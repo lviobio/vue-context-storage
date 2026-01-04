@@ -1,0 +1,77 @@
+{
+  "name": "vue-context-storage",
+  "version": "0.1.0",
+  "description": "Vue 3 context storage system with URL query synchronization support",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./components": {
+      "import": "./src/components.ts"
+    },
+    "./plugin": {
+      "import": "./src/plugin.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "check": "npm run ts:check && npm run lint:check && npm run format:check && npm run dependency-cruiser:check",
+    "ts:check": "tsc --noEmit",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "dependency-cruiser:check": "depcruise --config .dependency-cruiser.cjs src",
+    "prepublishOnly": "npm run check && npm run build"
+  },
+  "keywords": [
+    "vue",
+    "vue3",
+    "context",
+    "storage",
+    "state-management",
+    "query-sync"
+  ],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "vue": "^3.5.0",
+    "vue-router": "^4.0.0"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/lodash": "^4.17.15",
+    "@types/node": "^20.0.0",
+    "@vue/eslint-config-typescript": "^14.6.0",
+    "dependency-cruiser": "^17.3.6",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.6.2",
+    "prettier": "^3.7.4",
+    "tsdown": "^0.3.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.51.0",
+    "vue": "^3.5.26",
+    "vue-router": "^4.6.4"
+  }
+}

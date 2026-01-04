@@ -1,0 +1,262 @@
+# vue-context-storage
+
+Vue 3 context storage system with URL query synchronization support.
+
+A powerful state management solution for Vue 3 applications that provides:
+- **Context-based storage** using Vue's provide/inject API
+- **Automatic URL query synchronization** for preserving state across page reloads
+- **Multiple storage contexts** with activation management
+- **Type-safe** TypeScript support
+- **Tree-shakeable** and lightweight
+
+## Installation
+
+```bash
+npm install vue-context-storage
+```
+
+## Features
+
+- ✅ **Vue 3 Composition API** - Built with modern Vue patterns
+- ✅ **URL Query Sync** - Automatically sync state with URL parameters
+- ✅ **Multiple Contexts** - Support multiple independent storage contexts
+- ✅ **TypeScript** - Full type safety and IntelliSense support
+- ✅ **Flexible** - Works with vue-router 4+
+- ✅ **Transform Helpers** - Built-in utilities for type conversion
+
+## Basic Usage
+
+### Option 1: Using Vue Plugin (Recommended)
+
+Register the plugin in your main app file:
+
+```typescript
+import { createApp } from 'vue'
+import { VueContextStoragePlugin } from 'vue-context-storage/plugin'
+import App from './App.vue'
+
+const app = createApp(App)
+
+// Register components globally
+app.use(VueContextStoragePlugin)
+
+app.mount('#app')
+```
+
+Then use components without importing:
+
+```vue
+<template>
+  <ContextStorageRoot>
+    <router-view />
+  </ContextStorageRoot>
+</template>
+```
+
+### Option 2: Manual Component Import
+
+Import components individually when needed:
+
+```vue
+<template>
+  <ContextStorageRoot>
+    <router-view />
+  </ContextStorageRoot>
+</template>
+
+<script setup lang="ts">
+import { ContextStorageRoot } from 'vue-context-storage/components'
+</script>
+```
+
+## Use Query Handler in Components
+
+Sync reactive state with URL query parameters:
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useContextStorageQueryHandler } from 'vue-context-storage'
+
+interface Filters {
+  search: string
+  status: string
+  page: number
+}
+
+const filters = ref<Filters>({
+  search: '',
+  status: 'active',
+  page: 1
+})
+
+// Automatically syncs filters with URL query
+useContextStorageQueryHandler(filters, {
+  prefix: 'filters' // URL will be: ?filters[search]=...&filters[status]=...
+})
+</script>
+```
+
+## Advanced Usage
+
+### Using Transform Helpers
+
+Convert URL query string values to proper types:
+
+```typescript
+import { ref } from 'vue'
+import { useContextStorageQueryHandler, asNumber, asString } from 'vue-context-storage'
+
+interface TableState {
+  page: number
+  search: string
+  perPage: number
+}
+
+const state = ref<TableState>({
+  page: 1,
+  search: '',
+  perPage: 25
+})
+
+useContextStorageQueryHandler(state, {
+  prefix: 'table',
+  transform: (deserialized, initial) => ({
+    page: asNumber(deserialized.page, { fallback: 1 }),
+    search: asString(deserialized.search, { fallback: '' }),
+    perPage: asNumber(deserialized.perPage, { fallback: 25 })
+  })
+})
+```
+
+### Available Transform Helpers
+
+- `asNumber(value, options)` - Convert to number
+- `asString(value, options)` - Convert to string
+- `asBoolean(value, options)` - Convert to boolean
+- `asArray(value, options)` - Convert to array
+- `asNumberArray(value, options)` - Convert to number array
+
+### Preserve Empty State
+
+Keep empty state in URL to prevent resetting on reload:
+
+```typescript
+useContextStorageQueryHandler(filters, {
+  prefix: 'filters',
+  preserveEmptyState: true
+  // Empty filters will show as: ?filters
+  // Without this option, empty filters would clear the URL completely
+})
+```
+
+### Configure Query Handler
+
+Customize global behavior:
+
+```typescript
+import { ContextStorageQueryHandler } from 'vue-context-storage'
+
+const CustomQueryHandler = ContextStorageQueryHandler.configure({
+  mode: 'push', // 'replace' (default) or 'push' for history
+  preserveUnusedKeys: true, // Keep other query params
+  preserveEmptyState: false
+})
+
+// Use in ContextStorageRoot
+<ContextStorageRoot :handlers="[CustomQueryHandler]">
+```
+
+## API Reference
+
+### Composables
+
+#### `useContextStorageQueryHandler<T>(data, options)`
+
+Registers reactive data for URL query synchronization.
+
+**Parameters:**
+- `data: Ref<T>` - Reactive reference to sync
+- `options?: RegisterQueryHandlerOptions<T>`
+  - `prefix?: string` - Query parameter prefix
+  - `transform?: (deserialized, initial) => T` - Transform function
+  - `preserveEmptyState?: boolean` - Keep empty state in URL
+  - `mergeOnlyExistingKeysWithoutTransform?: boolean` - Only merge existing keys (default: true)
+
+### Classes
+
+#### `ContextStorageQueryHandler`
+
+Main handler for URL query synchronization.
+
+**Static Methods:**
+- `configure(options): ContextStorageHandlerConstructor` - Configure global options
+- `getInitialStateResolver(): () => LocationQuery` - Get initial state resolver
+
+**Methods:**
+- `register<T>(data, options): () => void` - Register data for sync
+- `setEnabled(state, initial): void` - Enable/disable handler
+- `setInitialState(state): void` - Set initial state
+
+### Transform Helpers
+
+All transform helpers support nullable and missable options:
+
+```typescript
+asNumber(value, {
+  fallback: 0,      // Default value
+  nullable: false,  // Allow null return
+  missable: false   // Allow undefined return
+})
+```
+
+## TypeScript Support
+
+Full TypeScript support with type inference:
+
+```typescript
+import type {
+  ContextStorageHandler,
+  ContextStorageHandlerConstructor,
+  IContextStorageQueryHandler,
+  QueryValue,
+  SerializeOptions
+} from 'vue-context-storage'
+```
+
+## Examples
+
+### Pagination with URL Sync
+
+```typescript
+import { ref } from 'vue'
+import { useContextStorageQueryHandler, asNumber } from 'vue-context-storage'
+
+const pagination = ref({
+  page: 1,
+  perPage: 25,
+  total: 0
+})
+
+useContextStorageQueryHandler(pagination, {
+  prefix: 'page',
+  transform: (data, initial) => ({
+    page: asNumber(data.page, { fallback: 1 }),
+    perPage: asNumber(data.perPage, { fallback: 25 }),
+    total: initial.total // Don't sync total from URL
+  })
+})
+```
+
+## Peer Dependencies
+
+- `vue`: ^3.5.0
+- `vue-router`: ^4.0.0
+
+## License
+
+MIT
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
