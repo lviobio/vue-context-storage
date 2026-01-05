@@ -1,8 +1,8 @@
 <script setup lang="ts"></script>
 
 <template>
-  <p>App</p>
-  <ContextStorage>
+  <div>
+    <p>MainLayout</p>
     <RouterView />
-  </ContextStorage>
+  </div>
 </template>
