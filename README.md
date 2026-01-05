@@ -47,9 +47,9 @@ Then use components without importing:
 
 ```vue
 <template>
-  <ContextStorageRoot>
+  <ContextStorage>
     <router-view />
-  </ContextStorageRoot>
+  </ContextStorage>
 </template>
 ```
 
@@ -59,13 +59,13 @@ Import components individually when needed:
 
 ```vue
 <template>
-  <ContextStorageRoot>
+  <ContextStorage>
     <router-view />
-  </ContextStorageRoot>
+  </ContextStorage>
 </template>
 
 <script setup lang="ts">
-import { ContextStorageRoot } from 'vue-context-storage/components'
+import { ContextStorage } from 'vue-context-storage/components'
 </script>
 ```
 
@@ -163,8 +163,8 @@ const CustomQueryHandler = ContextStorageQueryHandler.configure({
   preserveEmptyState: false
 })
 
-// Use in ContextStorageRoot
-<ContextStorageRoot :handlers="[CustomQueryHandler]">
+// Use in ContextStorage
+<ContextStorage :handlers="[CustomQueryHandler]">
 ```
 
 ## API Reference
