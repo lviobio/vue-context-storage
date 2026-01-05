@@ -1,7 +1,7 @@
-import { ContextStorageCollection, ContextStorageCollectionItem } from './collection'
+import { ContextStorageCollection, type ContextStorageCollectionItem } from './collection'
 import { ContextStorageQueryHandler } from './handlers/query'
 import { collection, collectionItem, contextStorageQueryHandler, handlers } from './symbols'
-import { InjectionKey } from 'vue'
+import type { InjectionKey } from 'vue'
 
 export const contextStorageCollectionInjectKey: InjectionKey<ContextStorageCollection> = collection
 export const contextStorageCollectionItemInjectKey: InjectionKey<ContextStorageCollectionItem> =

@@ -1,16 +1,23 @@
-import { ContextStorageHandlerConstructor } from '../../handlers.ts'
-import { deserializeParams, serializeParams } from './helpers.ts'
-import { contextStorageQueryHandler } from '../../symbols.ts'
+import type { ContextStorageHandlerConstructor } from '../../handlers'
+import { deserializeParams, serializeParams } from './helpers'
+import { contextStorageQueryHandler } from '../../symbols'
 import { cloneDeep, isEqual, merge, pick } from 'lodash'
-import { getCurrentInstance, inject, MaybeRefOrGetter, onBeforeUnmount, toValue, watch } from 'vue'
-import { LocationQuery, useRoute, useRouter } from 'vue-router'
 import {
+  getCurrentInstance,
+  inject,
+  type MaybeRefOrGetter,
+  onBeforeUnmount,
+  toValue,
+  watch,
+} from 'vue'
+import { type LocationQuery, useRoute, useRouter } from 'vue-router'
+import type {
   ContextStorageQueryRegisteredItem,
   IContextStorageQueryHandler,
   QueryHandlerBaseOptions,
   RegisterQueryHandlerBaseOptions,
   RegisterQueryHandlerOptions,
-} from './types.ts'
+} from './types'
 
 export function useContextStorageQueryHandler<T extends Record<string, unknown>>(
   data: MaybeRefOrGetter<T>,

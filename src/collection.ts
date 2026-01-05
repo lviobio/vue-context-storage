@@ -1,4 +1,4 @@
-import { ContextStorageHandler, ContextStorageHandlerConstructor } from './handlers'
+import type { ContextStorageHandler, ContextStorageHandlerConstructor } from './handlers'
 
 export type ContextStorageCollectionItem = {
   key: string

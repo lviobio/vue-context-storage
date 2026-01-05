@@ -1,6 +1,6 @@
-import { LocationQueryValue } from 'vue-router'
-import { MaybeRefOrGetter, UnwrapNestedRefs, WatchHandle } from 'vue'
-import { ContextStorageHandler, RegisterBaseOptions } from '../../handlers.ts'
+import type { LocationQueryValue } from 'vue-router'
+import type { MaybeRefOrGetter, UnwrapNestedRefs, WatchHandle } from 'vue'
+import type { ContextStorageHandler, RegisterBaseOptions } from '../../handlers'
 
 export type QueryValue = LocationQueryValue | LocationQueryValue[]
 

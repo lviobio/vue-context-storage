@@ -1,4 +1,4 @@
-import { QueryValue } from './types.ts'
+import type { QueryValue } from './types'
 
 interface AsNumberOptions {
   nullable?: boolean

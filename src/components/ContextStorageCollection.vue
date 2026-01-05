@@ -1,10 +1,10 @@
 <script lang="ts">
-import { ContextStorageCollection, ContextStorageCollectionItem } from '../collection'
-import { ContextStorageHandlerConstructor } from '../handlers'
+import { ContextStorageCollection, type ContextStorageCollectionItem } from '../collection'
+import { type ContextStorageHandlerConstructor } from '../handlers'
 import { contextStorageCollectionInjectKey } from '../injectionSymbols'
-import { computed, defineComponent, PropType, provide } from 'vue'
+import { computed, defineComponent, type PropType, provide } from 'vue'
 import { useRouter } from 'vue-router'
-import { defaultHandlers } from '../index.ts'
+import { defaultHandlers } from '../constants'
 
 export default defineComponent({
   props: {
