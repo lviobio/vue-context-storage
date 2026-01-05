@@ -5,6 +5,8 @@ export { default as ContextStorageCollection } from './components/ContextStorage
 export { default as ContextStorageProvider } from './components/ContextStorageProvider.vue'
 export { default as ContextStorage } from './components/ContextStorage.vue'
 
+export { VueContextStoragePlugin } from './plugin'
+
 export type {
   ContextStorageHandler,
   ContextStorageHandlerConstructor,
