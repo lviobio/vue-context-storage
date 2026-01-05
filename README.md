@@ -87,12 +87,12 @@ interface Filters {
 const filters = ref<Filters>({
   search: '',
   status: 'active',
-  page: 1
+  page: 1,
 })
 
 // Automatically syncs filters with URL query
 useContextStorageQueryHandler(filters, {
-  prefix: 'filters' // URL will be: ?filters[search]=...&filters[status]=...
+  prefix: 'filters', // URL will be: ?filters[search]=...&filters[status]=...
 })
 </script>
 ```
@@ -116,7 +116,7 @@ interface TableState {
 const state = ref<TableState>({
   page: 1,
   search: '',
-  perPage: 25
+  perPage: 25,
 })
 
 useContextStorageQueryHandler(state, {
@@ -124,8 +124,8 @@ useContextStorageQueryHandler(state, {
   transform: (deserialized, initial) => ({
     page: asNumber(deserialized.page, { fallback: 1 }),
     search: asString(deserialized.search, { fallback: '' }),
-    perPage: asNumber(deserialized.perPage, { fallback: 25 })
-  })
+    perPage: asNumber(deserialized.perPage, { fallback: 25 }),
+  }),
 })
 ```
 
@@ -144,7 +144,7 @@ Keep empty state in URL to prevent resetting on reload:
 ```typescript
 useContextStorageQueryHandler(filters, {
   prefix: 'filters',
-  preserveEmptyState: true
+  preserveEmptyState: true,
   // Empty filters will show as: ?filters
   // Without this option, empty filters would clear the URL completely
 })
@@ -157,14 +157,11 @@ Customize global behavior:
 ```typescript
 import { ContextStorageQueryHandler } from 'vue-context-storage'
 
-const CustomQueryHandler = ContextStorageQueryHandler.configure({
+ContextStorageQueryHandler.configure({
   mode: 'push', // 'replace' (default) or 'push' for history
   preserveUnusedKeys: true, // Keep other query params
-  preserveEmptyState: false
+  preserveEmptyState: false,
 })
-
-// Use in ContextStorage
-<ContextStorage :handlers="[CustomQueryHandler]">
 ```
 
 ## API Reference
@@ -206,7 +203,7 @@ All transform helpers support nullable and missable options:
 asNumber(value, {
   fallback: 0,      // Default value
   nullable: false,  // Allow null return
-  missable: false   // Allow undefined return
+  missable: false,   // Allow undefined return
 })
 ```
 
@@ -220,7 +217,7 @@ import type {
   ContextStorageHandlerConstructor,
   IContextStorageQueryHandler,
   QueryValue,
-  SerializeOptions
+  SerializeOptions,
 } from 'vue-context-storage'
 ```
 
@@ -235,7 +232,7 @@ import { useContextStorageQueryHandler, asNumber } from 'vue-context-storage'
 const pagination = ref({
   page: 1,
   perPage: 25,
-  total: 0
+  total: 0,
 })
 
 useContextStorageQueryHandler(pagination, {
@@ -243,7 +240,7 @@ useContextStorageQueryHandler(pagination, {
   transform: (data, initial) => ({
     page: asNumber(data.page, { fallback: 1 }),
     perPage: asNumber(data.perPage, { fallback: 25 }),
-    total: initial.total // Don't sync total from URL
+    total: initial.total, // Don't sync total from URL
   })
 })
 ```
