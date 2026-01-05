@@ -17,7 +17,7 @@ import { type ContextStorageHandlerConstructor } from '../handlers'
 import { defaultHandlers } from '../constants'
 
 interface Props {
-  handlers: ContextStorageHandlerConstructor[]
+  handlers?: ContextStorageHandlerConstructor[]
 }
 
 const { handlers = defaultHandlers } = defineProps<Props>()
