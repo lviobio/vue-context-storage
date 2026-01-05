@@ -4,12 +4,13 @@ import { ContextStorageHandlerConstructor } from '../handlers'
 import { contextStorageCollectionInjectKey } from '../injectionSymbols'
 import { computed, defineComponent, PropType, provide } from 'vue'
 import { useRouter } from 'vue-router'
+import { defaultHandlers } from '../index.ts'
 
 export default defineComponent({
   props: {
     handlers: {
       type: Object as PropType<ContextStorageHandlerConstructor[]>,
-      required: true,
+      default: () => defaultHandlers,
     },
   },
   setup({ handlers }, { slots }) {
