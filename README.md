@@ -84,7 +84,7 @@ interface Filters {
   page: number
 }
 
-const filters = ref<Filters>({
+const filters = reactive<Filters>({
   search: '',
   status: 'active',
   page: 1,
@@ -173,7 +173,7 @@ ContextStorageQueryHandler.configure({
 Registers reactive data for URL query synchronization.
 
 **Parameters:**
-- `data: Ref<T>` - Reactive reference to sync
+- `data: MaybeRefOrGetter<T>` - Reactive reference to sync
 - `options?: RegisterQueryHandlerOptions<T>`
   - `prefix?: string` - Query parameter prefix
   - `transform?: (deserialized, initial) => T` - Transform function
