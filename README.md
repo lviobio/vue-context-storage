@@ -8,7 +8,7 @@ Vue 3 context storage system with URL query synchronization support.
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/vue-context-storage)](https://bundlephobia.com/package/vue-context-storage)
 [![GitHub issues](https://img.shields.io/github/issues/lviobio/vue-context-storage)](https://github.com/lviobio/vue-context-storage/issues)
 [![GitHub License](https://img.shields.io/github/license/lviobio/vue-context-storage)](https://github.com/lviobio/vue-context-storage)
-[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://lviobio.github.io/vue-context-storage/)
+<a href="https://lviobio.github.io/vue-context-storage/" target="_blank"><img src="https://img.shields.io/badge/demo-live-brightgreen" alt="Live Demo"></a>
 
 A powerful state management solution for Vue 3 applications that provides:
 - **Context-based storage** using Vue's provide/inject API
@@ -19,7 +19,7 @@ A powerful state management solution for Vue 3 applications that provides:
 
 ## Live Demo
 
-🚀 **[Try the interactive playground](https://lviobio.github.io/vue-context-storage)**
+🚀 **<a href="https://lviobio.github.io/vue-context-storage" target="_blank">Try the interactive playground</a>**
 
 ## Installation
 
