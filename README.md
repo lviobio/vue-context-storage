@@ -137,6 +137,37 @@ useContextStorageQueryHandler(state, {
 - `asArray(value, options)` - Convert to array
 - `asNumberArray(value, options)` - Convert to number array
 
+### Using Zod Schemas
+
+Alternatively, you can use [Zod](https://zod.dev/) schemas for automatic validation and type inference:
+
+```typescript
+import { z } from 'zod'
+import { useContextStorageQueryHandler } from 'vue-context-storage'
+
+// Define schema with automatic coercion
+const FiltersSchema = z.object({
+  search: z.string().default(''),
+  page: z.coerce.number().int().positive().default(1),
+  status: z.enum(['active', 'inactive']).default('active'),
+})
+
+const filters = ref(FiltersSchema.parse({}))
+
+// Use schema for automatic validation
+useContextStorageQueryHandler(filters, {
+  prefix: 'filters',
+  schema: FiltersSchema,
+})
+```
+
+**Benefits:**
+- Automatic type coercion (strings → numbers, etc.)
+- Runtime validation with detailed errors
+- Automatic TypeScript type inference
+- Less boilerplate code
+- Single source of truth for structure and validation
+
 ### Preserve Empty State
 
 Keep empty state in URL to prevent resetting on reload:
@@ -221,6 +252,18 @@ import type {
 } from 'vue-context-storage'
 ```
 
+When using Zod schemas, TypeScript will automatically infer types:
+
+```typescript
+const FiltersSchema = z.object({
+  search: z.string().default(''),
+  page: z.coerce.number().default(1),
+})
+
+type Filters = z.infer<typeof FiltersSchema>
+// Result: { search: string; page: number }
+```
+
 ## Examples
 
 ### Pagination with URL Sync
@@ -249,6 +292,7 @@ useContextStorageQueryHandler(pagination, {
 
 - `vue`: ^3.5.0
 - `vue-router`: ^4.0.0
+- `zod`: ^4.0.0 (optional - only if using schema validation)
 
 ## License
 

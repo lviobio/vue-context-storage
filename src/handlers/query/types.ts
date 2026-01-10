@@ -101,10 +101,43 @@ export interface RegisterQueryHandlerBaseOptions<T> extends QueryHandlerSharedOp
    * ```
    */
   prefix?: string
+
+  /**
+   * Transform function to convert deserialized query parameters to the expected type.
+   *
+   * Note: If `schema` is provided, it takes priority over `transform`.
+   */
   transform?: (
     deserialized: DeepTransformValuesToLocationQueryValue<UnwrapNestedRefs<T>>,
     initialData: T,
   ) => UnwrapNestedRefs<T>
+
+  /**
+   * Zod schema for automatic validation and type coercion.
+   *
+   * When provided, the schema will be used to parse and validate query parameters.
+   * This option takes priority over the `transform` option.
+   *
+   * @example
+   * ```typescript
+   * import { z } from 'zod'
+   *
+   * const FiltersSchema = z.object({
+   *   search: z.string().default(''),
+   *   page: z.coerce.number().int().positive().default(1),
+   *   status: z.enum(['active', 'inactive']).default('active'),
+   * })
+   *
+   * useContextStorageQueryHandler(filters, {
+   *   prefix: 'filters',
+   *   schema: FiltersSchema,
+   * })
+   * ```
+   */
+  schema?: {
+    safeParse: (data: unknown) => { success: true; data: T } | { success: false; error: any }
+    parse: (data: unknown) => T
+  }
 }
 
 export interface RegisterQueryHandlerOptions<T>

@@ -168,7 +168,7 @@ export class ContextStorageQueryHandler implements IContextStorageQueryHandler {
         await this.router.push({ ...this.route, query: newQuery })
       }
     } catch (e) {
-      console.error('[ContextStorage] Got error while routing', e)
+      console.error('[vue-context-storage] Got error while routing', e)
     }
     this.preventAfterEachRouteCallsWhileCallingRouter = false
   }
@@ -243,7 +243,23 @@ export class ContextStorageQueryHandler implements IContextStorageQueryHandler {
       }
     }
 
-    if (item.options?.transform) {
+    // Priority: schema > transform > default merge
+    if (item.options?.schema) {
+      console.log('[vue-context-storage] 248', deserialized)
+      // Use Zod schema for validation and transformation
+      const result = item.options.schema.safeParse(deserialized)
+      console.log('[vue-context-storage] 251', result)
+
+      if (result.success) {
+        deserialized = result.data
+      } else {
+        console.warn('[vue-context-storage] schema parse failed', result.error)
+      }
+
+      if (item.options?.transform) {
+        console.warn('[vue-context-storage] transform is not supported with schema')
+      }
+    } else if (item.options?.transform) {
       deserialized = item.options.transform(deserialized, item.initialData)
     } else {
       if (mergeOnlyExistingKeysWithoutTransform) {
@@ -316,7 +332,7 @@ export class ContextStorageQueryHandler implements IContextStorageQueryHandler {
       patchKeys.forEach((key) => {
         if (newQueryRaw.hasOwnProperty(key)) {
           console.warn(
-            `[ContextStorage] Key ${key} is already present, overriding ` +
+            `[vue-context-storage] Key ${key} is already present, overriding ` +
               (item.options?.causer || ''),
           )
         }
