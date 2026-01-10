@@ -1,8 +1,70 @@
-# GitHub Pages Deployment
+# GitHub Actions Workflows
 
-This repository automatically deploys the playground to GitHub Pages on every push to the `main` branch.
+This repository uses GitHub Actions for continuous integration and deployment.
+
+## Available Workflows
+
+### 1. CI (Continuous Integration)
+**File**: `.github/workflows/ci.yml`
+
+Runs on every push and pull request to `main` and `develop` branches.
+
+**Jobs**:
+- **Test**: Runs tests on Node.js versions 18, 20, and 22
+  - Type checking (`npm run ts:check`)
+  - Linting (`npm run lint:check`)
+  - Formatting check (`npm run format:check`)
+  - Unit tests (`npm test`)
+  - Dependency cruiser check
+
+- **Build**: Verifies package builds correctly
+  - Builds the library
+  - Validates build artifacts exist
+
+### 2. Coverage
+**File**: `.github/workflows/coverage.yml`
+
+Runs on push to `main` and pull requests to `main`.
+
+**Jobs**:
+- Runs tests with coverage reporting
+- Uploads coverage to Codecov (requires `CODECOV_TOKEN` secret)
+- Comments on PRs with coverage report
+
+### 3. Deploy Playground to GitHub Pages
+**File**: `.github/workflows/deploy-playground.yml`
+
+Automatically deploys the playground to GitHub Pages on every push to the `main` branch.
+
+## Status Badges
+
+Add these badges to your README.md to show workflow status:
+
+```markdown
+![CI](https://github.com/<username>/vue-context-storage/actions/workflows/ci.yml/badge.svg)
+![Coverage](https://github.com/<username>/vue-context-storage/actions/workflows/coverage.yml/badge.svg)
+![Deploy](https://github.com/<username>/vue-context-storage/actions/workflows/deploy-playground.yml/badge.svg)
+[![codecov](https://codecov.io/gh/<username>/vue-context-storage/branch/main/graph/badge.svg)](https://codecov.io/gh/<username>/vue-context-storage)
+```
+
+Replace `<username>` with your GitHub username or organization name.
 
 ## Setup Instructions
+
+### Required Secrets
+
+For the Coverage workflow to work, you need to set up:
+
+1. **CODECOV_TOKEN** (optional but recommended):
+   - Go to [codecov.io](https://codecov.io)
+   - Sign up/in with your GitHub account
+   - Add your repository
+   - Copy the upload token
+   - In GitHub: **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+   - Name: `CODECOV_TOKEN`
+   - Value: Your Codecov token
+
+### Enable GitHub Pages
 
 To enable GitHub Pages deployment:
 
@@ -102,3 +164,68 @@ If styles or assets are not loading:
 1. Check that the base path matches the repository name
 2. Update `vite.config.ts` if your repository name is different
 3. Ensure `import.meta.env.BASE_URL` is used in router config
+
+## Running CI Checks Locally
+
+Before pushing, you can run the same checks that CI runs:
+
+```bash
+# Run all checks (same as CI)
+npm run check
+
+# Individual checks
+npm run ts:check              # Type checking
+npm run lint:check            # Linting
+npm run format:check          # Formatting
+npm test -- --run             # Tests
+npm run dependency-cruiser:check  # Dependencies
+npm run build                 # Build
+
+# With coverage
+npm test -- --run --coverage
+```
+
+## CI Workflow Details
+
+### Matrix Testing
+
+The CI workflow tests across multiple Node.js versions:
+- Node 18 (LTS)
+- Node 20 (LTS)
+- Node 22 (Current)
+
+This ensures compatibility across different Node.js versions.
+
+### Caching
+
+All workflows use npm caching to speed up dependency installation:
+```yaml
+cache: 'npm'
+```
+
+This caches the `~/.npm` directory between runs.
+
+### Fail Fast
+
+The test matrix does NOT use `fail-fast`, meaning all Node.js versions will be tested even if one fails. This helps identify version-specific issues.
+
+## Troubleshooting CI
+
+### Tests fail in CI but pass locally
+
+1. Check Node.js version matches
+2. Clear node_modules and reinstall: `npm ci`
+3. Check for environment-specific code
+4. Look at the CI logs for specific errors
+
+### Coverage upload fails
+
+1. Verify `CODECOV_TOKEN` is set correctly
+2. Check Codecov service status
+3. The workflow continues even if upload fails (`fail_ci_if_error: false`)
+
+### Build artifacts missing
+
+1. Ensure `npm run build` completes successfully locally
+2. Check that `dist/` is not in `.gitignore`
+3. Verify `tsdown.config.ts` is configured correctly
