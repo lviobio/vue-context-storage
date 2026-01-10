@@ -27,6 +27,11 @@ export {
   transform,
 } from './handlers/query/transform-helpers'
 
+export {
+  serializeParams as serializeQueryParams,
+  deserializeParams as deserializeQueryParams,
+} from './handlers/query/helpers'
+
 // Injection symbols
 export {
   contextStorageCollectionInjectKey,
