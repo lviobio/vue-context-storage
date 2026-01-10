@@ -1,7 +1,7 @@
 {
   "name": "vue-context-storage",
   "type": "module",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "Vue 3 context storage system with URL query synchronization support",
   "author": "",
   "license": "MIT",
