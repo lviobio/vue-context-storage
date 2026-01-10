@@ -1,20 +1,12 @@
 <script lang="ts">
-import { defineComponent, h, inject } from 'vue'
-import {
-  contextStorageCollectionInjectKey,
-  contextStorageCollectionItemInjectKey,
-} from '../injectionSymbols'
+import { defineComponent, h } from 'vue'
+import { useContextStorageCollection } from '../composables/useContextStorageActivator'
 
 export default defineComponent({
   setup(_, { slots }) {
-    const collection = inject(contextStorageCollectionInjectKey)!
-    const item = inject(contextStorageCollectionItemInjectKey)!
+    const { activate } = useContextStorageCollection()
 
-    const onActivate = () => {
-      collection.setActive(item)
-    }
-
-    return () => h('div', { onMousedown: onActivate }, slots.default?.())
+    return () => h('div', { onMousedown: activate }, slots.default?.())
   },
 })
 </script>

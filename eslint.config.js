@@ -19,6 +19,7 @@ export default defineConfigWithVueTs(
   {
     rules: {
       eqeqeq: 'error',
+      "no-console": ["error", { "allow": ["warn", "error"] }],
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-empty-object-type': 'off',
       'vue/multi-word-component-names': 'off', // Allow single-word names in library

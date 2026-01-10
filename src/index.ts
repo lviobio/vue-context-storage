@@ -7,6 +7,8 @@ export { default as ContextStorage } from './components/ContextStorage.vue'
 
 export { VueContextStoragePlugin } from './plugin'
 
+export { CollectionManager, type CollectionManagerItem } from './collection'
+
 export type {
   ContextStorageHandler,
   ContextStorageHandlerConstructor,
@@ -14,10 +16,6 @@ export type {
 } from './handlers'
 
 export { ContextStorageQueryHandler, useContextStorageQueryHandler } from './handlers/query'
-
-// Query helpers
-export { deserializeParams, serializeParams } from './handlers/query/helpers'
-export type { SerializeOptions } from './handlers/query/helpers'
 
 // Query transform helpers
 export {

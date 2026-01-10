@@ -1,6 +1,6 @@
 import type { ContextStorageHandler, ContextStorageHandlerConstructor } from './handlers'
 
-export type ContextStorageCollectionItem = {
+export type CollectionManagerItem = {
   key: string
   handlers: ContextStorageHandler[]
 }
@@ -9,38 +9,52 @@ interface ItemOptions {
   key: string
 }
 
-export class ContextStorageCollection {
-  public active?: ContextStorageCollectionItem = undefined
-  private collection: ContextStorageCollectionItem[] = []
-  private onActiveChangeCallbacks: ((item: ContextStorageCollectionItem) => void)[] = []
+export class CollectionManager {
+  public active?: CollectionManagerItem = undefined
+  private collection: CollectionManagerItem[] = []
+  private onActiveChangeCallbacks: ((item: CollectionManagerItem) => void)[] = []
+  private readonly isReadyPromise: Promise<void>
+  private resolveMarkAsReady: (() => void) | undefined = undefined
 
-  constructor(private handlerConstructors: ContextStorageHandlerConstructor[]) {}
+  constructor(private handlerConstructors: ContextStorageHandlerConstructor[]) {
+    this.isReadyPromise = new Promise((resolve) => {
+      this.resolveMarkAsReady = resolve
+    })
+  }
 
-  onActiveChange(callback: (item: ContextStorageCollectionItem) => void): void {
+  isReady() {
+    return this.isReadyPromise
+  }
+
+  markAsReady() {
+    this.resolveMarkAsReady?.()
+  }
+
+  onActiveChange(callback: (item: CollectionManagerItem) => void): void {
     this.onActiveChangeCallbacks.push(callback)
   }
 
-  first(): ContextStorageCollectionItem | undefined {
+  first(): CollectionManagerItem | undefined {
     return this.collection[0]
   }
 
-  findItemByKey(key: string): ContextStorageCollectionItem | undefined {
+  findItemByKey(key: string): CollectionManagerItem | undefined {
     return this.collection.find((item) => item.key === key)
   }
 
-  add(options: ItemOptions): ContextStorageCollectionItem {
+  add(options: ItemOptions): CollectionManagerItem {
     const handlers = this.handlerConstructors.map((constructor) => new constructor())
 
-    const item: ContextStorageCollectionItem = { handlers, key: options.key }
+    const item: CollectionManagerItem = { handlers, key: options.key }
 
     this.collection.push(item)
 
     return item
   }
 
-  remove(removeItem: ContextStorageCollectionItem): void {
+  remove(removeItem: CollectionManagerItem): void {
     if (this.collection.indexOf(removeItem) === -1) {
-      throw new Error('[ContextStorage] Item not found in collection')
+      throw new Error('[vue-context-storage] Item not found in collection')
     }
 
     this.collection = this.collection.filter((item) => item !== removeItem)
@@ -50,7 +64,7 @@ export class ContextStorageCollection {
     }
   }
 
-  setActive(activeItem: ContextStorageCollectionItem): void {
+  setActive(activeItem: CollectionManagerItem): void {
     if (this.active === activeItem) {
       return
     }

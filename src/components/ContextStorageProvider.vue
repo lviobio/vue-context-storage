@@ -1,10 +1,6 @@
 <script lang="ts">
-import {
-  contextStorageCollectionInjectKey,
-  contextStorageCollectionItemInjectKey,
-  contextStorageHandlersInjectKey,
-} from '../injectionSymbols'
-import { defineComponent, inject, onUnmounted, provide } from 'vue'
+import { defineComponent } from 'vue'
+import { useContextStorageCollection } from '../composables/useContextStorageProvider'
 
 export default defineComponent({
   props: {
@@ -14,23 +10,7 @@ export default defineComponent({
     },
   },
   setup(props, { slots }) {
-    const collection = inject(contextStorageCollectionInjectKey)
-    if (!collection) throw new Error('[ContextStorage] Context storage collection not found')
-
-    const item = collection.add({
-      key: props.itemKey,
-    })
-
-    provide(contextStorageCollectionItemInjectKey, item)
-    provide(contextStorageHandlersInjectKey, item.handlers)
-
-    item.handlers.forEach((handler) => {
-      provide(handler.getInjectionKey(), handler)
-    })
-
-    onUnmounted(() => {
-      collection.remove(item)
-    })
+    useContextStorageCollection(props.itemKey)
 
     return () => slots.default?.()
   },

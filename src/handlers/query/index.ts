@@ -28,7 +28,7 @@ export function useContextStorageQueryHandler<T extends Record<string, unknown>>
   )
 
   if (!handler) {
-    throw new Error('[ContextStorage] ContextStorageQueryHandler is not provided')
+    throw new Error('[vue-context-storage] ContextStorageQueryHandler is not provided')
   }
 
   const currentInstance = getCurrentInstance()
@@ -245,10 +245,8 @@ export class ContextStorageQueryHandler implements IContextStorageQueryHandler {
 
     // Priority: schema > transform > default merge
     if (item.options?.schema) {
-      console.log('[vue-context-storage] 248', deserialized)
       // Use Zod schema for validation and transformation
       const result = item.options.schema.safeParse(deserialized)
-      console.log('[vue-context-storage] 251', result)
 
       if (result.success) {
         deserialized = result.data
