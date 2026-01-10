@@ -5,7 +5,7 @@ import {
   contextStorageHandlersInjectKey,
 } from '../injectionSymbols'
 
-export function useContextStorageCollection(key: string) {
+export function useContextStorageProvider(key: string) {
   const collection = inject(contextStorageCollectionInjectKey)
   if (!collection) throw new Error('[vue-context-storage] Context storage collection not found')
 

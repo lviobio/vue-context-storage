@@ -4,7 +4,7 @@ import {
   contextStorageCollectionItemInjectKey,
 } from '../injectionSymbols'
 
-export function useContextStorageCollection() {
+export function useContextStorageActivator() {
   const collection = inject(contextStorageCollectionInjectKey)!
   const item = inject(contextStorageCollectionItemInjectKey)!
 

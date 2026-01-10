@@ -15,6 +15,10 @@ export type {
   RegisterBaseOptions,
 } from './handlers'
 
+export { useContextStorageActivator } from './composables/useContextStorageActivator'
+export { useContextStorageCollection } from './composables/useContextStorageCollection'
+export { useContextStorageProvider } from './composables/useContextStorageProvider'
+
 export { ContextStorageQueryHandler, useContextStorageQueryHandler } from './handlers/query'
 
 // Query transform helpers

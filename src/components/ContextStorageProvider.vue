@@ -1,6 +1,6 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
-import { useContextStorageCollection } from '../composables/useContextStorageProvider'
+import { useContextStorageProvider } from '../composables/useContextStorageProvider'
 
 export default defineComponent({
   props: {
@@ -10,7 +10,7 @@ export default defineComponent({
     },
   },
   setup(props, { slots }) {
-    useContextStorageCollection(props.itemKey)
+    useContextStorageProvider(props.itemKey)
 
     return () => slots.default?.()
   },
