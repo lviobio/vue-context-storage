@@ -4,7 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import VueContextStoragePlugin from '../../src/plugin'
 
 const router = createRouter({
-  history: createWebHistory('app'),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',

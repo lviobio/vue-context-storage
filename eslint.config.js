@@ -14,11 +14,11 @@ export default defineConfigWithVueTs(
   vue.configs['flat/essential'],
   vueTsConfigs.recommended,
   {
-    ignores: ['node_modules', 'dist', '*.log', 'coverage'],
+    ignores: ['node_modules', 'dist', '*.log', 'coverage', 'playground/dist'],
   },
   {
     rules: {
-      'eqeqeq': 'error',
+      eqeqeq: 'error',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-empty-object-type': 'off',
       'vue/multi-word-component-names': 'off', // Allow single-word names in library
