@@ -74,26 +74,6 @@ npm test -- --coverage
 - **TypeScript**: Full type checking enabled
 - **Vue**: @vue/test-utils for component testing
 
-## Skipped Tests
-
-Some tests are temporarily skipped (`.skip` extension) due to setup complexity:
-- `query-handler.test.ts.skip` - Requires Vue Router mocking setup
-- `components.integration.test.ts.skip` - Requires full Vue Router and component mounting setup
-
-These tests are written and functional but need additional Vue Router configuration to run properly.
-
-## Coverage
-
-Current test coverage:
-- ✅ Transform helpers (54 tests - 100%)
-- ✅ Serialization helpers (32 tests - 100%)
-- ✅ Zod integration (22 tests - 100%)
-- ✅ CollectionManager class (24 tests - 100%)
-- ⏸️ Query handler (skipped - router dependency)
-- ⏸️ Vue components (skipped - router dependency)
-
-**Total: 132 tests passing**
-
 ## Writing New Tests
 
 When adding new tests:
