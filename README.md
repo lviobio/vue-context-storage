@@ -2,12 +2,24 @@
 
 Vue 3 context storage system with URL query synchronization support.
 
+[![npm downloads](https://img.shields.io/npm/dm/vue-context-storage.svg)](https://www.npmjs.com/package/vue-context-storage)
+[![TypeScript](https://badgen.net/badge/icon/TypeScript?icon=typescript&label)](https://www.typescriptlang.org/)
+[![Vue 3](https://img.shields.io/badge/vue-3.x-brightgreen.svg)](https://vuejs.org/)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/vue-context-storage)](https://bundlephobia.com/package/vue-context-storage)
+[![GitHub issues](https://img.shields.io/github/issues/lviobio/vue-context-storage)](https://github.com/lviobio/vue-context-storage/issues)
+[![GitHub License](https://img.shields.io/github/license/lviobio/vue-context-storage)](https://github.com/lviobio/vue-context-storage)
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://lviobio.github.io/vue-context-storage/)
+
 A powerful state management solution for Vue 3 applications that provides:
 - **Context-based storage** using Vue's provide/inject API
 - **Automatic URL query synchronization** for preserving state across page reloads
 - **Multiple storage contexts** with activation management
 - **Type-safe** TypeScript support
 - **Tree-shakeable** and lightweight
+
+## Live Demo
+
+🚀 **[Try the interactive playground](https://lviobio.github.io/vue-context-storage)**
 
 ## Installation
 
@@ -43,7 +55,7 @@ app.use(VueContextStoragePlugin)
 app.mount('#app')
 ```
 
-Then use components without importing:
+Then use components without importing in your `App.vue`:
 
 ```vue
 <template>
@@ -55,7 +67,7 @@ Then use components without importing:
 
 ### Option 2: Manual Component Import
 
-Import components individually when needed:
+Import components individually when needed in your `App.vue`:
 
 ```vue
 <template>
@@ -297,6 +309,45 @@ useContextStorageQueryHandler(pagination, {
 ## License
 
 MIT
+
+## Development
+
+### Running Playground Locally
+
+```bash
+# Development mode (hot reload)
+npm run play
+
+# Production preview
+npm run build:playground
+npm run preview:playground
+```
+
+### Building
+
+```bash
+# Build library
+npm run build
+
+# Build playground for deployment
+npm run build:playground
+```
+
+### Testing & Quality
+
+```bash
+# Run all checks
+npm run check
+
+# Type checking
+npm run ts:check
+
+# Linting
+npm run lint
+
+# Formatting
+npm run format
+```
 
 ## Contributing
 
