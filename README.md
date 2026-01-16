@@ -120,7 +120,7 @@ Convert URL query string values to proper types:
 
 ```typescript
 import { ref } from 'vue'
-import { useContextStorageQueryHandler, asNumber, asString } from 'vue-context-storage'
+import { useContextStorageQueryHandler, transform } from 'vue-context-storage'
 
 interface TableState {
   page: number
@@ -137,9 +137,9 @@ const state = ref<TableState>({
 useContextStorageQueryHandler(state, {
   prefix: 'table',
   transform: (deserialized, initial) => ({
-    page: asNumber(deserialized.page, { fallback: 1 }),
-    search: asString(deserialized.search, { fallback: '' }),
-    perPage: asNumber(deserialized.perPage, { fallback: 25 }),
+    page: transform.asNumber(deserialized.page, { fallback: 1 }),
+    search: transform.asString(deserialized.search, { fallback: '' }),
+    perPage: transform.asNumber(deserialized.perPage, { fallback: 25 }),
   }),
 })
 ```
@@ -246,7 +246,7 @@ Main handler for URL query synchronization.
 All transform helpers support nullable and missable options:
 
 ```typescript
-asNumber(value, {
+transform.asNumber(value, {
   fallback: 0,      // Default value
   nullable: false,  // Allow null return
   missable: false,   // Allow undefined return
@@ -285,7 +285,7 @@ type Filters = z.infer<typeof FiltersSchema>
 
 ```typescript
 import { ref } from 'vue'
-import { useContextStorageQueryHandler, asNumber } from 'vue-context-storage'
+import { useContextStorageQueryHandler, transform } from 'vue-context-storage'
 
 const pagination = ref({
   page: 1,
@@ -296,8 +296,8 @@ const pagination = ref({
 useContextStorageQueryHandler(pagination, {
   prefix: 'page',
   transform: (data, initial) => ({
-    page: asNumber(data.page, { fallback: 1 }),
-    perPage: asNumber(data.perPage, { fallback: 25 }),
+    page: transform.asNumber(data.page, { fallback: 1 }),
+    perPage: transform.asNumber(data.perPage, { fallback: 25 }),
     total: initial.total, // Don't sync total from URL
   })
 })
