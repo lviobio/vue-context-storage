@@ -39,7 +39,7 @@
     "play": "vite",
     "build:playground": "vite build",
     "preview:playground": "vite preview --outDir playground/dist",
-    "test": "vitest",
+    "test": "vitest run",
     "release": "bumpp && npm publish",
     "prepublishOnly": "npm run check && npm run test && npm run build"
   },
