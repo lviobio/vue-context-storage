@@ -4,6 +4,7 @@ import {
   contextStorageCollectionItemInjectKey,
   contextStorageHandlersInjectKey,
 } from '../injectionSymbols'
+import type { CollectionManagerItem } from '../collection'
 
 export function useContextStorageProvider(key: string) {
   const collection = inject(contextStorageCollectionInjectKey)
@@ -13,14 +14,16 @@ export function useContextStorageProvider(key: string) {
     key,
   })
 
+  onUnmounted(() => {
+    collection.remove(item)
+  })
+}
+
+export function useContextStorageItemProvider(item: CollectionManagerItem) {
   provide(contextStorageCollectionItemInjectKey, item)
   provide(contextStorageHandlersInjectKey, item.handlers)
 
   item.handlers.forEach((handler) => {
     provide(handler.getInjectionKey(), handler)
-  })
-
-  onUnmounted(() => {
-    collection.remove(item)
   })
 }

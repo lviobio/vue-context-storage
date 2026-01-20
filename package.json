@@ -41,7 +41,7 @@
     "preview:playground": "vite preview --outDir playground/dist",
     "test": "vitest",
     "release": "bumpp && npm publish",
-    "prepublishOnly": "npm run check && npm run build"
+    "prepublishOnly": "npm run check && npm run test && npm run build"
   },
   "peerDependencies": {
     "vue": "^3.0.0",

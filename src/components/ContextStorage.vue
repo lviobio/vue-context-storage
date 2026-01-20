@@ -1,72 +1,65 @@
-<template>
-  <ContextStorageProvider :item-key="itemKey">
-    <ContextStorageActivator>
-      <slot />
-    </ContextStorageActivator>
-  </ContextStorageProvider>
-</template>
-
-<script setup lang="ts">
-import ContextStorageActivator from './ContextStorageActivator.vue'
-import ContextStorageProvider from './ContextStorageProvider.vue'
+<script lang="ts">
 import { type ContextStorageHandlerConstructor } from '../handlers'
 import { defaultHandlers } from '../constants'
-import { useContextStorageCollection } from '../composables/useContextStorageCollection'
 import { useRouter } from 'vue-router'
+import { createItem } from '../collection'
+import { useContextStorageItemProvider } from '../composables/useContextStorageProvider'
+import { defineComponent, type PropType } from 'vue'
 
-const itemKey = 'main'
+export default defineComponent({
+  props: {
+    handlers: {
+      type: Object as PropType<ContextStorageHandlerConstructor[]>,
+      default: () => defaultHandlers,
+    },
+  },
+  setup({ handlers }, { slots }) {
+    const item = createItem(handlers, { key: 'main' })
 
-interface Props {
-  handlers?: ContextStorageHandlerConstructor[]
-}
+    useContextStorageItemProvider(item)
 
-const { handlers = defaultHandlers } = defineProps<Props>()
+    const router = useRouter()
 
-const router = useRouter()
-const collection = useContextStorageCollection(handlers)
+    const initialNavigatorState = new Map<
+      ContextStorageHandlerConstructor,
+      Record<string, unknown>
+    >()
+    const initialNavigatorStateResolvers = new Map<
+      ContextStorageHandlerConstructor,
+      () => Record<string, unknown>
+    >()
 
-const initialNavigatorState = new Map<ContextStorageHandlerConstructor, Record<string, unknown>>()
-const initialNavigatorStateResolvers = new Map<
-  ContextStorageHandlerConstructor,
-  () => Record<string, unknown>
->()
+    handlers.forEach((handler) => {
+      if (!handler.getInitialStateResolver) {
+        return
+      }
 
-handlers.forEach((handler) => {
-  if (!handler.getInitialStateResolver) {
-    return
-  }
+      initialNavigatorStateResolvers.set(handler, handler.getInitialStateResolver())
+    })
 
-  initialNavigatorStateResolvers.set(handler, handler.getInitialStateResolver())
-})
+    const initItem = () => {
+      item.handlers.forEach((handler) => {
+        const state = initialNavigatorState.get(
+          handler.constructor as ContextStorageHandlerConstructor,
+        )
 
-const activateMainItem = () => {
-  const item = collection.findItemByKey(itemKey)
-  if (!item) {
-    throw new Error(`[vue-context-storage] Cannot find "${itemKey}" item in collection`)
-  }
+        if (!state) {
+          return
+        }
 
-  item.handlers.forEach((handler) => {
-    const state = initialNavigatorState.get(handler.constructor as ContextStorageHandlerConstructor)
-
-    if (!state) {
-      return
+        handler.setInitialState?.(state)
+        handler.setEnabled?.(true, true)
+      })
     }
 
-    handler.setInitialState?.(state)
-  })
+    router.isReady().then(() => {
+      initialNavigatorStateResolvers.forEach((resolver, handler) => {
+        initialNavigatorState.set(handler, resolver())
+      })
+      initItem()
+    })
 
-  collection.setActive(item)
-}
-
-router.isReady().then(() => {
-  collection.markAsReady()
-})
-
-collection.isReady().then(() => {
-  initialNavigatorStateResolvers.forEach((resolver, handler) => {
-    initialNavigatorState.set(handler, resolver())
-  })
-
-  activateMainItem()
+    return () => slots.default?.()
+  },
 })
 </script>

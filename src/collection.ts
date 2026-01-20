@@ -9,6 +9,15 @@ interface ItemOptions {
   key: string
 }
 
+export function createItem(
+  handlerConstructors: ContextStorageHandlerConstructor[],
+  options: ItemOptions,
+): CollectionManagerItem {
+  const handlers = handlerConstructors.map((constructor) => new constructor())
+
+  return { handlers, key: options.key }
+}
+
 export class CollectionManager {
   public active?: CollectionManagerItem = undefined
   private collection: CollectionManagerItem[] = []
@@ -43,9 +52,7 @@ export class CollectionManager {
   }
 
   add(options: ItemOptions): CollectionManagerItem {
-    const handlers = this.handlerConstructors.map((constructor) => new constructor())
-
-    const item: CollectionManagerItem = { handlers, key: options.key }
+    const item = createItem(this.handlerConstructors, options)
 
     this.collection.push(item)
 
