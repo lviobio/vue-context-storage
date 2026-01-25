@@ -1,25 +1,26 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { NConfigProvider, NMessageProvider } from 'naive-ui'
+</script>
 
 <template>
-  <ContextStorage>
-    <RouterView />
-  </ContextStorage>
+  <NConfigProvider
+    :theme-overrides="{
+      Form: {
+        labelTextColor: 'var(--color-gray-500)',
+        labelPaddingVertical: '0 0 0 2px',
+      },
+    }"
+  >
+    <NMessageProvider>
+      <ContextStorage>
+        <RouterView />
+      </ContextStorage>
+    </NMessageProvider>
+  </NConfigProvider>
 </template>
 
 <style>
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
 #app {
-  min-height: 100vh;
+  @apply min-h-screen;
 }
 </style>
