@@ -43,11 +43,10 @@ export default defineComponent({
           handler.constructor as ContextStorageHandlerConstructor,
         )
 
-        if (!state) {
-          return
+        if (state) {
+          handler.setInitialState?.(state)
         }
 
-        handler.setInitialState?.(state)
         handler.setEnabled?.(true, true)
       })
     }
