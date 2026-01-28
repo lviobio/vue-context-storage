@@ -1,6 +1,6 @@
 # vue-context-storage
 
-Vue 3 context storage system with URL query synchronization support.
+Vue 3 context storage system with URL query, localStorage, and sessionStorage synchronization support.
 
 [![npm downloads](https://img.shields.io/npm/dm/vue-context-storage.svg)](https://www.npmjs.com/package/vue-context-storage)
 [![TypeScript](https://badgen.net/badge/icon/TypeScript?icon=typescript&label)](https://www.typescriptlang.org/)
@@ -16,6 +16,7 @@ Vue 3 context storage system with URL query synchronization support.
 A powerful state management solution for Vue 3 applications that provides:
 - **Context-based storage** using Vue's provide/inject API
 - **Automatic URL query synchronization** for preserving state across page reloads
+- **localStorage & sessionStorage handlers** for persistent and session-scoped state
 - **Multiple storage contexts** with activation management
 - **Type-safe** TypeScript support
 - **Tree-shakeable** and lightweight
@@ -34,6 +35,8 @@ npm install vue-context-storage
 
 - ✅ **Vue 3 Composition API** - Built with modern Vue patterns
 - ✅ **URL Query Sync** - Automatically sync state with URL parameters
+- ✅ **localStorage Handler** - Persist state to localStorage with cross-tab sync
+- ✅ **sessionStorage Handler** - Session-scoped state that survives page refreshes
 - ✅ **Multiple Contexts** - Support multiple independent storage contexts
 - ✅ **TypeScript** - Full type safety and IntelliSense support
 - ✅ **Flexible** - Works with vue-router 4+
@@ -210,6 +213,148 @@ ContextStorageQueryHandler.configure({
 })
 ```
 
+## Use localStorage Handler in Components
+
+Persist reactive state to `localStorage`. Data is automatically synced across browser tabs.
+
+```vue
+<script setup lang="ts">
+import { reactive } from 'vue'
+import { useContextStorageLocalStorage } from 'vue-context-storage'
+
+const settings = reactive({
+  theme: 'light',
+  fontSize: 14,
+  sidebarOpen: true,
+})
+
+// Automatically syncs settings with localStorage under the key "app-settings"
+useContextStorageLocalStorage(settings, {
+  key: 'app-settings',
+})
+</script>
+```
+
+### Multiple Storage Keys
+
+Each call creates an independent storage entry:
+
+```typescript
+const userPrefs = reactive({
+  language: 'en',
+  notifications: true,
+})
+
+useContextStorageLocalStorage(userPrefs, {
+  key: 'user-preferences',
+})
+```
+
+### Configure localStorage Handler
+
+```typescript
+import { ContextStorageLocalStorageHandler } from 'vue-context-storage'
+
+ContextStorageLocalStorageHandler.configure({
+  listenToStorageEvents: true, // Cross-tab sync (default: true)
+})
+```
+
+## Use sessionStorage Handler in Components
+
+Persist reactive state to `sessionStorage`. Data survives page refreshes but is cleared when the tab is closed.
+
+```vue
+<script setup lang="ts">
+import { reactive } from 'vue'
+import { useContextStorageSessionStorage } from 'vue-context-storage'
+
+const formDraft = reactive({
+  email: '',
+  message: '',
+  step: 1,
+})
+
+// Automatically syncs form draft with sessionStorage
+useContextStorageSessionStorage(formDraft, {
+  key: 'contact-form-draft',
+})
+</script>
+```
+
+### Using Prefix
+
+Store multiple data objects under a single storage key using prefixes:
+
+```typescript
+const filters = reactive({ search: '', status: 'active' })
+
+useContextStorageSessionStorage(filters, {
+  key: 'app-state',
+  prefix: 'filters', // Stored as { filters: { search: '', status: 'active' } }
+})
+
+const pagination = reactive({ page: 1, perPage: 25 })
+
+useContextStorageSessionStorage(pagination, {
+  key: 'app-state',
+  prefix: 'pagination', // Stored as { filters: {...}, pagination: { page: 1, perPage: 25 } }
+})
+```
+
+### Using Transform with Storage Handlers
+
+Convert stored values to proper types when reading from storage:
+
+```typescript
+import { useContextStorageLocalStorage, transform } from 'vue-context-storage'
+
+const settings = reactive({
+  theme: 'light',
+  fontSize: 14,
+})
+
+useContextStorageLocalStorage(settings, {
+  key: 'app-settings',
+  transform: (deserialized, initial) => ({
+    theme: transform.asString(deserialized.theme, { fallback: 'light' }),
+    fontSize: transform.asNumber(deserialized.fontSize, { fallback: 14 }),
+  }),
+})
+```
+
+### Using Zod Schemas with Storage Handlers
+
+```typescript
+import { z } from 'zod'
+import { useContextStorageLocalStorage } from 'vue-context-storage'
+
+const SettingsSchema = z.object({
+  theme: z.enum(['light', 'dark']).default('light'),
+  fontSize: z.number().int().positive().default(14),
+  sidebarOpen: z.boolean().default(true),
+})
+
+const settings = reactive(SettingsSchema.parse({}))
+
+useContextStorageLocalStorage(settings, {
+  key: 'app-settings',
+  schema: SettingsSchema,
+})
+```
+
+### Custom Serialization
+
+Provide custom serializer/deserializer functions:
+
+```typescript
+useContextStorageLocalStorage(settings, {
+  key: 'app-settings',
+  serializer: (data) => btoa(JSON.stringify(data)),
+  deserializer: (str) => JSON.parse(atob(str)),
+})
+```
+
 ## API Reference
 
 ### Composables
@@ -240,6 +385,42 @@ Main handler for URL query synchronization.
 - `register<T>(data, options): () => void` - Register data for sync
 - `setEnabled(state, initial): void` - Enable/disable handler
 - `setInitialState(state): void` - Set initial state
+
+#### `useContextStorageLocalStorage<T>(data, options)`
+
+Registers reactive data for localStorage synchronization.
+
+**Parameters:**
+- `data: MaybeRefOrGetter<T>` - Reactive reference to sync
+- `options: RegisterWebStorageHandlerBaseOptions<T>`
+  - `key: string` - Storage key (required)
+  - `prefix?: string` - Namespace within the storage key
+  - `transform?: (deserialized, initial) => T` - Transform function
+  - `schema?: ZodSchema` - Zod schema for validation
+  - `serializer?: (data: T) => string` - Custom serializer (default: `JSON.stringify`)
+  - `deserializer?: (str: string) => unknown` - Custom deserializer (default: `JSON.parse`)
+
+#### `useContextStorageSessionStorage<T>(data, options)`
+
+Registers reactive data for sessionStorage synchronization. Same options as `useContextStorageLocalStorage`.
+
+### Classes
+
+#### `ContextStorageLocalStorageHandler`
+
+Handler for localStorage synchronization. Supports cross-tab sync via `storage` events.
+
+**Static Methods:**
+- `configure(options): ContextStorageHandlerConstructor` - Configure global options
+  - `listenToStorageEvents?: boolean` - Enable cross-tab sync (default: `true`)
+
+#### `ContextStorageSessionStorageHandler`
+
+Handler for sessionStorage synchronization. Data is scoped to the current tab.
+
+**Static Methods:**
+- `configure(options): ContextStorageHandlerConstructor` - Configure global options
+  - `listenToStorageEvents?: boolean` - Listen to storage events (default: `false`)
 
 ### Transform Helpers
 
