@@ -14,6 +14,7 @@ Vue 3 context storage system with URL query, localStorage, and sessionStorage sy
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://lviobio.github.io/vue-context-storage/)
 
 A powerful state management solution for Vue 3 applications that provides:
+
 - **Context-based storage** using Vue's provide/inject API
 - **Automatic URL query synchronization** for preserving state across page reloads
 - **localStorage & sessionStorage handlers** for persistent and session-scoped state
@@ -87,14 +88,80 @@ Then use components without importing in your `App.vue`:
 </template>
 ```
 
+## Unified Composable
+
+`useContextStorage()` provides a single entry point for all handler types:
+
+```vue
+<script setup lang="ts">
+import { reactive } from 'vue'
+import { useContextStorage } from 'vue-context-storage'
+
+const filters = reactive({
+  search: '',
+  status: 'active',
+  page: 1,
+})
+
+// Sync with URL query
+useContextStorage('query', filters, {
+  prefix: 'filters',
+})
+
+// Sync with localStorage
+useContextStorage('localStorage', filters, {
+  key: 'saved-filters',
+})
+
+// Sync with sessionStorage
+useContextStorage('sessionStorage', filters, {
+  key: 'temp-filters',
+})
+</script>
+```
+
+Options are type-checked per handler — `'query'` accepts query options, `'localStorage'` and `'sessionStorage'` require a `key`, etc.
+
+You can also pass an injection key directly instead of a string:
+
+```typescript
+import { contextStorageQueryHandlerInjectKey } from 'vue-context-storage'
+
+useContextStorage(contextStorageQueryHandlerInjectKey, filters, {
+  prefix: 'filters',
+})
+```
+
+### Registering Custom Handlers
+
+Register your own handlers at runtime and extend the type map for full type safety:
+
+```typescript
+import { defineContextStorageHandler } from 'vue-context-storage'
+import { myHandlerInjectionKey } from './my-handler'
+
+// Runtime registration
+defineContextStorageHandler('myHandler', myHandlerInjectionKey)
+
+// TypeScript augmentation (e.g. in a .d.ts or at module level)
+declare module 'vue-context-storage' {
+  interface ContextStorageHandlerMap {
+    myHandler: { key: string }
+  }
+}
+
+// Now fully type-checked
+useContextStorage('myHandler', data, { key: 'example' })
+```
+
 ## Use Query Handler in Components
 
 Sync reactive state with URL query parameters:
 
 ```vue
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useContextStorageQueryHandler } from 'vue-context-storage'
+import { reactive } from 'vue'
+import { useContextStorage } from 'vue-context-storage'
 
 interface Filters {
   search: string
@@ -109,10 +176,20 @@ const filters = reactive<Filters>({
 })
 
 // Automatically syncs filters with URL query
-useContextStorageQueryHandler(filters, {
+useContextStorage('query', filters, {
   prefix: 'filters', // URL will be: ?filters[search]=...&filters[status]=...
 })
 </script>
+```
+
+Also available as a dedicated composable:
+
+```typescript
+import { useContextStorageQueryHandler } from 'vue-context-storage'
+
+useContextStorageQueryHandler(filters, {
+  prefix: 'filters',
+})
 ```
 
 ## Advanced Usage
@@ -123,7 +200,7 @@ Convert URL query string values to proper types:
 
 ```typescript
 import { ref } from 'vue'
-import { useContextStorageQueryHandler, transform } from 'vue-context-storage'
+import { useContextStorage, transform } from 'vue-context-storage'
 
 interface TableState {
   page: number
@@ -137,7 +214,7 @@ const state = ref<TableState>({
   perPage: 25,
 })
 
-useContextStorageQueryHandler(state, {
+useContextStorage('query', state, {
   prefix: 'table',
   transform: (deserialized, initial) => ({
     page: transform.asNumber(deserialized.page, { fallback: 1 }),
@@ -161,7 +238,7 @@ Alternatively, you can use [Zod](https://zod.dev/) schemas for automatic validat
 
 ```typescript
 import { z } from 'zod'
-import { useContextStorageQueryHandler } from 'vue-context-storage'
+import { useContextStorage } from 'vue-context-storage'
 
 // Define schema with automatic coercion
 const FiltersSchema = z.object({
@@ -173,13 +250,14 @@ const FiltersSchema = z.object({
 const filters = ref(FiltersSchema.parse({}))
 
 // Use schema for automatic validation
-useContextStorageQueryHandler(filters, {
+useContextStorage('query', filters, {
   prefix: 'filters',
   schema: FiltersSchema,
 })
 ```
 
 **Benefits:**
+
 - Automatic type coercion (strings → numbers, etc.)
 - Runtime validation with detailed errors
 - Automatic TypeScript type inference
@@ -191,7 +269,7 @@ useContextStorageQueryHandler(filters, {
 Keep empty state in URL to prevent resetting on reload:
 
 ```typescript
-useContextStorageQueryHandler(filters, {
+useContextStorage('query', filters, {
   prefix: 'filters',
   preserveEmptyState: true,
   // Empty filters will show as: ?filters
@@ -220,7 +298,7 @@ Persist reactive state to `localStorage`. Data is automatically synced across br
 ```vue
 <script setup lang="ts">
 import { reactive } from 'vue'
-import { useContextStorageLocalStorage } from 'vue-context-storage'
+import { useContextStorage } from 'vue-context-storage'
 
 const settings = reactive({
   theme: 'light',
@@ -229,24 +307,19 @@ const settings = reactive({
 })
 
 // Automatically syncs settings with localStorage under the key "app-settings"
-useContextStorageLocalStorage(settings, {
+useContextStorage('localStorage', settings, {
   key: 'app-settings',
 })
 </script>
 ```
 
-### Multiple Storage Keys
-
-Each call creates an independent storage entry:
+Also available as a dedicated composable:
 
 ```typescript
-const userPrefs = reactive({
-  language: 'en',
-  notifications: true,
-})
+import { useContextStorageLocalStorage } from 'vue-context-storage'
 
-useContextStorageLocalStorage(userPrefs, {
-  key: 'user-preferences',
+useContextStorageLocalStorage(settings, {
+  key: 'app-settings',
 })
 ```
 
@@ -267,7 +340,7 @@ Persist reactive state to `sessionStorage`. Data survives page refreshes but is 
 ```vue
 <script setup lang="ts">
 import { reactive } from 'vue'
-import { useContextStorageSessionStorage } from 'vue-context-storage'
+import { useContextStorage } from 'vue-context-storage'
 
 const formDraft = reactive({
   email: '',
@@ -276,10 +349,20 @@ const formDraft = reactive({
 })
 
 // Automatically syncs form draft with sessionStorage
-useContextStorageSessionStorage(formDraft, {
+useContextStorage('sessionStorage', formDraft, {
   key: 'contact-form-draft',
 })
 </script>
+```
+
+Also available as a dedicated composable:
+
+```typescript
+import { useContextStorageSessionStorage } from 'vue-context-storage'
+
+useContextStorageSessionStorage(formDraft, {
+  key: 'contact-form-draft',
+})
 ```
 
 ### Using Prefix
@@ -289,14 +372,14 @@ Store multiple data objects under a single storage key using prefixes:
 ```typescript
 const filters = reactive({ search: '', status: 'active' })
 
-useContextStorageSessionStorage(filters, {
+useContextStorage('sessionStorage', filters, {
   key: 'app-state',
   prefix: 'filters', // Stored as { filters: { search: '', status: 'active' } }
 })
 
 const pagination = reactive({ page: 1, perPage: 25 })
 
-useContextStorageSessionStorage(pagination, {
+useContextStorage('sessionStorage', pagination, {
   key: 'app-state',
   prefix: 'pagination', // Stored as { filters: {...}, pagination: { page: 1, perPage: 25 } }
 })
@@ -307,14 +390,14 @@ useContextStorageSessionStorage(pagination, {
 Convert stored values to proper types when reading from storage:
 
 ```typescript
-import { useContextStorageLocalStorage, transform } from 'vue-context-storage'
+import { useContextStorage, transform } from 'vue-context-storage'
 
 const settings = reactive({
   theme: 'light',
   fontSize: 14,
 })
 
-useContextStorageLocalStorage(settings, {
+useContextStorage('localStorage', settings, {
   key: 'app-settings',
   transform: (deserialized, initial) => ({
     theme: transform.asString(deserialized.theme, { fallback: 'light' }),
@@ -337,7 +420,7 @@ const SettingsSchema = z.object({
 
 const settings = reactive(SettingsSchema.parse({}))
 
-useContextStorageLocalStorage(settings, {
+useContextStorage('localStorage', settings, {
   key: 'app-settings',
   schema: SettingsSchema,
 })
@@ -348,7 +431,7 @@ useContextStorageLocalStorage(settings, {
 Provide custom serializer/deserializer functions:
 
 ```typescript
-useContextStorageLocalStorage(settings, {
+useContextStorage('localStorage', settings, {
   key: 'app-settings',
   serializer: (data) => btoa(JSON.stringify(data)),
   deserializer: (str) => JSON.parse(atob(str)),
@@ -359,11 +442,27 @@ useContextStorageLocalStorage(settings, {
 
 ### Composables
 
+#### `useContextStorage(type, data, options)`
+
+Unified composable that delegates to the correct handler based on `type`.
+
+**Parameters:**
+
+- `type: 'query' | 'localStorage' | 'sessionStorage' | InjectionKey` - Handler type or injection key
+- `data: MaybeRefOrGetter<T>` - Reactive reference to sync
+- `options` - Handler-specific options (type-checked per handler)
+
+**Custom handler registration:**
+
+- `defineContextStorageHandler(name, injectionKey)` - Register a custom handler
+- `resolveHandlerInjectionKey(type)` - Look up an injection key by name
+
 #### `useContextStorageQueryHandler<T>(data, options)`
 
 Registers reactive data for URL query synchronization.
 
 **Parameters:**
+
 - `data: MaybeRefOrGetter<T>` - Reactive reference to sync
 - `options?: RegisterQueryHandlerOptions<T>`
   - `prefix?: string` - Query parameter prefix
@@ -378,10 +477,12 @@ Registers reactive data for URL query synchronization.
 Main handler for URL query synchronization.
 
 **Static Methods:**
+
 - `configure(options): ContextStorageHandlerConstructor` - Configure global options
 - `getInitialStateResolver(): () => LocationQuery` - Get initial state resolver
 
 **Methods:**
+
 - `register<T>(data, options): () => void` - Register data for sync
 - `setEnabled(state, initial): void` - Enable/disable handler
 - `setInitialState(state): void` - Set initial state
@@ -391,6 +492,7 @@ Main handler for URL query synchronization.
 Registers reactive data for localStorage synchronization.
 
 **Parameters:**
+
 - `data: MaybeRefOrGetter<T>` - Reactive reference to sync
 - `options: RegisterWebStorageHandlerBaseOptions<T>`
   - `key: string` - Storage key (required)
@@ -411,6 +513,7 @@ Registers reactive data for sessionStorage synchronization. Same options as `use
 Handler for localStorage synchronization. Supports cross-tab sync via `storage` events.
 
 **Static Methods:**
+
 - `configure(options): ContextStorageHandlerConstructor` - Configure global options
   - `listenToStorageEvents?: boolean` - Enable cross-tab sync (default: `true`)
 
@@ -419,6 +522,7 @@ Handler for localStorage synchronization. Supports cross-tab sync via `storage` 
 Handler for sessionStorage synchronization. Data is scoped to the current tab.
 
 **Static Methods:**
+
 - `configure(options): ContextStorageHandlerConstructor` - Configure global options
   - `listenToStorageEvents?: boolean` - Listen to storage events (default: `false`)
 
@@ -428,9 +532,9 @@ All transform helpers support nullable and missable options:
 
 ```typescript
 transform.asNumber(value, {
-  fallback: 0,      // Default value
-  nullable: false,  // Allow null return
-  missable: false,   // Allow undefined return
+  fallback: 0, // Default value
+  nullable: false, // Allow null return
+  missable: false, // Allow undefined return
 })
 ```
 
@@ -480,7 +584,7 @@ useContextStorageQueryHandler(pagination, {
     page: transform.asNumber(data.page, { fallback: 1 }),
     perPage: transform.asNumber(data.perPage, { fallback: 25 }),
     total: initial.total, // Don't sync total from URL
-  })
+  }),
 })
 ```
 

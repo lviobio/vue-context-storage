@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 import {
-  NForm,
-  NFormItem,
-  NInput,
-  NInputNumber,
   NButton,
   NCode,
   NCollapse,
   NCollapseItem,
+  NForm,
+  NFormItem,
+  NInput,
+  NInputNumber,
 } from 'naive-ui'
-import { transform, useContextStorageQueryHandler } from '../../../src'
+import { transform, useContextStorage } from '../../../src'
 
 const data = reactive({
   name: '',
@@ -19,7 +19,7 @@ const data = reactive({
   number: null as number | null,
 })
 
-useContextStorageQueryHandler(data, {
+useContextStorage('query', data, {
   transform: (value) => ({
     name: transform.asString(value.name),
     title: transform.asString(value.title),
@@ -29,7 +29,7 @@ useContextStorageQueryHandler(data, {
 })
 
 const exampleCode = `import { reactive } from 'vue'
-import { transform, useContextStorageQueryHandler } from 'vue-context-storage'
+import { transform, useContextStorage } from 'vue-context-storage'
 
 const data = reactive({
   name: '',
@@ -38,7 +38,7 @@ const data = reactive({
   number: null as number | null,
 })
 
-useContextStorageQueryHandler(data, {
+useContextStorage('query', data, {
   transform: (value) => ({
     name: transform.asString(value.name),
     title: transform.asString(value.title),

@@ -12,7 +12,7 @@ import {
   NCollapse,
   NCollapseItem,
 } from 'naive-ui'
-import { useContextStorageLocalStorage } from '../../../src'
+import { useContextStorage } from '../../../src'
 
 const settings = reactive({
   theme: 'light',
@@ -20,7 +20,7 @@ const settings = reactive({
   sidebarOpen: true,
 })
 
-useContextStorageLocalStorage(settings, {
+useContextStorage('localStorage', settings, {
   key: 'app-settings',
 })
 
@@ -29,7 +29,7 @@ const userPrefs = reactive({
   notifications: true,
 })
 
-useContextStorageLocalStorage(userPrefs, {
+useContextStorage('localStorage', settings, {
   key: 'user-preferences',
 })
 
@@ -40,7 +40,7 @@ const reset = () => {
 }
 
 const exampleCode = `import { reactive } from 'vue'
-import { useContextStorageLocalStorage } from 'vue-context-storage'
+import { useContextStorage } from 'vue-context-storage'
 
 const settings = reactive({
   theme: 'light',
@@ -49,7 +49,7 @@ const settings = reactive({
 })
 
 // Sync reactive data with localStorage
-useContextStorageLocalStorage(settings, {
+useContextStorage('localStorage', settings, {
   key: 'app-settings',
 })
 
@@ -59,7 +59,7 @@ const userPrefs = reactive({
   notifications: true,
 })
 
-useContextStorageLocalStorage(userPrefs, {
+useContextStorage('localStorage', userPrefs, {
   key: 'user-preferences',
 })`
 </script>

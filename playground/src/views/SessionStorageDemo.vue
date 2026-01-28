@@ -11,7 +11,7 @@ import {
   NCollapse,
   NCollapseItem,
 } from 'naive-ui'
-import { useContextStorageSessionStorage } from '../../../src'
+import { useContextStorage } from '../../../src'
 
 const formDraft = reactive({
   email: '',
@@ -19,7 +19,7 @@ const formDraft = reactive({
   step: 1,
 })
 
-useContextStorageSessionStorage(formDraft, {
+useContextStorage('sessionStorage', formDraft, {
   key: 'contact-form-draft',
 })
 
@@ -29,7 +29,7 @@ const wizardState = reactive({
   answers: [] as string[],
 })
 
-useContextStorageSessionStorage(wizardState, {
+useContextStorage('sessionStorage', wizardState, {
   key: 'wizard-state',
 })
 
@@ -44,7 +44,7 @@ const reset = () => {
 }
 
 const exampleCode = `import { reactive } from 'vue'
-import { useContextStorageSessionStorage } from 'vue-context-storage'
+import { useContextStorage } from 'vue-context-storage'
 
 // Form draft - survives page refresh but not tab close
 const formDraft = reactive({
@@ -53,7 +53,7 @@ const formDraft = reactive({
   step: 1,
 })
 
-useContextStorageSessionStorage(formDraft, {
+useContextStorage('sessionStorage', formDraft, {
   key: 'contact-form-draft',
 })
 
@@ -64,7 +64,7 @@ const wizardState = reactive({
   answers: [] as string[],
 })
 
-useContextStorageSessionStorage(wizardState, {
+useContextStorage('sessionStorage', wizardState, {
   key: 'wizard-state',
 })`
 </script>

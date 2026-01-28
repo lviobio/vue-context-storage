@@ -15,6 +15,7 @@ export type {
   RegisterBaseOptions,
 } from './handlers'
 
+export { useContextStorage } from './composables/useContextStorage'
 export { useContextStorageActivator } from './composables/useContextStorageActivator'
 export { useContextStorageCollection } from './composables/useContextStorageCollection'
 export { useContextStorageProvider } from './composables/useContextStorageProvider'
@@ -30,6 +31,10 @@ export {
   ContextStorageSessionStorageHandler,
   useContextStorageSessionStorage,
 } from './handlers/session-storage'
+
+// Handler registry
+export { defineContextStorageHandler, resolveHandlerInjectionKey } from './registry'
+export type { ContextStorageHandlerMap } from './registry'
 
 // Query transform helpers
 export {
@@ -55,16 +60,6 @@ export {
   contextStorageQueryHandlerInjectKey,
   contextStorageSessionStorageHandlerInjectKey,
 } from './injectionSymbols'
-
-// Symbols
-export {
-  collection,
-  collectionItem,
-  contextStorageLocalStorageHandler,
-  contextStorageQueryHandler,
-  contextStorageSessionStorageHandler,
-  handlers,
-} from './symbols'
 
 // Constants
 export { defaultHandlers } from './constants'
