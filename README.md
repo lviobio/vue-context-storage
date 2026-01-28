@@ -41,7 +41,23 @@ npm install vue-context-storage
 
 ## Basic Usage
 
-### Option 1: Using Vue Plugin (Recommended)
+### Option 1: Manual Component Import (Recommended)
+
+Import ContextStorage component in your `App.vue`:
+
+```vue
+<template>
+  <ContextStorage>
+    <router-view />
+  </ContextStorage>
+</template>
+
+<script setup lang="ts">
+import { ContextStorage } from 'vue-context-storage/components'
+</script>
+```
+
+### Option 2: Using Vue Plugin
 
 Register the plugin in your main app file:
 
@@ -66,22 +82,6 @@ Then use components without importing in your `App.vue`:
     <router-view />
   </ContextStorage>
 </template>
-```
-
-### Option 2: Manual Component Import
-
-Import components individually when needed in your `App.vue`:
-
-```vue
-<template>
-  <ContextStorage>
-    <router-view />
-  </ContextStorage>
-</template>
-
-<script setup lang="ts">
-import { ContextStorage } from 'vue-context-storage/components'
-</script>
 ```
 
 ## Use Query Handler in Components
