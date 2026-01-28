@@ -7,8 +7,18 @@ const routes = [
     children: [
       {
         path: '/',
-        name: 'home',
+        name: 'query',
         component: () => import('./views/Home.vue'),
+      },
+      {
+        path: '/local-storage',
+        name: 'local-storage',
+        component: () => import('./views/LocalStorageDemo.vue'),
+      },
+      {
+        path: '/session-storage',
+        name: 'session-storage',
+        component: () => import('./views/SessionStorageDemo.vue'),
       },
     ],
   },

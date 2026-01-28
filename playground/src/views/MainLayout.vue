@@ -1,13 +1,34 @@
 <script setup lang="ts">
-import { NLayout, NLayoutContent, NLayoutHeader } from 'naive-ui'
-import { RouterLink } from 'vue-router'
+import { NLayout, NLayoutContent, NLayoutHeader, NMenu } from 'naive-ui'
+import { computed, h } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
+
+const route = useRoute()
+
+const activeKey = computed(() => route.name as string)
+
+const menuOptions = [
+  {
+    label: () => h(RouterLink, { to: '/' }, { default: () => 'Query Handler' }),
+    key: 'query',
+  },
+  {
+    label: () => h(RouterLink, { to: '/local-storage' }, { default: () => 'LocalStorage Handler' }),
+    key: 'local-storage',
+  },
+  {
+    label: () =>
+      h(RouterLink, { to: '/session-storage' }, { default: () => 'SessionStorage Handler' }),
+    key: 'session-storage',
+  },
+]
 </script>
 
 <template>
   <NLayout>
     <NLayoutHeader bordered class="header main-header">
       <RouterLink to="/" class="title">Vue Context Storage</RouterLink>
-      <RouterLink to="/" class="demo-link">Demo</RouterLink>
+      <NMenu mode="horizontal" :value="activeKey" :options="menuOptions" class="nav-menu" />
       <a
         href="https://github.com/lviobio/vue-context-storage"
         target="_blank"
@@ -35,12 +56,8 @@ import { RouterLink } from 'vue-router'
 }
 
 .main-header {
-  height: 40px;
+  height: 48px;
   gap: 24px;
-}
-
-.sub-header {
-  height: 36px;
 }
 
 .title {
@@ -50,10 +67,12 @@ import { RouterLink } from 'vue-router'
   color: inherit;
 }
 
-.demo-link {
-  color: var(--n-item-text-color-active, #18a058);
+.nav-menu {
+  flex: 1;
+}
+
+.nav-menu :deep(a) {
   text-decoration: none;
-  font-weight: 500;
 }
 
 .github-link {

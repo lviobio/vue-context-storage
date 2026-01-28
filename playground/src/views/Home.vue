@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
-import { NForm, NFormItem, NInput, NInputNumber, NButton } from 'naive-ui'
+import {
+  NForm,
+  NFormItem,
+  NInput,
+  NInputNumber,
+  NButton,
+  NCode,
+  NCollapse,
+  NCollapseItem,
+} from 'naive-ui'
 import { transform, useContextStorageQueryHandler } from '../../../src'
 
 const data = reactive({
@@ -18,11 +27,34 @@ useContextStorageQueryHandler(data, {
     number: transform.asNumber(value.number, { nullable: true }),
   }),
 })
+
+const exampleCode = `import { reactive } from 'vue'
+import { transform, useContextStorageQueryHandler } from 'vue-context-storage'
+
+const data = reactive({
+  name: '',
+  title: '',
+  search: '',
+  number: null as number | null,
+})
+
+useContextStorageQueryHandler(data, {
+  transform: (value) => ({
+    name: transform.asString(value.name),
+    title: transform.asString(value.title),
+    search: transform.asString(value.search),
+    number: transform.asNumber(value.number, { nullable: true }),
+  }),
+})`
 </script>
 
 <template>
-  <h2 class="text-xl font-semibold mb-4">Home</h2>
-  <NForm label-placement="left" label-width="80">
+  <h2 class="text-xl font-semibold mb-4">Query Handler Demo</h2>
+  <p class="text-sm text-gray-500 mb-4">
+    Data is synced with URL query parameters. Changes are reflected in the URL.
+  </p>
+
+  <NForm label-placement="left" label-width="80" class="max-w-lg">
     <NFormItem label="Name">
       <NInput v-model:value="data.name" placeholder="Enter name" />
     </NFormItem>
@@ -39,5 +71,15 @@ useContextStorageQueryHandler(data, {
       <NButton @click="data.number = Math.ceil(Math.random() * 1000)">Random number</NButton>
     </NFormItem>
   </NForm>
-  <code>{{ data }}</code>
+
+  <div class="mt-4 mb-6">
+    <p class="text-sm text-gray-500 mb-2">Current state:</p>
+    <code class="text-sm">{{ data }}</code>
+  </div>
+
+  <NCollapse>
+    <NCollapseItem title="Code Example" name="code">
+      <NCode :code="exampleCode" language="typescript" word-wrap />
+    </NCollapseItem>
+  </NCollapse>
 </template>
