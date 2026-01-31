@@ -68,7 +68,9 @@ function sortQueryByReference(query: LocationQuery, ...references: LocationQuery
   return sorted
 }
 
-export class ContextStorageQueryHandler implements IContextStorageQueryHandler {
+export class ContextStorageQueryHandler<
+  T extends Record<string, unknown>,
+> implements IContextStorageQueryHandler<T> {
   private enabled = false
   private registered: ContextStorageQueryRegisteredItem<any>[] = []
   private currentQuery: LocationQuery | undefined = undefined
@@ -90,10 +92,12 @@ export class ContextStorageQueryHandler implements IContextStorageQueryHandler {
   }
 
   // noinspection JSUnusedGlobalSymbols
-  static configure(options: QueryHandlerBaseOptions): ContextStorageHandlerConstructor {
+  static configure<T extends Record<string, unknown>>(
+    options: QueryHandlerBaseOptions,
+  ): ContextStorageHandlerConstructor<T> {
     ContextStorageQueryHandler.customQueryHandlerOptions = options
 
-    return ContextStorageQueryHandler
+    return ContextStorageQueryHandler<T>
   }
 
   constructor() {

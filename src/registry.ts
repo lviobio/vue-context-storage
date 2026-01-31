@@ -12,7 +12,7 @@ import {
  * Augmentable interface mapping handler names to their options types.
  *
  * Users can extend this via module declaration:
- * ```typescript
+ * ```ts
  * declare module 'vue-context-storage' {
  *   interface ContextStorageHandlerMap {
  *     myHandler: MyHandlerOptions
@@ -20,25 +20,25 @@ import {
  * }
  * ```
  */
-export interface ContextStorageHandlerMap {
-  query: RegisterQueryHandlerBaseOptions<any>
-  localStorage: UseWebStorageOptions<any>
-  sessionStorage: UseWebStorageOptions<any>
+export interface ContextStorageHandlerMap<T> {
+  query: RegisterQueryHandlerBaseOptions<T>
+  localStorage: UseWebStorageOptions<T>
+  sessionStorage: UseWebStorageOptions<T>
 }
 
 // Runtime map: string → injection key
-const handlerRegistry = new Map<string, InjectionKey<ContextStorageHandler>>()
+const handlerRegistry = new Map<string, InjectionKey<ContextStorageHandler<any>>>()
 
-export function defineContextStorageHandler(
+export function defineContextStorageHandler<T>(
   name: string,
-  injectionKey: InjectionKey<ContextStorageHandler>,
+  injectionKey: InjectionKey<ContextStorageHandler<T>>,
 ): void {
   handlerRegistry.set(name, injectionKey)
 }
 
-export function resolveHandlerInjectionKey(
-  type: string,
-): InjectionKey<ContextStorageHandler> | undefined {
+export function resolveHandlerInjectionKey<K extends keyof ContextStorageHandlerMap<T>, T>(
+  type: K,
+): InjectionKey<ContextStorageHandler<T>> | undefined {
   return handlerRegistry.get(type)
 }
 

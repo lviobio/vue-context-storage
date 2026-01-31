@@ -2,7 +2,7 @@ import type { ContextStorageHandler, ContextStorageHandlerConstructor } from './
 
 export type CollectionManagerItem = {
   key: string
-  handlers: ContextStorageHandler[]
+  handlers: ContextStorageHandler<any>[]
 }
 
 interface ItemOptions {

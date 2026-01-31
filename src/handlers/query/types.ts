@@ -143,7 +143,9 @@ export interface RegisterQueryHandlerBaseOptions<T> extends QueryHandlerSharedOp
 export interface RegisterQueryHandlerOptions<T>
   extends RegisterBaseOptions, RegisterQueryHandlerBaseOptions<T> {}
 
-export interface IContextStorageQueryHandler extends ContextStorageHandler {
+export interface IContextStorageQueryHandler<
+  T extends Record<string, unknown>,
+> extends ContextStorageHandler<T> {
   register: <T extends Record<string, unknown>>(
     data: MaybeRefOrGetter<T>,
     options: RegisterQueryHandlerOptions<T>,

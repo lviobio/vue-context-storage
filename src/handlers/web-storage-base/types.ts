@@ -70,7 +70,9 @@ export interface RegisterWebStorageHandlerBaseOptions<T> {
 export interface RegisterWebStorageHandlerOptions<T>
   extends RegisterBaseOptions, RegisterWebStorageHandlerBaseOptions<T> {}
 
-export interface IContextStorageWebStorageHandler extends ContextStorageHandler {
+export interface IContextStorageWebStorageHandler<
+  T extends Record<string, unknown>,
+> extends ContextStorageHandler<T> {
   register: <T extends Record<string, unknown>>(
     data: MaybeRefOrGetter<T>,
     options: RegisterWebStorageHandlerOptions<T>,

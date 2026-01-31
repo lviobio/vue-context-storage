@@ -1,7 +1,7 @@
 import type { InjectionKey, MaybeRefOrGetter } from 'vue'
 
-export interface ContextStorageHandlerConstructor {
-  new (): ContextStorageHandler
+export interface ContextStorageHandlerConstructor<T = any> {
+  new (): ContextStorageHandler<T>
   getInitialStateResolver?: () => () => Record<string, unknown>
 }
 
@@ -10,9 +10,9 @@ export interface RegisterBaseOptions {
   uid: number
 }
 
-export interface ContextStorageHandler {
-  register: (data: MaybeRefOrGetter, options: RegisterBaseOptions) => () => void
+export interface ContextStorageHandler<T> {
+  register: (data: MaybeRefOrGetter<T>, options: RegisterBaseOptions) => () => void
   setInitialState?: (state: Record<string, unknown>) => void
   setEnabled?: (enabled: boolean, initial: boolean) => void
-  getInjectionKey(): InjectionKey<ContextStorageHandler>
+  getInjectionKey(): InjectionKey<ContextStorageHandler<T>>
 }

@@ -4,9 +4,11 @@ import type { InjectionKey } from 'vue'
 import { ContextStorageWebStorageHandler, createWebStorageComposable } from '../web-storage-base'
 import type { SessionStorageHandlerBaseOptions } from './types'
 
-export class ContextStorageSessionStorageHandler extends ContextStorageWebStorageHandler {
+export class ContextStorageSessionStorageHandler<
+  T extends Record<string, unknown>,
+> extends ContextStorageWebStorageHandler<T> {
   protected readonly storage: Storage
-  protected readonly injectionKey: InjectionKey<ContextStorageSessionStorageHandler>
+  protected readonly injectionKey: InjectionKey<ContextStorageSessionStorageHandler<T>>
 
   static customHandlerOptions: SessionStorageHandlerBaseOptions = {}
 
@@ -27,10 +29,12 @@ export class ContextStorageSessionStorageHandler extends ContextStorageWebStorag
   }
 
   // noinspection JSUnusedGlobalSymbols
-  static configure(options: SessionStorageHandlerBaseOptions): ContextStorageHandlerConstructor {
+  static configure<T extends Record<string, unknown>>(
+    options: SessionStorageHandlerBaseOptions,
+  ): ContextStorageHandlerConstructor<T> {
     ContextStorageSessionStorageHandler.customHandlerOptions = options
 
-    return ContextStorageSessionStorageHandler
+    return ContextStorageSessionStorageHandler<T>
   }
 }
 

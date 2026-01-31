@@ -16,7 +16,9 @@ import type {
   WebStorageHandlerBaseOptions,
 } from './types'
 
-export abstract class ContextStorageWebStorageHandler implements IContextStorageWebStorageHandler {
+export abstract class ContextStorageWebStorageHandler<
+  T extends Record<string, unknown>,
+> implements IContextStorageWebStorageHandler<T> {
   protected enabled = false
   protected registered: ContextStorageWebStorageRegisteredItem<any>[] = []
   protected initialState?: Record<string, unknown>
@@ -24,7 +26,7 @@ export abstract class ContextStorageWebStorageHandler implements IContextStorage
   protected preventSyncToStorage = false
 
   protected abstract readonly storage: Storage
-  protected abstract readonly injectionKey: InjectionKey<ContextStorageWebStorageHandler>
+  protected abstract readonly injectionKey: InjectionKey<ContextStorageWebStorageHandler<T>>
 
   protected readonly options: Required<WebStorageHandlerBaseOptions>
 
@@ -63,7 +65,7 @@ export abstract class ContextStorageWebStorageHandler implements IContextStorage
     })
   }
 
-  getInjectionKey(): InjectionKey<ContextStorageWebStorageHandler> {
+  getInjectionKey(): InjectionKey<ContextStorageWebStorageHandler<T>> {
     return this.injectionKey
   }
 
@@ -268,7 +270,7 @@ export abstract class ContextStorageWebStorageHandler implements IContextStorage
 export type UseWebStorageOptions<T> = RegisterWebStorageHandlerBaseOptions<T> &
   Required<Pick<RegisterWebStorageHandlerBaseOptions<T>, 'key'>>
 
-export function createWebStorageComposable<Handler extends ContextStorageWebStorageHandler>(
+export function createWebStorageComposable<Handler extends ContextStorageWebStorageHandler<any>>(
   injectionKey: InjectionKey<Handler>,
   handlerName: string,
 ) {

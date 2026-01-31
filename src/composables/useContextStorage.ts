@@ -1,41 +1,16 @@
-import {
-  getCurrentInstance,
-  inject,
-  type InjectionKey,
-  type MaybeRefOrGetter,
-  onBeforeUnmount,
-} from 'vue'
-import type { ContextStorageHandler } from '../handlers'
+import { getCurrentInstance, inject, type MaybeRefOrGetter, onBeforeUnmount } from 'vue'
 import { type ContextStorageHandlerMap, resolveHandlerInjectionKey } from '../registry'
 
-export function useContextStorage<
-  K extends keyof ContextStorageHandlerMap,
-  T extends Record<string, unknown>,
->(type: K, data: MaybeRefOrGetter<T>, options: ContextStorageHandlerMap[K]): void
-
-export function useContextStorage<T extends Record<string, unknown>>(
-  type: InjectionKey<ContextStorageHandler>,
+export function useContextStorage<K extends keyof ContextStorageHandlerMap<T>, T>(
+  type: K,
   data: MaybeRefOrGetter<T>,
-  options?: Record<string, unknown>,
-): void
-
-export function useContextStorage(
-  type: string | symbol | InjectionKey<ContextStorageHandler>,
-  data: MaybeRefOrGetter<any>,
-  options?: any,
+  options: ContextStorageHandlerMap<T>[K],
 ): void {
-  let injectionKey: InjectionKey<ContextStorageHandler>
-
-  if (typeof type === 'string') {
-    const resolved = resolveHandlerInjectionKey(type)
-    if (!resolved) {
-      throw new Error(
-        `[vue-context-storage] Unknown handler type: "${type}". Use defineContextStorageHandler() to register it.`,
-      )
-    }
-    injectionKey = resolved
-  } else {
-    injectionKey = type as InjectionKey<ContextStorageHandler>
+  const injectionKey = resolveHandlerInjectionKey(type)
+  if (!injectionKey) {
+    throw new Error(
+      `[vue-context-storage] Unknown handler type: "${type}". Use defineContextStorageHandler() to register it.`,
+    )
   }
 
   const handler = inject(injectionKey)
