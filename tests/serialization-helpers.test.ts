@@ -105,15 +105,24 @@ describe('serializeParams', () => {
   })
 
   describe('edge cases', () => {
-    it('should skip empty strings', () => {
+    it('should preserve empty strings', () => {
       const result = serializeParams({ name: '', age: 30 })
       expect(result).toEqual({
+        name: '',
         age: '30',
       })
     })
 
-    it('should skip null values', () => {
+    it('should preserve null values', () => {
       const result = serializeParams({ name: null, age: 30 })
+      expect(result).toEqual({
+        name: null,
+        age: '30',
+      })
+    })
+
+    it('should skip undefined values', () => {
+      const result = serializeParams({ name: undefined, age: 30 })
       expect(result).toEqual({
         age: '30',
       })

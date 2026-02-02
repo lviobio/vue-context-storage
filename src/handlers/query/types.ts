@@ -1,4 +1,4 @@
-import type { LocationQueryValue } from 'vue-router'
+import type { LocationQuery, LocationQueryValue } from 'vue-router'
 import type { MaybeRefOrGetter, UnwrapNestedRefs, WatchHandle } from 'vue'
 import type { ContextStorageHandler, RegisterBaseOptions } from '../../handlers'
 
@@ -15,6 +15,26 @@ export type DeepTransformValuesToLocationQueryValue<T> = {
 }
 
 interface QueryHandlerSharedOptions {
+  /**
+   * Default: false
+   *
+   * If enabled - only values that differ from the initial state will be written to URL.
+   * This keeps URLs clean by omitting default values.
+   *
+   * @example
+   * ```
+   * Options: { onlyChanges: true }
+   *
+   * Initial state: { page: 1, search: '', with_trashed: false }
+   * Current state: { page: 1, search: 'test', with_trashed: true }
+   *
+   * URL will be: ?search=test&with_trashed=1
+   *
+   * The page parameter is omitted because it equals the initial value.
+   * ```
+   */
+  onlyChanges?: boolean
+
   /**
    * Default: false
    *
@@ -155,6 +175,7 @@ export interface IContextStorageQueryHandler<
 export interface ContextStorageQueryRegisteredItem<T extends Record<string, unknown>> {
   data: MaybeRefOrGetter<T>
   initialData: T
+  initialQueryData: LocationQuery
   options: RegisterQueryHandlerOptions<T>
   watchHandle: WatchHandle
 }

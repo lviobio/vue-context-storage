@@ -1,7 +1,7 @@
 import type { ContextStorageHandlerConstructor } from '../../handlers'
 import { deserializeParams, serializeParams } from './helpers'
 import { contextStorageQueryHandler } from '../../symbols'
-import { cloneDeep, isEqual, merge, pick } from 'lodash'
+import { cloneDeep, isEqual, merge, omit, pick } from 'lodash'
 import {
   getCurrentInstance,
   inject,
@@ -89,6 +89,7 @@ export class ContextStorageQueryHandler<
     mergeOnlyExistingKeysWithoutTransform: true,
     preserveUnusedKeys: false,
     preserveEmptyState: false,
+    onlyChanges: true,
   }
 
   // noinspection JSUnusedGlobalSymbols
@@ -209,51 +210,69 @@ export class ContextStorageQueryHandler<
       return
     }
 
-    let deserialized = deserializeParams(this.initialState)
+    let initialState: Record<string, unknown> | undefined | null = deserializeParams(
+      this.initialState,
+    )
 
     const {
       prefix,
       mergeOnlyExistingKeysWithoutTransform = this.options.mergeOnlyExistingKeysWithoutTransform,
+      onlyChanges = this.options.onlyChanges,
     } = item.options || {}
 
     if (typeof prefix === 'string' && prefix.length > 0) {
-      deserialized = deserialized[prefix]
+      initialState = initialState[prefix] as Record<string, unknown> | undefined | null
     }
 
-    if (deserialized === undefined) {
+    if (initialState === undefined) {
       return
     }
 
-    const itemData = toValue(item.data)
+    /**
+     * null can be if query parameter only has a name without a value sign (e.g. /?name)
+     */
+    if (initialState === null) {
+      return
+    }
 
     /**
-     * null can be if query parameter only has a name without a value sign
+     * Current state of the item
      */
-    if (deserialized !== null) {
-      const deserializedKeys = Object.keys(deserialized)
+    const itemState = toValue(item.data)
 
-      /**
-       * If the data is empty, return the initial value.
-       *
-       * This can happen when directly navigating to a route, for example through a menu item.
-       */
-      if (!deserializedKeys.length) {
-        merge(itemData, item.initialData)
-        return
-      }
+    /**
+     * Initial state keys before any manipulation
+     */
+    const initialStateBaseKeys = initialState ? Object.keys(initialState) : []
 
-      if (deserializedKeys.length === 1 && deserialized[this.options.emptyPlaceholder] === null) {
-        delete deserialized[this.options.emptyPlaceholder]
-      }
+    let wasEmptyState = false
+
+    /**
+     * If the data is empty, return the initial value.
+     *
+     * This can happen when directly navigating to a route, for example through a menu item.
+     */
+    if (!initialStateBaseKeys.length) {
+      merge(itemState, item.initialData)
+      return
+    }
+
+    if (initialStateBaseKeys.length === 1 && initialState[this.options.emptyPlaceholder] === null) {
+      delete initialState[this.options.emptyPlaceholder]
+      wasEmptyState = true
+    }
+
+    if (onlyChanges && !wasEmptyState) {
+      merge(initialState, omit(itemState, initialStateBaseKeys))
     }
 
     // Priority: schema > transform > default merge
     if (item.options?.schema) {
       // Use Zod schema for validation and transformation
-      const result = item.options.schema.safeParse(deserialized)
+      const result = item.options.schema.safeParse(initialState)
 
       if (result.success) {
-        deserialized = result.data
+        initialState = result.data
       } else {
         console.warn('[vue-context-storage] schema parse failed', result.error)
       }
@@ -262,18 +281,18 @@ export class ContextStorageQueryHandler<
         console.warn('[vue-context-storage] transform is not supported with schema')
       }
     } else if (item.options?.transform) {
-      deserialized = item.options.transform(deserialized, item.initialData)
+      initialState = item.options.transform(initialState as any, item.initialData)
     } else {
       if (mergeOnlyExistingKeysWithoutTransform) {
-        deserialized = pick(deserialized, Object.keys(item.initialData))
+        initialState = pick(initialState, Object.keys(item.initialData))
       }
     }
 
-    if (isEqual(itemData, deserialized)) {
+    if (isEqual(itemState, initialState)) {
       return
     }
 
-    merge(itemData, deserialized)
+    merge(itemState, initialState)
   }
 
   syncInitialStateToRegistered(): void {
@@ -290,9 +309,13 @@ export class ContextStorageQueryHandler<
       deep: true,
     })
 
+    const initialData = cloneDeep(toValue(data)) as T
+    const initialQueryData = serializeParams(initialData, { prefix: options.prefix })
+
     const item: ContextStorageQueryRegisteredItem<T> = {
       data,
-      initialData: cloneDeep(toValue(data)) as T,
+      initialData,
+      initialQueryData,
       options,
       watchHandle,
     }
@@ -322,10 +345,26 @@ export class ContextStorageQueryHandler<
     const newQueryRaw: LocationQuery = {}
 
     this.registered.forEach((item) => {
-      const { prefix, preserveEmptyState = this.options.preserveEmptyState } = item.options || {}
+      const options = item.options || {}
+      const { prefix, onlyChanges = this.options.onlyChanges } = options
+      let { preserveEmptyState = this.options.preserveEmptyState } = options
       const patch = serializeParams(toValue(item.data), {
         prefix,
       })
+
+      // Remove keys that have the same value as initial
+      if (onlyChanges) {
+        if (preserveEmptyState) {
+          preserveEmptyState = false
+          console.warn('[vue-context-storage] preserveEmptyState is not supported with onlyChanges')
+        }
+
+        Object.keys(patch).forEach((key) => {
+          if (isEqual(patch[key], item.initialQueryData[key])) {
+            delete patch[key]
+          }
+        })
+      }
 
       const patchKeys = Object.keys(patch)
 

@@ -44,21 +44,24 @@ export function serializeParams(
   Object.keys(params).forEach((key) => {
     const value = params[key]
 
-    // Skip empty values, null, and empty arrays
-    if (value === '') {
+    // Skip undefined values (remove key from result)
+    if (value === undefined) {
       return
     }
 
-    if (value === null) {
-      return
-    }
-
+    // Skip empty arrays
     if (Array.isArray(value) && value.length === 0) {
       return
     }
 
     // Format the key with prefix (or without if prefix is empty)
     const formattedKey = prefix ? `${prefix}[${key}]` : key
+
+    // Preserve empty strings and null as-is
+    if (value === '' || value === null) {
+      result[formattedKey] = value
+      return
+    }
 
     if (typeof value === 'object') {
       if (Array.isArray(value)) {
@@ -93,7 +96,7 @@ export function serializeParams(
  * deserializeParams({ 'filters[status]': 'active', search: 'test' })
  * // => { filters: {status: 'active'}, search: 'test' }
  */
-export function deserializeParams(params: Record<string, any>): Record<string, any> {
+export function deserializeParams(params: Record<string, any>) {
   return Object.keys(params).reduce<Record<string, any>>((acc, key) => {
     const value = params[key]
 
@@ -130,5 +133,5 @@ export function deserializeParams(params: Record<string, any>): Record<string, a
     }
 
     return acc
-  }, {})
+  }, {}) as Record<string, unknown>
 }
