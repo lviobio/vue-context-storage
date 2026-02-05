@@ -1,7 +1,9 @@
 import type { ContextStorageHandlerConstructor } from '../../handlers'
 import { deserializeParams, serializeParams } from './helpers'
 import { contextStorageQueryHandler } from '../../symbols'
-import { cloneDeep, isEqual, merge, omit, pick } from 'lodash'
+import { cloneDeep, isEqual, merge, pick } from 'lodash'
+import { buildQuery } from './build-query'
+import { computeSyncState } from './compute-sync-state'
 import {
   getCurrentInstance,
   inject,
@@ -42,30 +44,57 @@ export function useContextStorageQueryHandler<T extends Record<string, unknown>>
   })
 }
 
-function sortQueryByReference(query: LocationQuery, ...references: LocationQuery[]): LocationQuery {
-  const sorted: LocationQuery = {}
+export interface ApplyTransformInput<T extends Record<string, unknown>> {
+  state: Record<string, unknown>
+  initialData: T
+  schema?: {
+    safeParse: (data: unknown) => { success: true; data: any } | { success: false; error: any }
+  }
+  transform?: (deserialized: any, initialData: T) => any
+  mergeOnlyExistingKeysWithoutTransform: boolean
+}
 
-  const referenceKeys = new Set<string>()
+export interface ApplyTransformWarning {
+  message: string
+  args: unknown[]
+}
 
-  references.forEach((reference) => {
-    Object.keys(reference).forEach((key) => {
-      referenceKeys.add(key)
-    })
-  })
+export interface ApplyTransformResult {
+  data: Record<string, unknown>
+  warnings: ApplyTransformWarning[]
+}
 
-  referenceKeys.forEach((key) => {
-    if (key in query && !(key in sorted)) {
-      sorted[key] = query[key]
+export function applyTransform<T extends Record<string, unknown>>(
+  input: ApplyTransformInput<T>,
+): ApplyTransformResult {
+  const warnings: ApplyTransformWarning[] = []
+  let data: Record<string, unknown> = input.state
+
+  // Priority: schema > transform > default merge
+  if (input.schema) {
+    const result = input.schema.safeParse(data)
+
+    if (result.success) {
+      data = result.data
+    } else {
+      warnings.push({ message: '[vue-context-storage] schema parse failed', args: [result.error] })
     }
-  })
 
-  Object.keys(query).forEach((key) => {
-    if (!(key in sorted)) {
-      sorted[key] = query[key]
+    if (input.transform) {
+      warnings.push({
+        message: '[vue-context-storage] transform is not supported with schema',
+        args: [],
+      })
     }
-  })
+  } else if (input.transform) {
+    data = input.transform(data as any, input.initialData)
+  } else {
+    if (input.mergeOnlyExistingKeysWithoutTransform) {
+      data = pick(data, Object.keys(input.initialData))
+    }
+  }
 
-  return sorted
+  return { data, warnings }
 }
 
 export class ContextStorageQueryHandler<
@@ -203,6 +232,10 @@ export class ContextStorageQueryHandler<
     })
   }
 
+  syncInitialStateToRegistered(): void {
+    this.registered.forEach((item) => this.syncInitialStateToRegisteredItem(item))
+  }
+
   syncInitialStateToRegisteredItem<T extends Record<string, unknown>>(
     item: ContextStorageQueryRegisteredItem<T>,
   ): void {
@@ -210,93 +243,48 @@ export class ContextStorageQueryHandler<
       return
     }
 
-    let initialState: Record<string, unknown> | undefined | null = deserializeParams(
-      this.initialState,
-    )
-
     const {
       prefix,
       mergeOnlyExistingKeysWithoutTransform = this.options.mergeOnlyExistingKeysWithoutTransform,
       onlyChanges = this.options.onlyChanges,
     } = item.options || {}
 
-    if (typeof prefix === 'string' && prefix.length > 0) {
-      initialState = initialState[prefix] as Record<string, unknown> | undefined | null
-    }
-
-    if (initialState === undefined) {
-      return
-    }
-
-    /**
-     * null can be if query parameter only has a name without a value sign (e.g. /?name)
-     */
-    if (initialState === null) {
-      return
-    }
-
-    /**
-     * Current state of the item
-     */
     const itemState = toValue(item.data)
 
-    /**
-     * Initial state keys before any manipulation
-     */
-    const initialStateBaseKeys = initialState ? Object.keys(initialState) : []
+    const result = computeSyncState({
+      deserializedState: deserializeParams(this.initialState),
+      itemState,
+      initialData: item.initialData,
+      prefix,
+      onlyChanges,
+      emptyPlaceholder: this.options.emptyPlaceholder,
+    })
 
-    let wasEmptyState = false
-
-    /**
-     * If the data is empty, return the initial value.
-     *
-     * This can happen when directly navigating to a route, for example through a menu item.
-     */
-    if (!initialStateBaseKeys.length) {
-      merge(itemState, item.initialData)
+    if (result.type === 'none') {
       return
     }
 
-    if (initialStateBaseKeys.length === 1 && initialState[this.options.emptyPlaceholder] === null) {
-      delete initialState[this.options.emptyPlaceholder]
-      wasEmptyState = true
-    }
-
-    if (onlyChanges && !wasEmptyState) {
-      merge(initialState, omit(itemState, initialStateBaseKeys))
-    }
-
-    // Priority: schema > transform > default merge
-    if (item.options?.schema) {
-      // Use Zod schema for validation and transformation
-      const result = item.options.schema.safeParse(initialState)
-
-      if (result.success) {
-        initialState = result.data
-      } else {
-        console.warn('[vue-context-storage] schema parse failed', result.error)
-      }
-
-      if (item.options?.transform) {
-        console.warn('[vue-context-storage] transform is not supported with schema')
-      }
-    } else if (item.options?.transform) {
-      initialState = item.options.transform(initialState as any, item.initialData)
-    } else {
-      if (mergeOnlyExistingKeysWithoutTransform) {
-        initialState = pick(initialState, Object.keys(item.initialData))
-      }
-    }
-
-    if (isEqual(itemState, initialState)) {
+    if (result.type === 'reset') {
+      merge(itemState, result.data)
       return
     }
 
-    merge(itemState, initialState)
-  }
+    // result.type === 'sync'
+    const transformed = applyTransform({
+      state: result.data,
+      initialData: item.initialData,
+      schema: item.options?.schema,
+      transform: item.options?.transform,
+      mergeOnlyExistingKeysWithoutTransform,
+    })
 
-  syncInitialStateToRegistered(): void {
-    this.registered.forEach((item) => this.syncInitialStateToRegisteredItem(item))
+    transformed.warnings.forEach((w) => console.warn(w.message, ...w.args))
+
+    if (isEqual(itemState, transformed.data)) {
+      return
+    }
+
+    merge(itemState, transformed.data)
   }
 
   register<T extends Record<string, unknown>>(
@@ -342,78 +330,25 @@ export class ContextStorageQueryHandler<
   }
 
   #buildQueryFromRegistered(): { newQuery: LocationQuery; newQueryRaw: LocationQuery } {
-    const newQueryRaw: LocationQuery = {}
-
-    this.registered.forEach((item) => {
-      const options = item.options || {}
-      const { prefix, onlyChanges = this.options.onlyChanges } = options
-      let { preserveEmptyState = this.options.preserveEmptyState } = options
-      const patch = serializeParams(toValue(item.data), {
-        prefix,
-      })
-
-      // Remove keys that have the same value as initial
-      if (onlyChanges) {
-        if (preserveEmptyState) {
-          preserveEmptyState = false
-          console.warn('[vue-context-storage] preserveEmptyState is not supported with onlyChanges')
-        }
-
-        Object.keys(patch).forEach((key) => {
-          if (isEqual(patch[key], item.initialQueryData[key])) {
-            delete patch[key]
-          }
-        })
-      }
-
-      const patchKeys = Object.keys(patch)
-
-      // If there are key intersections between the query and the patch, a warning is issued.
-      // Patches should not overwrite each other, otherwise, upon reload, an incorrect value will be restored.
-      patchKeys.forEach((key) => {
-        if (newQueryRaw.hasOwnProperty(key)) {
-          console.warn(
-            `[vue-context-storage] Key ${key} is already present, overriding ` +
-              (item.options?.causer || ''),
-          )
-        }
-      })
-
-      if (!patchKeys.length && preserveEmptyState) {
-        patch[prefix || this.options.emptyPlaceholder] = null
-      }
-
-      Object.assign(newQueryRaw, patch)
+    const result = buildQuery({
+      items: this.registered.map((item) => ({
+        data: toValue(item.data) as Record<string, unknown>,
+        initialQueryData: item.initialQueryData,
+        prefix: item.options?.prefix,
+        onlyChanges: item.options?.onlyChanges,
+        preserveEmptyState: item.options?.preserveEmptyState,
+        causer: item.options?.causer,
+      })),
+      currentQuery: this.currentQuery,
+      routeQuery: this.route.query,
+      preserveUnusedKeys: this.options.preserveUnusedKeys,
+      preserveEmptyState: this.options.preserveEmptyState,
+      onlyChanges: this.options.onlyChanges,
+      emptyPlaceholder: this.options.emptyPlaceholder,
     })
 
-    let newQuery = { ...newQueryRaw }
+    result.warnings.forEach((w) => console.warn(w))
 
-    /*
-     * It will not delete from the query the keys that are not used in the patch.
-     *
-     * It will only work if the registered item has a transform, otherwise without
-     * it - all keys are dumped into item.data during the initial fill from initialState
-     */
-    if (this.options.preserveUnusedKeys) {
-      newQuery = { ...this.route.query, ...newQuery }
-    }
-
-    if (this.currentQuery !== undefined) {
-      //Perform a diff of keys between currentQuery and newQueryRaw, and remove the keys that are in currentQuery but not in newQueryRaw.
-      //This is necessary to ensure that the query string does not contain keys that are no longer used.
-      Object.keys(this.currentQuery).forEach((key) => {
-        if (!newQueryRaw.hasOwnProperty(key)) {
-          delete newQuery[key]
-        }
-      })
-    }
-
-    if (Object.keys(newQuery).length > 1 && newQuery[this.options.emptyPlaceholder] === null) {
-      delete newQuery[this.options.emptyPlaceholder]
-    }
-
-    newQuery = sortQueryByReference(newQuery, newQueryRaw)
-
-    return { newQuery, newQueryRaw }
+    return { newQuery: result.newQuery, newQueryRaw: result.newQueryRaw }
   }
 }
