@@ -108,8 +108,9 @@ export class ContextStorageQueryHandler<
   private initialState?: Record<string, unknown>
   private hasAnyRegistered = false
   private preventSyncRegisteredToQueryByAfterEachRoute = false
-  private preventAfterEachRouteCallsWhileCallingRouter = false
+  private preventAfterEachRouteCallsWhileCallingRouter = 0
   private syncToQueryScheduled = false
+  private registeredVersion = 0
 
   static customQueryHandlerOptions: QueryHandlerBaseOptions = {}
 
@@ -212,7 +213,7 @@ export class ContextStorageQueryHandler<
       mode: this.options.mode,
       newQuery,
     })
-    this.preventAfterEachRouteCallsWhileCallingRouter = true
+    this.preventAfterEachRouteCallsWhileCallingRouter++
     try {
       if (this.options.mode === 'replace') {
         await this.router.replace({ ...this.route, query: newQuery })
@@ -222,7 +223,7 @@ export class ContextStorageQueryHandler<
     } catch (e) {
       console.error('[vue-context-storage] Got error while routing', e)
     }
-    this.preventAfterEachRouteCallsWhileCallingRouter = false
+    this.preventAfterEachRouteCallsWhileCallingRouter--
   }
 
   private scheduleSyncToQuery(): void {
@@ -232,9 +233,14 @@ export class ContextStorageQueryHandler<
     }
     console.debug('[query-sync] scheduleSyncToQuery — scheduled microtask')
     this.syncToQueryScheduled = true
+    const version = this.registeredVersion
     queueMicrotask(() => {
-      console.debug('[query-sync] scheduleSyncToQuery — executing microtask')
       this.syncToQueryScheduled = false
+      if (version !== this.registeredVersion) {
+        console.debug('[query-sync] scheduleSyncToQuery — skipped (stale, version changed)')
+        return
+      }
+      console.debug('[query-sync] scheduleSyncToQuery — executing microtask')
       this.syncRegisteredToQuery()
     })
   }
@@ -289,17 +295,14 @@ export class ContextStorageQueryHandler<
 
     const {
       mergeOnlyExistingKeysWithoutTransform = this.options.mergeOnlyExistingKeysWithoutTransform,
-      onlyChanges = this.options.onlyChanges,
     } = item.options || {}
 
     const itemState = toValue(item.data)
 
     const result = computeSyncState({
       deserializedState: deserializeParams(this.initialState),
-      itemState,
       initialData: item.initialData,
       prefix,
-      onlyChanges,
       emptyPlaceholder: this.options.emptyPlaceholder,
     })
 
@@ -318,6 +321,8 @@ export class ContextStorageQueryHandler<
     }
 
     // result.type === 'sync'
+    const urlKeys = new Set(Object.keys(result.data))
+
     const transformed = applyTransform({
       state: result.data,
       initialData: item.initialData,
@@ -328,7 +333,17 @@ export class ContextStorageQueryHandler<
 
     transformed.warnings.forEach((w) => console.warn(w.message, ...w.args))
 
-    if (isEqual(itemState, transformed.data)) {
+    // For non-URL keys, preserve values from itemState instead of using transform fallbacks.
+    // Transform functions are typed for URL-deserialized values (string/null/undefined),
+    // not for already-typed values (boolean/number) that would come from itemState.
+    const finalData: Record<string, unknown> = { ...transformed.data }
+    for (const key of Object.keys(itemState as Record<string, unknown>)) {
+      if (!urlKeys.has(key)) {
+        finalData[key] = (itemState as Record<string, unknown>)[key]
+      }
+    }
+
+    if (isEqual(itemState, finalData)) {
       console.debug(
         '[query-sync] syncInitialStateToRegisteredItem — skipped (data unchanged after transform)',
         { prefix },
@@ -339,9 +354,9 @@ export class ContextStorageQueryHandler<
     console.debug('[query-sync] syncInitialStateToRegisteredItem — merging', {
       prefix,
       from: { ...itemState },
-      to: transformed.data,
+      to: finalData,
     })
-    merge(itemState, transformed.data)
+    merge(itemState, finalData)
   }
 
   register<T extends Record<string, unknown>>(
@@ -397,7 +412,8 @@ export class ContextStorageQueryHandler<
     return (): void => {
       console.debug('[query-sync] unregister', { prefix: options.prefix })
       this.registered.splice(this.registered.indexOf(item), 1)
-      this.scheduleSyncToQuery()
+      this.registeredVersion++
+      this.syncRegisteredToQuery()
     }
   }
 

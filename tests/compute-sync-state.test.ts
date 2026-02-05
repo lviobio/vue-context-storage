@@ -7,13 +7,11 @@ import {
 function createInput<T extends Record<string, unknown>>(
   overrides: Partial<ComputeSyncStateInput<T>> & {
     deserializedState: Record<string, unknown>
-    itemState: T
     initialData: T
   },
 ): ComputeSyncStateInput<T> {
   return {
     prefix: undefined,
-    onlyChanges: false,
     emptyPlaceholder: '_',
     ...overrides,
   }
@@ -25,7 +23,6 @@ describe('computeSyncState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { filters: { search: 'test' } },
-          itemState: { search: '' },
           initialData: { search: '' },
           prefix: 'filters',
         }),
@@ -38,7 +35,6 @@ describe('computeSyncState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { other: { search: 'test' } },
-          itemState: { search: '' },
           initialData: { search: '' },
           prefix: 'filters',
         }),
@@ -51,7 +47,6 @@ describe('computeSyncState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { filters: null },
-          itemState: { search: '' },
           initialData: { search: '' },
           prefix: 'filters',
         }),
@@ -64,7 +59,6 @@ describe('computeSyncState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { search: 'test', page: '2' },
-          itemState: { search: '', page: '1' },
           initialData: { search: '', page: '1' },
         }),
       )
@@ -79,7 +73,6 @@ describe('computeSyncState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { search: 'test' },
-          itemState: { search: '' },
           initialData: { search: '' },
           prefix: '',
         }),
@@ -96,7 +89,6 @@ describe('computeSyncState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: {},
-          itemState: { search: 'current', page: 5 },
           initialData,
         }),
       )
@@ -110,7 +102,6 @@ describe('computeSyncState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { filters: {} },
-          itemState: { search: 'current' },
           initialData,
           prefix: 'filters',
         }),
@@ -125,7 +116,6 @@ describe('computeSyncState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { _: null },
-          itemState: { search: 'test' },
           initialData: { search: '' },
           emptyPlaceholder: '_',
         }),
@@ -138,7 +128,6 @@ describe('computeSyncState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { empty: null },
-          itemState: { search: 'test' },
           initialData: { search: '' },
           emptyPlaceholder: 'empty',
         }),
@@ -151,7 +140,6 @@ describe('computeSyncState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { _: 'something' },
-          itemState: { _: '' },
           initialData: { _: '' },
           emptyPlaceholder: '_',
         }),
@@ -164,7 +152,6 @@ describe('computeSyncState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { _: null, search: 'test' },
-          itemState: { search: '' },
           initialData: { search: '' },
           emptyPlaceholder: '_',
         }),
@@ -179,7 +166,6 @@ describe('computeSyncState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { filters: { _: null } },
-          itemState: { search: '' },
           initialData: { search: '' },
           prefix: 'filters',
           emptyPlaceholder: '_',
@@ -190,30 +176,12 @@ describe('computeSyncState', () => {
     })
   })
 
-  describe('onlyChanges', () => {
-    it('should merge non-URL keys from itemState when onlyChanges is true', () => {
+  describe('URL-only data (no itemState merge)', () => {
+    it('should return only URL-deserialized keys without merging itemState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { search: 'hello' },
-          itemState: { search: 'old', page: 5, status: 'active' },
           initialData: { search: '', page: 1, status: 'active' },
-          onlyChanges: true,
-        }),
-      )
-
-      expect(result).toEqual({
-        type: 'sync',
-        data: { search: 'hello', page: 5, status: 'active' },
-      })
-    })
-
-    it('should not merge itemState keys when onlyChanges is false', () => {
-      const result = computeSyncState(
-        createInput({
-          deserializedState: { search: 'hello' },
-          itemState: { search: 'old', page: 5, status: 'active' },
-          initialData: { search: '', page: 1, status: 'active' },
-          onlyChanges: false,
         }),
       )
 
@@ -223,54 +191,18 @@ describe('computeSyncState', () => {
       })
     })
 
-    it('should not merge itemState keys when wasEmptyState is true', () => {
-      const result = computeSyncState(
-        createInput({
-          deserializedState: { _: null },
-          itemState: { search: 'current', page: 5 },
-          initialData: { search: '', page: 1 },
-          onlyChanges: true,
-          emptyPlaceholder: '_',
-        }),
-      )
-
-      // Empty placeholder was removed, wasEmptyState=true, so onlyChanges merge is skipped
-      expect(result).toEqual({ type: 'sync', data: {} })
-    })
-
-    it('should keep URL keys and add missing keys from itemState', () => {
-      const result = computeSyncState(
-        createInput({
-          deserializedState: { page: '3' },
-          itemState: { page: 1, search: 'test', tags: ['a', 'b'] },
-          initialData: { page: 1, search: '', tags: [] as string[] },
-          onlyChanges: true,
-        }),
-      )
-
-      expect(result.type).toBe('sync')
-      const data = (result as any).data
-      // URL key 'page' should have the URL value
-      expect(data.page).toBe('3')
-      // Non-URL keys should come from itemState
-      expect(data.search).toBe('test')
-      expect(data.tags).toEqual(['a', 'b'])
-    })
-
-    it('should work with prefix and onlyChanges', () => {
+    it('should return only URL key even with prefix', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { filters: { search: 'hello' } },
-          itemState: { search: 'old', page: 5 },
           initialData: { search: '', page: 1 },
           prefix: 'filters',
-          onlyChanges: true,
         }),
       )
 
       expect(result).toEqual({
         type: 'sync',
-        data: { search: 'hello', page: 5 },
+        data: { search: 'hello' },
       })
     })
   })
@@ -283,28 +215,11 @@ describe('computeSyncState', () => {
       computeSyncState(
         createInput({
           deserializedState,
-          itemState: { search: '' },
           initialData: { search: '' },
         }),
       )
 
       expect(deserializedState).toEqual(original)
-    })
-
-    it('should not mutate itemState', () => {
-      const itemState = { search: 'current', page: 5 }
-      const original = { ...itemState }
-
-      computeSyncState(
-        createInput({
-          deserializedState: { search: 'new' },
-          itemState,
-          initialData: { search: '', page: 1 },
-          onlyChanges: true,
-        }),
-      )
-
-      expect(itemState).toEqual(original)
     })
 
     it('should not mutate initialData', () => {
@@ -314,7 +229,6 @@ describe('computeSyncState', () => {
       computeSyncState(
         createInput({
           deserializedState: {},
-          itemState: { search: 'current' },
           initialData,
         }),
       )
@@ -330,7 +244,6 @@ describe('computeSyncState', () => {
           deserializedState: {
             filters: { price: { min: '0', max: '100' } },
           },
-          itemState: { price: { min: 0, max: 1000 } },
           initialData: { price: { min: 0, max: 1000 } },
           prefix: 'filters',
         }),
@@ -344,7 +257,6 @@ describe('computeSyncState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { search: 'test' },
-          itemState: { search: '' },
           initialData: { search: '' },
         }),
       )
@@ -357,7 +269,6 @@ describe('computeSyncState', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { search: null },
-          itemState: { search: '' },
           initialData: { search: '' },
           emptyPlaceholder: '_',
         }),

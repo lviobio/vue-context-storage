@@ -1,14 +1,11 @@
-import { merge, omit } from 'lodash'
+import { omit } from 'lodash'
 
 export interface ComputeSyncStateInput<T extends Record<string, unknown>> {
   /** Deserialized state from URL query (output of deserializeParams) */
   deserializedState: Record<string, unknown>
-  /** Current state of the item (already unwrapped from reactive) */
-  itemState: T
   /** Snapshot of data at registration time */
   initialData: T
   prefix?: string
-  onlyChanges: boolean
   emptyPlaceholder: string
 }
 
@@ -51,16 +48,9 @@ export function computeSyncState<T extends Record<string, unknown>>(
     return { type: 'reset', data: input.initialData }
   }
 
-  let wasEmptyState = false
-
   if (stateBaseKeys.length === 1 && state[input.emptyPlaceholder] === null) {
     state = omit(state, [input.emptyPlaceholder]) as Record<string, unknown>
-    wasEmptyState = true
   }
 
-  if (input.onlyChanges && !wasEmptyState) {
-    state = merge({}, state, omit(input.itemState as Record<string, unknown>, stateBaseKeys))
-  }
-
-  return { type: 'sync', data: state }
+  return { type: 'sync', data: state as Record<string, unknown> }
 }
