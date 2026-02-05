@@ -109,6 +109,7 @@ export class ContextStorageQueryHandler<
   private hasAnyRegistered = false
   private preventSyncRegisteredToQueryByAfterEachRoute = false
   private preventAfterEachRouteCallsWhileCallingRouter = false
+  private syncToQueryScheduled = false
 
   static customQueryHandlerOptions: QueryHandlerBaseOptions = {}
 
@@ -165,13 +166,21 @@ export class ContextStorageQueryHandler<
   setEnabled(state: boolean, initial: boolean): void {
     const prevState = this.enabled
     this.enabled = state
+    console.debug('[query-sync] setEnabled', {
+      state,
+      prevState,
+      initial,
+      hasAnyRegistered: this.hasAnyRegistered,
+    })
 
     if (this.hasAnyRegistered) {
       if (initial) {
+        console.debug('[query-sync] setEnabled → syncInitialStateToRegistered', this.initialState)
         this.syncInitialStateToRegistered()
       }
 
       if ((state && !prevState) || !initial) {
+        console.debug('[query-sync] setEnabled → syncRegisteredToQuery')
         this.syncRegisteredToQuery()
       }
     }
@@ -179,10 +188,14 @@ export class ContextStorageQueryHandler<
 
   async syncRegisteredToQuery(): Promise<void> {
     if (!this.enabled) {
+      console.debug('[query-sync] syncRegisteredToQuery — skipped (disabled)')
       return
     }
 
     if (this.preventSyncRegisteredToQueryByAfterEachRoute) {
+      console.debug(
+        '[query-sync] syncRegisteredToQuery — skipped (preventSyncRegisteredToQueryByAfterEachRoute)',
+      )
       return
     }
 
@@ -191,9 +204,14 @@ export class ContextStorageQueryHandler<
     this.currentQuery = newQueryRaw
 
     if (isEqual(newQuery, this.route.query)) {
+      console.debug('[query-sync] syncRegisteredToQuery — skipped (query unchanged)')
       return
     }
 
+    console.debug('[query-sync] syncRegisteredToQuery — updating URL', {
+      mode: this.options.mode,
+      newQuery,
+    })
     this.preventAfterEachRouteCallsWhileCallingRouter = true
     try {
       if (this.options.mode === 'replace') {
@@ -207,26 +225,47 @@ export class ContextStorageQueryHandler<
     this.preventAfterEachRouteCallsWhileCallingRouter = false
   }
 
+  private scheduleSyncToQuery(): void {
+    if (this.syncToQueryScheduled) {
+      console.debug('[query-sync] scheduleSyncToQuery — deduplicated (already scheduled)')
+      return
+    }
+    console.debug('[query-sync] scheduleSyncToQuery — scheduled microtask')
+    this.syncToQueryScheduled = true
+    queueMicrotask(() => {
+      console.debug('[query-sync] scheduleSyncToQuery — executing microtask')
+      this.syncToQueryScheduled = false
+      this.syncRegisteredToQuery()
+    })
+  }
+
   afterEachRoute(): void {
     if (!this.enabled) {
+      console.debug('[query-sync] afterEachRoute — skipped (disabled)')
       return
     }
 
     if (this.preventAfterEachRouteCallsWhileCallingRouter) {
+      console.debug(
+        '[query-sync] afterEachRoute — skipped (preventAfterEachRouteCallsWhileCallingRouter)',
+      )
       return
     }
 
+    console.debug(
+      '[query-sync] afterEachRoute — setting initial state from route query',
+      this.route.query,
+    )
     this.setInitialState(this.route.query)
 
     this.preventSyncRegisteredToQueryByAfterEachRoute = true
     queueMicrotask(() => {
+      console.debug(
+        '[query-sync] afterEachRoute microtask — syncInitialStateToRegistered + syncRegisteredToQuery',
+        this.initialState,
+      )
       this.preventSyncRegisteredToQueryByAfterEachRoute = false
 
-      this.syncInitialStateToRegistered()
-      this.syncRegisteredToQuery()
-    })
-
-    setTimeout(() => {
       this.syncInitialStateToRegistered()
       this.syncRegisteredToQuery()
     })
@@ -239,12 +278,16 @@ export class ContextStorageQueryHandler<
   syncInitialStateToRegisteredItem<T extends Record<string, unknown>>(
     item: ContextStorageQueryRegisteredItem<T>,
   ): void {
+    const prefix = item.options?.prefix
+
     if (this.initialState === undefined) {
+      console.debug('[query-sync] syncInitialStateToRegisteredItem — skipped (no initial state)', {
+        prefix,
+      })
       return
     }
 
     const {
-      prefix,
       mergeOnlyExistingKeysWithoutTransform = this.options.mergeOnlyExistingKeysWithoutTransform,
       onlyChanges = this.options.onlyChanges,
     } = item.options || {}
@@ -261,10 +304,15 @@ export class ContextStorageQueryHandler<
     })
 
     if (result.type === 'none') {
+      console.debug('[query-sync] syncInitialStateToRegisteredItem — no changes', { prefix })
       return
     }
 
     if (result.type === 'reset') {
+      console.debug('[query-sync] syncInitialStateToRegisteredItem — reset', {
+        prefix,
+        data: result.data,
+      })
       merge(itemState, result.data)
       return
     }
@@ -281,9 +329,18 @@ export class ContextStorageQueryHandler<
     transformed.warnings.forEach((w) => console.warn(w.message, ...w.args))
 
     if (isEqual(itemState, transformed.data)) {
+      console.debug(
+        '[query-sync] syncInitialStateToRegisteredItem — skipped (data unchanged after transform)',
+        { prefix },
+      )
       return
     }
 
+    console.debug('[query-sync] syncInitialStateToRegisteredItem — merging', {
+      prefix,
+      from: { ...itemState },
+      to: transformed.data,
+    })
     merge(itemState, transformed.data)
   }
 
@@ -293,9 +350,16 @@ export class ContextStorageQueryHandler<
   ): () => void {
     this.hasAnyRegistered = true
 
-    const watchHandle = watch(data, () => this.syncRegisteredToQuery(), {
-      deep: true,
-    })
+    const watchHandle = watch(
+      data,
+      () => {
+        console.debug('[query-sync] watcher triggered', { prefix: options.prefix })
+        this.scheduleSyncToQuery()
+      },
+      {
+        deep: true,
+      },
+    )
 
     const initialData = cloneDeep(toValue(data)) as T
     const initialQueryData = serializeParams(initialData, { prefix: options.prefix })
@@ -310,22 +374,30 @@ export class ContextStorageQueryHandler<
     this.registered.push(item)
 
     const syncCallback = (): void => {
+      console.debug('[query-sync] register syncCallback executing', { prefix: options.prefix })
       this.syncInitialStateToRegisteredItem(item)
-      this.syncRegisteredToQuery()
+      this.scheduleSyncToQuery()
     }
 
     if (this.preventAfterEachRouteCallsWhileCallingRouter) {
+      console.debug('[query-sync] register — scheduling syncCallback via setTimeout (HMR path)', {
+        prefix: options.prefix,
+      })
       /**
        * Macrotask solves syncing issues when syncRegisteredToQuery called after HMR
        */
       setTimeout(syncCallback)
     } else {
+      console.debug('[query-sync] register — scheduling syncCallback via microtask', {
+        prefix: options.prefix,
+      })
       queueMicrotask(syncCallback)
     }
 
     return (): void => {
+      console.debug('[query-sync] unregister', { prefix: options.prefix })
       this.registered.splice(this.registered.indexOf(item), 1)
-      this.syncRegisteredToQuery()
+      this.scheduleSyncToQuery()
     }
   }
 
