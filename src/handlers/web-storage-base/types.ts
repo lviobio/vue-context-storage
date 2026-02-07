@@ -1,5 +1,6 @@
 import type { MaybeRefOrGetter, UnwrapNestedRefs, WatchHandle } from 'vue'
 import type { ContextStorageHandler, RegisterBaseOptions } from '../../handlers'
+import type { HandlerSchema } from '../types'
 
 export interface WebStorageHandlerBaseOptions {
   /**
@@ -51,10 +52,7 @@ export interface RegisterWebStorageHandlerBaseOptions<T> {
    * })
    * ```
    */
-  schema?: {
-    safeParse: (data: unknown) => { success: true; data: T } | { success: false; error: any }
-    parse: (data: unknown) => T
-  }
+  schema?: HandlerSchema<T>
 
   /**
    * Custom serializer function. Defaults to JSON.stringify.

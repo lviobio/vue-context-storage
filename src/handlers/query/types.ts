@@ -1,6 +1,7 @@
 import type { LocationQuery, LocationQueryValue } from 'vue-router'
 import type { MaybeRefOrGetter, UnwrapNestedRefs, WatchHandle } from 'vue'
 import type { ContextStorageHandler, RegisterBaseOptions } from '../../handlers'
+import type { HandlerSchema } from '../types'
 
 export type QueryValue = LocationQueryValue | LocationQueryValue[]
 
@@ -154,10 +155,7 @@ export interface RegisterQueryHandlerBaseOptions<T> extends QueryHandlerSharedOp
    * })
    * ```
    */
-  schema?: {
-    safeParse: (data: unknown) => { success: true; data: T } | { success: false; error: any }
-    parse: (data: unknown) => T
-  }
+  schema?: HandlerSchema<T>
 }
 
 export interface RegisterQueryHandlerOptions<T>
