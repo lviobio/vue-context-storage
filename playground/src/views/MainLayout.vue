@@ -4,22 +4,30 @@ import { computed, h } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
 const route = useRoute()
-
-const activeKey = computed(() => route.name as string)
+const activeKey = computed(() => route.matched[1]?.name as string)
 
 const menuOptions = [
   {
-    label: () => h(RouterLink, { to: '/' }, { default: () => 'Query Handler' }),
-    key: 'query',
-  },
-  {
-    label: () => h(RouterLink, { to: '/local-storage' }, { default: () => 'LocalStorage Handler' }),
-    key: 'local-storage',
+    label: () => h(RouterLink, { to: { name: 'demo.query' } }, { default: () => 'Query Handler' }),
+    key: 'demo.query',
   },
   {
     label: () =>
-      h(RouterLink, { to: '/session-storage' }, { default: () => 'SessionStorage Handler' }),
-    key: 'session-storage',
+      h(
+        RouterLink,
+        { to: { name: 'demo.local-storage' } },
+        { default: () => 'LocalStorage Handler' },
+      ),
+    key: 'demo.local-storage',
+  },
+  {
+    label: () =>
+      h(
+        RouterLink,
+        { to: { name: 'demo.session-storage' } },
+        { default: () => 'SessionStorage Handler' },
+      ),
+    key: 'demo.session-storage',
   },
 ]
 </script>
@@ -28,7 +36,7 @@ const menuOptions = [
   <NLayout>
     <NLayoutHeader bordered class="header main-header">
       <RouterLink to="/" class="title">Vue Context Storage</RouterLink>
-      <NMenu mode="horizontal" :value="activeKey" :options="menuOptions" class="nav-menu" />
+      <NMenu mode="horizontal" :value="activeKey" :options="menuOptions" />
       <a
         href="https://github.com/lviobio/vue-context-storage"
         target="_blank"
@@ -65,14 +73,6 @@ const menuOptions = [
   white-space: nowrap;
   text-decoration: none;
   color: inherit;
-}
-
-.nav-menu {
-  flex: 1;
-}
-
-.nav-menu :deep(a) {
-  text-decoration: none;
 }
 
 .github-link {

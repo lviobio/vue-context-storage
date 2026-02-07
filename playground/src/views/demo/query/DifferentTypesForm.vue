@@ -10,14 +10,9 @@ import {
   NInput,
   NInputNumber,
 } from 'naive-ui'
-import { transform, useContextStorage } from '../../../src'
+import { transform, useContextStorage } from '../../../../../src'
 
-const onlyChangesKey = 'query-handler.demo.onlyChanges'
-const onlyChanges = (sessionStorage.getItem(onlyChangesKey) ?? 'true') === 'true'
-const handleUpdateOnlyChanges = (value: boolean) => {
-  sessionStorage.setItem(onlyChangesKey, String(value))
-  window.location.reload()
-}
+const { onlyChanges } = defineProps<{ onlyChanges: boolean }>()
 
 const data = reactive({
   name: 'John',
@@ -29,13 +24,15 @@ const data = reactive({
 
 useContextStorage('query', data, {
   onlyChanges: onlyChanges,
-  transform: (value) => ({
-    name: transform.asString(value.name),
-    title: transform.asString(value.title, { nullable: true }),
-    search: transform.asString(value.search, { missable: true }),
-    number: transform.asNumber(value.number, { nullable: true }),
-    switch: transform.asBoolean(value.switch),
-  }),
+  transform: (value) => {
+    return {
+      name: transform.asString(value.name),
+      title: transform.asString(value.title, { nullable: true }),
+      search: transform.asString(value.search, { missable: true }),
+      number: transform.asNumber(value.number, { nullable: true }),
+      switch: transform.asBoolean(value.switch),
+    }
+  },
 })
 
 const exampleCode = `import { reactive } from 'vue'
@@ -63,15 +60,6 @@ useContextStorage('query', data, {
 </script>
 
 <template>
-  <h2 class="text-xl font-semibold mb-4">Query Handler Demo</h2>
-  <p class="text-sm text-gray-500 mb-4">
-    Data is synced with URL query parameters. Changes are reflected in the URL.
-  </p>
-
-  <NFormItem label="Sync only changed values" label-placement="left">
-    <NSwitch :value="onlyChanges" @update:value="handleUpdateOnlyChanges" />
-  </NFormItem>
-
   <NForm label-placement="left" label-width="80" class="max-w-lg">
     <NFormItem label="Name" feedback="This field can be only string">
       <NInput v-model:value="data.name" placeholder="Enter name" />

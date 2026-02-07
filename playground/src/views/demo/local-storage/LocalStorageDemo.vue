@@ -12,7 +12,7 @@ import {
   NCollapse,
   NCollapseItem,
 } from 'naive-ui'
-import { useContextStorage } from '../../../src'
+import { useContextStorage } from '../../../../../src'
 
 const settings = reactive({
   theme: 'light',

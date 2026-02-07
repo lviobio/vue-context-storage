@@ -4,21 +4,35 @@ const routes = [
   {
     path: '/',
     component: () => import('./views/MainLayout.vue'),
+    redirect: '/query',
     children: [
       {
-        path: '/',
-        name: 'query',
-        component: () => import('./views/Home.vue'),
+        path: 'query',
+        name: 'demo.query',
+        component: () => import('./views/demo/query/QueryDemoLayout.vue'),
+        redirect: '/query/different-types',
+        children: [
+          {
+            path: 'different-types',
+            name: 'demo.query.different-types',
+            component: () => import('./views/demo/query/DifferentTypes.vue'),
+          },
+          {
+            path: 'complex-form',
+            name: 'demo.query.complex-form',
+            component: () => import('./views/demo/query/ComplexForm.vue'),
+          },
+        ],
       },
       {
-        path: '/local-storage',
-        name: 'local-storage',
-        component: () => import('./views/LocalStorageDemo.vue'),
+        path: 'local-storage',
+        name: 'demo.local-storage',
+        component: () => import('./views/demo/local-storage/LocalStorageDemo.vue'),
       },
       {
-        path: '/session-storage',
-        name: 'session-storage',
-        component: () => import('./views/SessionStorageDemo.vue'),
+        path: 'session-storage',
+        name: 'demo.session-storage',
+        component: () => import('./views/demo/session-storage/SessionStorageDemo.vue'),
       },
     ],
   },
