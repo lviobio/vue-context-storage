@@ -38,7 +38,7 @@ export function useContextStorageQueryHandler<T extends Record<string, unknown>>
 
   const causer = new Error().stack?.split('\n')[2]?.trimStart() || 'unknown'
 
-  const stop = handler.register(data, { causer, uid, ...options })
+  const { stop } = handler.register(data, { causer, uid, ...options })
   onBeforeUnmount(() => {
     stop()
   })
@@ -362,7 +362,7 @@ export class ContextStorageQueryHandler<
   register<T extends Record<string, unknown>>(
     data: MaybeRefOrGetter<T>,
     options: RegisterQueryHandlerOptions<T>,
-  ): () => void {
+  ) {
     this.hasAnyRegistered = true
 
     const watchHandle = watch(
@@ -409,11 +409,13 @@ export class ContextStorageQueryHandler<
       queueMicrotask(syncCallback)
     }
 
-    return (): void => {
-      console.debug('[query-sync] unregister', { prefix: options.prefix })
-      this.registered.splice(this.registered.indexOf(item), 1)
-      this.registeredVersion++
-      this.syncRegisteredToQuery()
+    return {
+      stop: () => {
+        console.debug('[query-sync] unregister', { prefix: options.prefix })
+        this.registered.splice(this.registered.indexOf(item), 1)
+        this.registeredVersion++
+        this.syncRegisteredToQuery()
+      },
     }
   }
 

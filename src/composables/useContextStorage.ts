@@ -5,7 +5,10 @@ export function useContextStorage<K extends keyof ContextStorageHandlerMap<T>, T
   type: K,
   data: MaybeRefOrGetter<T>,
   options: ContextStorageHandlerMap<T>[K],
-): void {
+): {
+  data: MaybeRefOrGetter<T>
+  stop: () => void
+} {
   const injectionKey = resolveHandlerInjectionKey(type)
   if (!injectionKey) {
     throw new Error(
@@ -22,8 +25,13 @@ export function useContextStorage<K extends keyof ContextStorageHandlerMap<T>, T
   const uid = currentInstance?.uid || 0
   const causer = new Error().stack?.split('\n')[2]?.trimStart() || 'unknown'
 
-  const stop = handler.register(data, { causer, uid, ...options })
+  const { stop } = handler.register(data, { causer, uid, ...options })
   onBeforeUnmount(() => {
     stop()
   })
+
+  return {
+    data,
+    stop,
+  }
 }

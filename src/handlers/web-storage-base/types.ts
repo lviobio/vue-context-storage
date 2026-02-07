@@ -1,5 +1,5 @@
 import type { MaybeRefOrGetter, UnwrapNestedRefs, WatchHandle } from 'vue'
-import type { ContextStorageHandler, RegisterBaseOptions } from '../../handlers'
+import type { ContextStorageHandler, RegisterBaseOptions, RegisterResult } from '../../handlers'
 import type { HandlerSchema } from '../types'
 
 export interface WebStorageHandlerBaseOptions {
@@ -74,7 +74,7 @@ export interface IContextStorageWebStorageHandler<
   register: <T extends Record<string, unknown>>(
     data: MaybeRefOrGetter<T>,
     options: RegisterWebStorageHandlerOptions<T>,
-  ) => () => void
+  ) => RegisterResult
 }
 
 export interface ContextStorageWebStorageRegisteredItem<T extends Record<string, unknown>> {

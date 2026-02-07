@@ -32,7 +32,7 @@ export abstract class ContextStorageWebStorageHandler<
 
   private storageEventHandler: ((event: StorageEvent) => void) | null = null
 
-  constructor(defaultOptions: Required<WebStorageHandlerBaseOptions>) {
+  protected constructor(defaultOptions: Required<WebStorageHandlerBaseOptions>) {
     this.options = { ...defaultOptions }
   }
 
@@ -231,7 +231,7 @@ export abstract class ContextStorageWebStorageHandler<
   register<T extends Record<string, unknown>>(
     data: MaybeRefOrGetter<T>,
     options: RegisterWebStorageHandlerOptions<T>,
-  ): () => void {
+  ) {
     if (!options.key) {
       throw new Error('[vue-context-storage] Storage handler requires a key option')
     }
@@ -252,9 +252,11 @@ export abstract class ContextStorageWebStorageHandler<
 
     this.syncStorageToRegisteredItem(item)
 
-    return (): void => {
-      watchHandle.stop()
-      this.registered.splice(this.registered.indexOf(item), 1)
+    return {
+      stop: () => {
+        watchHandle.stop()
+        this.registered.splice(this.registered.indexOf(item), 1)
+      },
     }
   }
 }
@@ -284,7 +286,7 @@ export function createWebStorageComposable<Handler extends ContextStorageWebStor
 
     const causer = new Error().stack?.split('\n')[2]?.trimStart() || 'unknown'
 
-    const stop = handler.register(data, { causer, uid, ...options })
+    const { stop } = handler.register(data, { causer, uid, ...options })
     onBeforeUnmount(() => {
       stop()
     })

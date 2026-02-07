@@ -10,8 +10,12 @@ export interface RegisterBaseOptions {
   uid: number
 }
 
+export interface RegisterResult {
+  stop: () => void
+}
+
 export interface ContextStorageHandler<T> {
-  register: (data: MaybeRefOrGetter<T>, options: RegisterBaseOptions) => () => void
+  register: (data: MaybeRefOrGetter<T>, options: RegisterBaseOptions) => RegisterResult
   setInitialState?: (state: Record<string, unknown>) => void
   setEnabled?: (enabled: boolean, initial: boolean) => void
   getInjectionKey(): InjectionKey<ContextStorageHandler<T>>
