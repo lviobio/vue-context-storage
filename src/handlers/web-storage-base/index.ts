@@ -250,15 +250,10 @@ export abstract class ContextStorageWebStorageHandler<
     }
     this.registered.push(item)
 
-    const syncCallback = (): void => {
-      this.syncStorageToRegisteredItem(item)
-      this.syncRegisteredToStorage()
-    }
-
-    queueMicrotask(syncCallback)
+    this.syncStorageToRegisteredItem(item)
 
     return (): void => {
-      watchHandle()
+      watchHandle.stop()
       this.registered.splice(this.registered.indexOf(item), 1)
     }
   }
