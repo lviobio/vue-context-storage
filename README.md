@@ -49,12 +49,12 @@ In Vue applications, reactive state often needs to live beyond a single componen
 
 `vue-context-storage` eliminates that repetitive work. You declare your reactive state once, point it at a storage target, and the library handles the rest:
 
-- **URL query parameters** stay in sync with your data automatically -- users can bookmark or share a page and get the exact same state back.
+- **URL query parameters** stay in sync with your data automatically - users can bookmark or share a page and get the exact same state back.
 - **localStorage and sessionStorage** are kept up to date without manual `getItem`/`setItem` calls, including cross-tab synchronization.
 - **Type safety** is preserved end-to-end: URL strings are coerced back to numbers, booleans, and arrays via transform helpers or Zod schemas.
 - **Multiple independent contexts** (e.g. two data tables on the same page) are supported out of the box through the prefix pattern, so query parameters never collide.
 
-The goal is a single, declarative API -- `useContextStorage('query', data, options)` -- that replaces scattered watchers, router guards, and storage listeners with one composable call per piece of state.
+The goal is a single, declarative API - `useContextStorage('query', data, options)` - that replaces scattered watchers, router guards, and storage listeners with one composable call per piece of state.
 
 ## Basic Usage
 
