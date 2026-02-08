@@ -1,31 +1,24 @@
-import type { ContextStorageHandlerConstructor } from '../../handlers'
+import type { ContextStorageHandler, ContextStorageHandlerConstructor } from '../../handlers'
 import { deserializeParams, serializeParams } from './helpers'
 import { contextStorageQueryHandler } from '../../symbols'
 import { cloneDeep, isEqual, merge, pick } from 'lodash'
 import { buildQuery } from './build-query'
 import { computeSyncState } from './compute-sync-state'
-import {
-  getCurrentInstance,
-  inject,
-  type MaybeRefOrGetter,
-  onBeforeUnmount,
-  toValue,
-  watch,
-} from 'vue'
+import { computed, inject, type MaybeRefOrGetter, onBeforeUnmount, toValue, watch } from 'vue'
 import { type LocationQuery, useRoute, useRouter } from 'vue-router'
 import type {
   ContextStorageQueryRegisteredItem,
-  IContextStorageQueryHandler,
   QueryHandlerBaseOptions,
-  RegisterQueryHandlerBaseOptions,
   RegisterQueryHandlerOptions,
 } from './types'
+import { buildContextStorageHandler } from '../helpers'
+import type { UseContextStorageResult } from '../../composables/types'
 
 export function useContextStorageQueryHandler<T extends Record<string, unknown>>(
   data: MaybeRefOrGetter<T>,
-  options?: RegisterQueryHandlerBaseOptions<T>,
-): void {
-  const handler = inject<InstanceType<typeof ContextStorageQueryHandler>>(
+  options?: RegisterQueryHandlerOptions<T>,
+): UseContextStorageResult<T> {
+  const handler = inject<InstanceType<typeof ContextStorageQueryHandler<T>>>(
     contextStorageQueryHandler,
   )
 
@@ -33,15 +26,7 @@ export function useContextStorageQueryHandler<T extends Record<string, unknown>>
     throw new Error('[vue-context-storage] ContextStorageQueryHandler is not provided')
   }
 
-  const currentInstance = getCurrentInstance()
-  const uid = currentInstance?.uid || 0
-
-  const causer = new Error().stack?.split('\n')[2]?.trimStart() || 'unknown'
-
-  const { stop } = handler.register(data, { causer, uid, ...options })
-  onBeforeUnmount(() => {
-    stop()
-  })
+  return buildContextStorageHandler(handler, data, options)
 }
 
 export interface ApplyTransformInput<T extends Record<string, unknown>> {
@@ -99,7 +84,7 @@ export function applyTransform<T extends Record<string, unknown>>(
 
 export class ContextStorageQueryHandler<
   T extends Record<string, unknown>,
-> implements IContextStorageQueryHandler<T> {
+> implements ContextStorageHandler<T, RegisterQueryHandlerOptions<T>> {
   private enabled = false
   private registered: ContextStorageQueryRegisteredItem<any>[] = []
   private currentQuery: LocationQuery | undefined = undefined
@@ -409,6 +394,8 @@ export class ContextStorageQueryHandler<
       queueMicrotask(syncCallback)
     }
 
+    const wasChanged = computed(() => !isEqual(toValue(data), initialData))
+
     return {
       stop: () => {
         console.debug('[query-sync] unregister', { prefix: options.prefix })
@@ -416,6 +403,7 @@ export class ContextStorageQueryHandler<
         this.registeredVersion++
         this.syncRegisteredToQuery()
       },
+      wasChanged,
     }
   }
 

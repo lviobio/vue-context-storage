@@ -1,6 +1,6 @@
 import { cloneDeep, isEqual, merge, pick } from 'lodash'
 import {
-  getCurrentInstance,
+  computed,
   inject,
   type InjectionKey,
   type MaybeRefOrGetter,
@@ -10,15 +10,16 @@ import {
 } from 'vue'
 import type {
   ContextStorageWebStorageRegisteredItem,
-  IContextStorageWebStorageHandler,
-  RegisterWebStorageHandlerBaseOptions,
   RegisterWebStorageHandlerOptions,
   WebStorageHandlerBaseOptions,
 } from './types'
+import { buildContextStorageHandler } from '../helpers'
+import type { ContextStorageHandler } from '../../handlers'
+import type { UseContextStorageResult } from '../../composables/types'
 
 export abstract class ContextStorageWebStorageHandler<
   T extends Record<string, unknown>,
-> implements IContextStorageWebStorageHandler<T> {
+> implements ContextStorageHandler<T, RegisterWebStorageHandlerOptions<T>> {
   protected enabled = false
   protected registered: ContextStorageWebStorageRegisteredItem<any>[] = []
   protected initialState?: Record<string, unknown>
@@ -252,43 +253,38 @@ export abstract class ContextStorageWebStorageHandler<
 
     this.syncStorageToRegisteredItem(item)
 
+    const wasChanged = computed(() => !isEqual(toValue(data), item.initialData))
+
     return {
       stop: () => {
         watchHandle.stop()
         this.registered.splice(this.registered.indexOf(item), 1)
       },
+      wasChanged,
     }
   }
 }
 
-/**
- * Options for the web storage composable with required key
- */
-export type UseWebStorageOptions<T> = RegisterWebStorageHandlerBaseOptions<T> &
-  Required<Pick<RegisterWebStorageHandlerBaseOptions<T>, 'key'>>
+// /**
+//  * Options for the web storage composable with required key
+//  */
+// export type UseWebStorageOptions<T> = RegisterWebStorageHandlerBaseOptions<T> &
+//   Required<Pick<RegisterWebStorageHandlerBaseOptions<T>, 'key'>>
 
-export function createWebStorageComposable<Handler extends ContextStorageWebStorageHandler<any>>(
-  injectionKey: InjectionKey<Handler>,
-  handlerName: string,
-) {
-  return function useContextStorageWebStorage<T extends Record<string, unknown>>(
+export function createWebStorageComposable<
+  Handler extends ContextStorageWebStorageHandler<T>,
+  T extends Record<string, unknown>,
+>(injectionKey: InjectionKey<Handler>, handlerName: string) {
+  return function useContextStorageWebStorage(
     data: MaybeRefOrGetter<T>,
-    options: UseWebStorageOptions<T>,
-  ): void {
+    options: RegisterWebStorageHandlerOptions<T>,
+  ): UseContextStorageResult<T> {
     const handler = inject<Handler>(injectionKey)
 
     if (!handler) {
       throw new Error(`[vue-context-storage] ${handlerName} is not provided`)
     }
 
-    const currentInstance = getCurrentInstance()
-    const uid = currentInstance?.uid || 0
-
-    const causer = new Error().stack?.split('\n')[2]?.trimStart() || 'unknown'
-
-    const { stop } = handler.register(data, { causer, uid, ...options })
-    onBeforeUnmount(() => {
-      stop()
-    })
+    return buildContextStorageHandler(handler, data, options)
   }
 }

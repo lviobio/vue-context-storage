@@ -1,8 +1,12 @@
-import type { ContextStorageHandler, ContextStorageHandlerConstructor } from './handlers'
+import type {
+  ContextStorageHandler,
+  ContextStorageHandlerConstructor,
+  RegisterOptions,
+} from './handlers'
 
 export type CollectionManagerItem = {
   key: string
-  handlers: ContextStorageHandler<any>[]
+  handlers: ContextStorageHandler<any, RegisterOptions<any>>[]
 }
 
 interface ItemOptions {

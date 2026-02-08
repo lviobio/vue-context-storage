@@ -1,6 +1,5 @@
 import type { MaybeRefOrGetter, UnwrapNestedRefs, WatchHandle } from 'vue'
-import type { ContextStorageHandler, RegisterBaseOptions, RegisterResult } from '../../handlers'
-import type { HandlerSchema } from '../types'
+import type { RegisterBaseOptions } from '../../handlers'
 
 export interface WebStorageHandlerBaseOptions {
   /**
@@ -13,9 +12,6 @@ export interface WebStorageHandlerBaseOptions {
 }
 
 export interface RegisterWebStorageHandlerBaseOptions<T> {
-  /**
-   * Storage key for this data.
-   */
   key?: string
 
   /**
@@ -32,29 +28,6 @@ export interface RegisterWebStorageHandlerBaseOptions<T> {
   transform?: (deserialized: Record<string, unknown>, initialData: T) => UnwrapNestedRefs<T>
 
   /**
-   * Zod schema for automatic validation and type coercion.
-   *
-   * When provided, the schema will be used to parse and validate storage data.
-   * This option takes priority over the `transform` option.
-   *
-   * @example
-   * ```typescript
-   * import { z } from 'zod'
-   *
-   * const SettingsSchema = z.object({
-   *   theme: z.enum(['light', 'dark']).default('light'),
-   *   fontSize: z.number().int().positive().default(14),
-   * })
-   *
-   * useContextStorageLocalStorage(settings, {
-   *   key: 'app-settings',
-   *   schema: SettingsSchema,
-   * })
-   * ```
-   */
-  schema?: HandlerSchema<T>
-
-  /**
    * Custom serializer function. Defaults to JSON.stringify.
    */
   serializer?: (data: T) => string
@@ -66,16 +39,7 @@ export interface RegisterWebStorageHandlerBaseOptions<T> {
 }
 
 export interface RegisterWebStorageHandlerOptions<T>
-  extends RegisterBaseOptions, RegisterWebStorageHandlerBaseOptions<T> {}
-
-export interface IContextStorageWebStorageHandler<
-  T extends Record<string, unknown>,
-> extends ContextStorageHandler<T> {
-  register: <T extends Record<string, unknown>>(
-    data: MaybeRefOrGetter<T>,
-    options: RegisterWebStorageHandlerOptions<T>,
-  ) => RegisterResult
-}
+  extends RegisterBaseOptions<T>, RegisterWebStorageHandlerBaseOptions<T> {}
 
 export interface ContextStorageWebStorageRegisteredItem<T extends Record<string, unknown>> {
   data: MaybeRefOrGetter<T>

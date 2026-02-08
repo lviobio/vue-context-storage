@@ -65,16 +65,9 @@ export {
 export { defaultHandlers } from './constants'
 
 // Types
-export type { QueryValue, IContextStorageQueryHandler } from './handlers/query/types'
+export type { QueryValue } from './handlers/query/types'
 
 export type {
-  IContextStorageLocalStorageHandler,
   LocalStorageHandlerBaseOptions,
   RegisterLocalStorageHandlerBaseOptions,
 } from './handlers/local-storage/types'
-
-export type {
-  IContextStorageSessionStorageHandler,
-  RegisterSessionStorageHandlerBaseOptions,
-  SessionStorageHandlerBaseOptions,
-} from './handlers/session-storage/types'

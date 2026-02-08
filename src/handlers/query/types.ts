@@ -1,7 +1,6 @@
 import type { LocationQuery, LocationQueryValue } from 'vue-router'
 import type { MaybeRefOrGetter, UnwrapNestedRefs, WatchHandle } from 'vue'
-import type { ContextStorageHandler, RegisterBaseOptions, RegisterResult } from '../../handlers'
-import type { HandlerSchema } from '../types'
+import type { RegisterBaseOptions } from '../../handlers'
 
 export type QueryValue = LocationQueryValue | LocationQueryValue[]
 
@@ -132,43 +131,10 @@ export interface RegisterQueryHandlerBaseOptions<T> extends QueryHandlerSharedOp
     deserialized: DeepTransformValuesToLocationQueryValue<UnwrapNestedRefs<T>>,
     initialData: T,
   ) => UnwrapNestedRefs<T>
-
-  /**
-   * Zod schema for automatic validation and type coercion.
-   *
-   * When provided, the schema will be used to parse and validate query parameters.
-   * This option takes priority over the `transform` option.
-   *
-   * @example
-   * ```typescript
-   * import { z } from 'zod'
-   *
-   * const FiltersSchema = z.object({
-   *   search: z.string().default(''),
-   *   page: z.coerce.number().int().positive().default(1),
-   *   status: z.enum(['active', 'inactive']).default('active'),
-   * })
-   *
-   * useContextStorageQueryHandler(filters, {
-   *   prefix: 'filters',
-   *   schema: FiltersSchema,
-   * })
-   * ```
-   */
-  schema?: HandlerSchema<T>
 }
 
 export interface RegisterQueryHandlerOptions<T>
-  extends RegisterBaseOptions, RegisterQueryHandlerBaseOptions<T> {}
-
-export interface IContextStorageQueryHandler<
-  T extends Record<string, unknown>,
-> extends ContextStorageHandler<T> {
-  register: <T extends Record<string, unknown>>(
-    data: MaybeRefOrGetter<T>,
-    options: RegisterQueryHandlerOptions<T>,
-  ) => RegisterResult
-}
+  extends RegisterBaseOptions<T>, RegisterQueryHandlerBaseOptions<T> {}
 
 export interface ContextStorageQueryRegisteredItem<T extends Record<string, unknown>> {
   data: MaybeRefOrGetter<T>
