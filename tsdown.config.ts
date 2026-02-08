@@ -9,7 +9,7 @@ export default defineConfig({
     {
       name: 'drop-console',
       async transform(code, id) {
-        if (id.endsWith('.ts') || id.endsWith('.vue')) {
+        if ((id.endsWith('.ts') && !id.endsWith('.d.ts')) || id.endsWith('.vue')) {
           const result = await transform(code, {
             loader: 'ts',
             drop: ['console'],
