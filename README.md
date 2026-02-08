@@ -21,7 +21,7 @@ A powerful state management solution for Vue 3 applications that provides:
 - **Multiple storage contexts** with activation management
 - **Type-safe** TypeScript support
 - **Tree-shakeable** and lightweight
-
+- 
 ## Live Demo
 
 🚀 **[Try the interactive playground](https://lviobio.github.io/vue-context-storage)**
@@ -42,6 +42,19 @@ npm install vue-context-storage
 - ✅ **TypeScript** - Full type safety and IntelliSense support
 - ✅ **Flexible** - Works with vue-router 4+ or 5+
 - ✅ **Transform Helpers** - Built-in utilities for type conversion
+
+## Motivation
+
+In Vue applications, reactive state often needs to live beyond a single component. Filters, pagination, sorting, and user preferences must survive page reloads, be shareable via URL, or persist across sessions. Solving this typically means writing the same boilerplate over and over: manually reading and writing query parameters with vue-router, serializing objects to localStorage, handling type coercion from URL strings, and keeping everything in sync.
+
+`vue-context-storage` eliminates that repetitive work. You declare your reactive state once, point it at a storage target, and the library handles the rest:
+
+- **URL query parameters** stay in sync with your data automatically -- users can bookmark or share a page and get the exact same state back.
+- **localStorage and sessionStorage** are kept up to date without manual `getItem`/`setItem` calls, including cross-tab synchronization.
+- **Type safety** is preserved end-to-end: URL strings are coerced back to numbers, booleans, and arrays via transform helpers or Zod schemas.
+- **Multiple independent contexts** (e.g. two data tables on the same page) are supported out of the box through the prefix pattern, so query parameters never collide.
+
+The goal is a single, declarative API -- `useContextStorage('query', data, options)` -- that replaces scattered watchers, router guards, and storage listeners with one composable call per piece of state.
 
 ## Basic Usage
 
