@@ -29,7 +29,7 @@ const userPrefs = reactive({
   notifications: true,
 })
 
-useContextStorage('localStorage', settings, {
+useContextStorage('localStorage', userPrefs, {
   key: 'user-preferences',
 })
 
@@ -69,7 +69,7 @@ useContextStorage('localStorage', userPrefs, {
 
   <NAlert type="info" class="mb-4">
     <NA
-      :href="$router.resolve({ name: 'local-storage' }).href"
+      :href="$router.resolve({ name: 'demo.local-storage' }).href"
       target="_blank"
       rel="noopener noreferrer"
       >Open this page</NA
