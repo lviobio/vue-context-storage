@@ -13,6 +13,7 @@ import type {
 } from './types'
 import { buildContextStorageHandler } from '../helpers'
 import type { UseContextStorageResult } from '../../composables/types'
+import type { HandlerSchema } from '../types'
 
 export function useContextStorageQueryHandler<T extends Record<string, unknown>>(
   data: MaybeRefOrGetter<T>,
@@ -32,9 +33,7 @@ export function useContextStorageQueryHandler<T extends Record<string, unknown>>
 export interface ApplyTransformInput<T extends Record<string, unknown>> {
   state: Record<string, unknown>
   initialData: T
-  schema?: {
-    safeParse: (data: unknown) => { success: true; data: any } | { success: false; error: any }
-  }
+  schema?: Pick<HandlerSchema<T>, 'safeParse'>
   transform?: (deserialized: any, initialData: T) => any
   mergeOnlyExistingKeysWithoutTransform: boolean
 }
