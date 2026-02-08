@@ -1,6 +1,7 @@
-import { getCurrentInstance, inject, type MaybeRefOrGetter, onBeforeUnmount } from 'vue'
+import { inject, type MaybeRefOrGetter } from 'vue'
 import { type ContextStorageHandlerMap, resolveHandlerInjectionKey } from '../registry'
 import type { UseContextStorageResult } from './types'
+import { buildContextStorageHandler } from '../handlers/helpers'
 
 export function useContextStorage<K extends keyof ContextStorageHandlerMap<T>, T>(
   type: K,
@@ -19,18 +20,5 @@ export function useContextStorage<K extends keyof ContextStorageHandlerMap<T>, T
     throw new Error(`[vue-context-storage] Handler not provided for type: "${String(type)}"`)
   }
 
-  const currentInstance = getCurrentInstance()
-  const uid = currentInstance?.uid || 0
-  const causer = new Error().stack?.split('\n')[2]?.trimStart() || 'unknown'
-
-  const { stop, wasChanged } = handler.register(data, { causer, uid, ...options })
-  onBeforeUnmount(() => {
-    stop()
-  })
-
-  return {
-    data,
-    stop,
-    wasChanged,
-  }
+  return buildContextStorageHandler(handler, data, options)
 }
