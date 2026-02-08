@@ -11,10 +11,10 @@ export function buildContextStorageHandler<T, O extends RegisterBaseOptions<T>>(
 
   const causer = new Error().stack?.split('\n')[3]?.trimStart() || 'unknown'
 
-  const { stop, wasChanged } = handler.register(data, { causer, uid, ...options } as O)
+  const { stop, reset, wasChanged } = handler.register(data, { causer, uid, ...options } as O)
   onBeforeUnmount(() => {
     stop()
   })
 
-  return { data, stop, wasChanged }
+  return { data, stop, reset, wasChanged }
 }

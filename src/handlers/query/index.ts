@@ -402,6 +402,10 @@ export class ContextStorageQueryHandler<
         this.registeredVersion++
         this.syncRegisteredToQuery()
       },
+      reset: () => {
+        console.debug('[query-sync] reset', { prefix: options.prefix })
+        merge(toValue(data), cloneDeep(initialData))
+      },
       wasChanged,
     }
   }

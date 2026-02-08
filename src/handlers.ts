@@ -43,6 +43,7 @@ export type RegisterOptions<T> = Required<Pick<RegisterBaseOptions<T>, 'causer' 
 
 export interface RegisterResult {
   stop: () => void
+  reset: () => void
   wasChanged: ComputedRef<boolean>
 }
 

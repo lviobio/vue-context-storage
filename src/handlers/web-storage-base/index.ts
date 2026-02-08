@@ -260,6 +260,9 @@ export abstract class ContextStorageWebStorageHandler<
         watchHandle.stop()
         this.registered.splice(this.registered.indexOf(item), 1)
       },
+      reset: () => {
+        merge(toValue(data), cloneDeep(item.initialData))
+      },
       wasChanged,
     }
   }
