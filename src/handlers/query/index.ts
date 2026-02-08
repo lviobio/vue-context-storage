@@ -86,6 +86,7 @@ export class ContextStorageQueryHandler<
 > implements ContextStorageHandler<T, RegisterQueryHandlerOptions<T>> {
   private enabled = false
   private registered: ContextStorageQueryRegisteredItem<any>[] = []
+  private registeredDataObjects = new Set<object>()
   private currentQuery: LocationQuery | undefined = undefined
   private readonly route: ReturnType<typeof useRoute>
   private router: ReturnType<typeof useRouter>
@@ -347,6 +348,15 @@ export class ContextStorageQueryHandler<
     data: MaybeRefOrGetter<T>,
     options: RegisterQueryHandlerOptions<T>,
   ) {
+    const resolvedData = toValue(data)
+    if (this.registeredDataObjects.has(resolvedData)) {
+      console.warn(
+        '[vue-context-storage] The same data object is already registered in ContextStorageQueryHandler.',
+        { prefix: options?.prefix },
+      )
+    }
+    this.registeredDataObjects.add(resolvedData)
+
     this.hasAnyRegistered = true
 
     const watchHandle = watch(
@@ -360,7 +370,7 @@ export class ContextStorageQueryHandler<
       },
     )
 
-    const initialData = cloneDeep(toValue(data)) as T
+    const initialData = cloneDeep(resolvedData) as T
     const initialQueryData = serializeParams(initialData, { prefix: options.prefix })
 
     const item: ContextStorageQueryRegisteredItem<T> = {
@@ -399,6 +409,7 @@ export class ContextStorageQueryHandler<
       stop: () => {
         console.debug('[query-sync] unregister', { prefix: options.prefix })
         this.registered.splice(this.registered.indexOf(item), 1)
+        this.registeredDataObjects.delete(resolvedData)
         this.registeredVersion++
         this.syncRegisteredToQuery()
       },

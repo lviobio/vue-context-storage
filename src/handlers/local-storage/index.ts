@@ -9,6 +9,7 @@ export class ContextStorageLocalStorageHandler<
 > extends ContextStorageWebStorageHandler<T> {
   protected readonly storage: Storage
   protected readonly injectionKey: InjectionKey<ContextStorageLocalStorageHandler<T>>
+  protected readonly handlerName = 'localStorage'
 
   static customHandlerOptions: LocalStorageHandlerBaseOptions = {}
 

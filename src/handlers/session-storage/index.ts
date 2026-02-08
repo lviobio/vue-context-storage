@@ -9,6 +9,7 @@ export class ContextStorageSessionStorageHandler<
 > extends ContextStorageWebStorageHandler<T> {
   protected readonly storage: Storage
   protected readonly injectionKey: InjectionKey<ContextStorageSessionStorageHandler<T>>
+  protected readonly handlerName = 'sessionStorage'
 
   static customHandlerOptions: SessionStorageHandlerBaseOptions = {}
 

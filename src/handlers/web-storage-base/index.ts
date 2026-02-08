@@ -22,12 +22,14 @@ export abstract class ContextStorageWebStorageHandler<
 > implements ContextStorageHandler<T, RegisterWebStorageHandlerOptions<T>> {
   protected enabled = false
   protected registered: ContextStorageWebStorageRegisteredItem<any>[] = []
+  private registeredDataObjects = new Set<object>()
   protected initialState?: Record<string, unknown>
   protected hasAnyRegistered = false
   protected preventSyncToStorage = false
 
   protected abstract readonly storage: Storage
   protected abstract readonly injectionKey: InjectionKey<ContextStorageWebStorageHandler<T>>
+  protected abstract readonly handlerName: string
 
   protected readonly options: Required<WebStorageHandlerBaseOptions>
 
@@ -237,6 +239,15 @@ export abstract class ContextStorageWebStorageHandler<
       throw new Error('[vue-context-storage] Storage handler requires a key option')
     }
 
+    const resolvedData = toValue(data)
+    if (this.registeredDataObjects.has(resolvedData)) {
+      console.warn(
+        `[vue-context-storage] The same data object is already registered in ${this.handlerName}.`,
+        { key: options.key, prefix: options.prefix },
+      )
+    }
+    this.registeredDataObjects.add(resolvedData)
+
     this.hasAnyRegistered = true
 
     const watchHandle = watch(data, () => this.syncRegisteredToStorage(), {
@@ -245,7 +256,7 @@ export abstract class ContextStorageWebStorageHandler<
 
     const item: ContextStorageWebStorageRegisteredItem<T> = {
       data,
-      initialData: cloneDeep(toValue(data)) as T,
+      initialData: cloneDeep(resolvedData) as T,
       options,
       watchHandle,
     }
@@ -259,6 +270,7 @@ export abstract class ContextStorageWebStorageHandler<
       stop: () => {
         watchHandle.stop()
         this.registered.splice(this.registered.indexOf(item), 1)
+        this.registeredDataObjects.delete(resolvedData)
       },
       reset: () => {
         merge(toValue(data), cloneDeep(item.initialData))
