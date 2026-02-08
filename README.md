@@ -40,7 +40,7 @@ npm install vue-context-storage
 - ✅ **sessionStorage Handler** - Session-scoped state that survives page refreshes
 - ✅ **Multiple Contexts** - Support multiple independent storage contexts
 - ✅ **TypeScript** - Full type safety and IntelliSense support
-- ✅ **Flexible** - Works with vue-router 4+
+- ✅ **Flexible** - Works with vue-router 4+ or 5+
 - ✅ **Transform Helpers** - Built-in utilities for type conversion
 
 ## Basic Usage
@@ -590,8 +590,8 @@ useContextStorageQueryHandler(pagination, {
 
 ## Peer Dependencies
 
-- `vue`: ^3.5.0
-- `vue-router`: ^4.0.0
+- `vue`: ^3.0.0
+- `vue-router`: ^4.0.0 || ^5.0.0
 - `zod`: ^4.0.0 (optional - only if using schema validation)
 
 ## License
