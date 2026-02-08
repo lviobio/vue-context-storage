@@ -55,6 +55,25 @@ export abstract class ContextStorageWebStorageHandler<
     }
   }
 
+  /**
+   * Computes the effective storage key by appending the prefix in bracket notation.
+   *
+   * e.g. key='form', prefix='filters'    → 'form[filters]'
+   * e.g. key='form', prefix='a[b][d]'    → 'form[a][b][d]'
+   */
+  private resolveStorageKey(key: string, prefix?: string): string {
+    if (prefix) {
+      // prefix may already contain brackets (e.g. 'a[b][d]'),
+      // wrap only the first segment to avoid double-nesting
+      const bracketIdx = prefix.indexOf('[')
+      if (bracketIdx === -1) {
+        return `${key}[${prefix}]`
+      }
+      return `${key}[${prefix.slice(0, bracketIdx)}]${prefix.slice(bracketIdx)}`
+    }
+    return key
+  }
+
   protected handleStorageEvent(event: StorageEvent): void {
     if (!this.enabled) {
       return
@@ -62,7 +81,8 @@ export abstract class ContextStorageWebStorageHandler<
 
     // Find registered items that match the changed key
     this.registered.forEach((item) => {
-      if (event.key === item.options.key) {
+      const effectiveKey = this.resolveStorageKey(item.options.key!, item.options.prefix)
+      if (event.key === effectiveKey) {
         this.syncStorageToRegisteredItem(item)
       }
     })
@@ -100,56 +120,17 @@ export abstract class ContextStorageWebStorageHandler<
       return
     }
 
-    // Group registered items by storage key
-    const byKey = new Map<string, ContextStorageWebStorageRegisteredItem<any>[]>()
-
     this.registered.forEach((item) => {
-      const key = item.options.key!
-      if (!byKey.has(key)) {
-        byKey.set(key, [])
-      }
-      byKey.get(key)!.push(item)
-    })
+      const effectiveKey = this.resolveStorageKey(item.options.key!, item.options.prefix)
+      const data = toValue(item.data)
+      const { serializer } = item.options
 
-    // Write each key's data to storage
-    byKey.forEach((items, key) => {
-      let storageData: Record<string, unknown> = {}
-
-      // Try to read existing data first to preserve other prefixes
       try {
-        const existing = this.storage.getItem(key)
-        if (existing) {
-          storageData = JSON.parse(existing)
-        }
-      } catch {
-        // Ignore parse errors, start fresh
-      }
-
-      items.forEach((item) => {
-        const { prefix, serializer } = item.options
-        const data = toValue(item.data)
-
-        if (prefix) {
-          storageData[prefix] = data
+        if (serializer) {
+          this.storage.setItem(effectiveKey, serializer(data))
         } else {
-          storageData = { ...storageData, ...data }
+          this.storage.setItem(effectiveKey, JSON.stringify(data))
         }
-
-        // Use custom serializer if provided, otherwise merge into main object
-        if (serializer && !prefix) {
-          // Custom serializer with no prefix - serialize the whole data
-          try {
-            this.storage.setItem(key, serializer(data))
-          } catch (e) {
-            console.error('[vue-context-storage] Error writing to storage', e)
-          }
-          return
-        }
-      })
-
-      // Write merged data
-      try {
-        this.storage.setItem(key, JSON.stringify(storageData))
       } catch (e) {
         console.error('[vue-context-storage] Error writing to storage', e)
       }
@@ -160,10 +141,11 @@ export abstract class ContextStorageWebStorageHandler<
     item: ContextStorageWebStorageRegisteredItem<T>,
   ): void {
     const { key, prefix, deserializer } = item.options
+    const effectiveKey = this.resolveStorageKey(key!, prefix)
 
     let stored: string | null = null
     try {
-      stored = this.storage.getItem(key!)
+      stored = this.storage.getItem(effectiveKey)
     } catch {
       return
     }
@@ -180,12 +162,8 @@ export abstract class ContextStorageWebStorageHandler<
         deserialized = JSON.parse(stored)
       }
     } catch {
-      console.warn('[vue-context-storage] Failed to parse storage data for key:', key)
+      console.warn('[vue-context-storage] Failed to parse storage data for key:', effectiveKey)
       return
-    }
-
-    if (typeof prefix === 'string' && prefix.length > 0) {
-      deserialized = (deserialized[prefix] as Record<string, unknown>) || {}
     }
 
     if (deserialized === undefined || deserialized === null) {
@@ -263,6 +241,7 @@ export abstract class ContextStorageWebStorageHandler<
     this.registered.push(item)
 
     this.syncStorageToRegisteredItem(item)
+    this.syncRegisteredToStorage()
 
     const wasChanged = computed(() => !isEqual(toValue(data), item.initialData))
 

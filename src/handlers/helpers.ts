@@ -1,5 +1,26 @@
-import { getCurrentInstance, type MaybeRefOrGetter, onBeforeUnmount } from 'vue'
+import {
+  getCurrentInstance,
+  inject,
+  type InjectionKey,
+  type MaybeRefOrGetter,
+  onBeforeUnmount,
+  toValue,
+} from 'vue'
 import type { ContextStorageHandler, RegisterBaseOptions } from '../handlers'
+import { contextStoragePrefixSegmentsInjectKey, resolvePrefixSegments } from '../prefix'
+
+/**
+ * Maps handler injection keys to their handler type names (e.g. 'query', 'localStorage').
+ * This is used to resolve per-handler prefix segments from ContextStoragePrefix components.
+ */
+const knownHandlerKeys = new Map<InjectionKey<unknown>, string>()
+
+export function registerKnownHandlerKey(
+  injectionKey: InjectionKey<unknown>,
+  handlerType: string,
+): void {
+  knownHandlerKeys.set(injectionKey, handlerType)
+}
 
 export function buildContextStorageHandler<T, O extends RegisterBaseOptions<T>>(
   handler: ContextStorageHandler<T, O>,
@@ -11,7 +32,30 @@ export function buildContextStorageHandler<T, O extends RegisterBaseOptions<T>>(
 
   const causer = new Error().stack?.split('\n')[3]?.trimStart() || 'unknown'
 
-  const { stop, reset, wasChanged } = handler.register(data, { causer, uid, ...options } as O)
+  const mergedOptions = { causer, uid, ...options } as O
+
+  // Resolve prefix from ContextStoragePrefix components
+  const rawPrefixSegments = inject(contextStoragePrefixSegmentsInjectKey, undefined)
+  const prefixSegments = rawPrefixSegments ? toValue(rawPrefixSegments) : undefined
+  if (prefixSegments && prefixSegments.length > 0) {
+    const handlerInjectionKey = handler.getInjectionKey()
+    const resolvedPrefix = resolvePrefixSegments(
+      prefixSegments,
+      handlerInjectionKey,
+      knownHandlerKeys,
+    )
+
+    if (resolvedPrefix) {
+      const optionsPrefix = (mergedOptions as Record<string, unknown>).prefix as string | undefined
+      if (optionsPrefix) {
+        ;(mergedOptions as Record<string, unknown>).prefix = `${resolvedPrefix}[${optionsPrefix}]`
+      } else {
+        ;(mergedOptions as Record<string, unknown>).prefix = resolvedPrefix
+      }
+    }
+  }
+
+  const { stop, reset, wasChanged } = handler.register(data, mergedOptions)
   onBeforeUnmount(() => {
     stop()
   })

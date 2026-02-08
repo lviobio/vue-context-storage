@@ -8,3 +8,4 @@ export const contextStorageLocalStorageHandler: unique symbol = Symbol(
 export const contextStorageSessionStorageHandler: unique symbol = Symbol(
   'context-storage-session-storage-handler',
 )
+export const contextStoragePrefixSegments: unique symbol = Symbol('context-storage-prefix-segments')

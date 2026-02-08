@@ -21,7 +21,7 @@ A powerful state management solution for Vue 3 applications that provides:
 - **Multiple storage contexts** with activation management
 - **Type-safe** TypeScript support
 - **Tree-shakeable** and lightweight
-- 
+
 ## Live Demo
 
 🚀 **[Try the interactive playground](https://lviobio.github.io/vue-context-storage)**
@@ -165,6 +165,64 @@ declare module 'vue-context-storage' {
 
 // Now fully type-checked
 useContextStorage('myHandler', data, { key: 'example' })
+```
+
+## Prefix Scoping with `<ContextStoragePrefix>`
+
+The `<ContextStoragePrefix>` component adds a prefix to all `useContextStorage` calls within its subtree. Prefixes stack when nested, and are concatenated with bracket notation.
+
+### Basic Usage
+
+```vue
+<template>
+  <ContextStoragePrefix name="table">
+    <MyTable />
+  </ContextStoragePrefix>
+</template>
+```
+
+Inside `MyTable`, any `useContextStorage('query', data)` call will automatically get `prefix: 'tables'`. If the composable also specifies its own prefix, they are combined:
+
+```typescript
+// Inside MyTable — effective prefix becomes 'table[filters]'
+useContextStorage('query', filters, { prefix: 'filters' })
+// URL: ?table[filters][search]=...
+```
+
+### Stacking Prefixes
+
+Nested `<ContextStoragePrefix>` components stack their prefixes:
+
+```vue
+<ContextStoragePrefix name="tables">
+  <ContextStoragePrefix name="first">
+    <!-- All handlers here get prefix 'tables[first]' -->
+    <!-- useContextStorage('query', data) → URL: ?tables[first][search]=... -->
+    <!-- useContextStorage('localStorage', data, { key: 'state' }) → key: 'state[tables][first]' -->
+  </ContextStoragePrefix>
+</ContextStoragePrefix>
+```
+
+### Per-Handler Prefixes
+
+Pass an object to apply different prefixes per handler type:
+
+```vue
+<ContextStoragePrefix :name="{ query: 'url-tables', localStorage: 'ls-data' }">
+  <!-- query handler gets prefix 'url-tables' -->
+  <!-- localStorage handler gets prefix 'ls-data' -->
+  <!-- sessionStorage handler gets no prefix (not specified) -->
+</ContextStoragePrefix>
+```
+
+### Dynamic Prefix
+
+When the `name` prop changes, all descendant components are re-created and re-registered with the new prefix:
+
+```vue
+<ContextStoragePrefix :name="activeTab">
+  <TabContent />
+</ContextStoragePrefix>
 ```
 
 ## Use Query Handler in Components
@@ -380,21 +438,21 @@ useContextStorageSessionStorage(formDraft, {
 
 ### Using Prefix
 
-Store multiple data objects under a single storage key using prefixes:
+The prefix is appended to the storage key in bracket notation, so each prefixed registration gets its own storage entry:
 
 ```typescript
 const filters = reactive({ search: '', status: 'active' })
 
 useContextStorage('sessionStorage', filters, {
   key: 'app-state',
-  prefix: 'filters', // Stored as { filters: { search: '', status: 'active' } }
+  prefix: 'filters', // Storage key: 'app-state[filters]', value: { search: '', status: 'active' }
 })
 
 const pagination = reactive({ page: 1, perPage: 25 })
 
 useContextStorage('sessionStorage', pagination, {
   key: 'app-state',
-  prefix: 'pagination', // Stored as { filters: {...}, pagination: { page: 1, perPage: 25 } }
+  prefix: 'pagination', // Storage key: 'app-state[pagination]', value: { page: 1, perPage: 25 }
 })
 ```
 
@@ -465,6 +523,13 @@ Unified composable that delegates to the correct handler based on `type`.
 - `data: MaybeRefOrGetter<T>` - Reactive reference to sync
 - `options` - Handler-specific options (type-checked per handler)
 
+**Returns:** `{ data, stop, reset, wasChanged }`
+
+- `data` - The reactive reference passed in
+- `stop()` - Unregister and stop syncing (called automatically on unmount)
+- `reset()` - Restore data to its initial state
+- `wasChanged: ComputedRef<boolean>` - Whether data differs from initial state
+
 **Custom handler registration:**
 
 - `defineContextStorageHandler(name, injectionKey)` - Register a custom handler
@@ -509,7 +574,7 @@ Registers reactive data for localStorage synchronization.
 - `data: MaybeRefOrGetter<T>` - Reactive reference to sync
 - `options: RegisterWebStorageHandlerBaseOptions<T>`
   - `key: string` - Storage key (required)
-  - `prefix?: string` - Namespace within the storage key
+  - `prefix?: string` - Appended to the storage key in bracket notation (e.g. key `'app'` + prefix `'filters'` = storage key `'app[filters]'`)
   - `transform?: (deserialized, initial) => T` - Transform function
   - `schema?: ZodSchema` - Zod schema for validation
   - `serializer?: (data: T) => string` - Custom serializer (default: `JSON.stringify`)
@@ -538,6 +603,18 @@ Handler for sessionStorage synchronization. Data is scoped to the current tab.
 
 - `configure(options): ContextStorageHandlerConstructor` - Configure global options
   - `listenToStorageEvents?: boolean` - Listen to storage events (default: `false`)
+
+### Components
+
+#### `<ContextStoragePrefix>`
+
+Scopes a prefix for all descendant `useContextStorage` calls via provide/inject.
+
+**Props:**
+
+- `name: string | Partial<Record<string, string>>` (required) - Prefix to apply. A string applies to all handlers; an object applies per handler type (e.g. `{ query: 'q', localStorage: 'ls' }`)
+
+Nested `<ContextStoragePrefix>` components stack their prefixes using bracket notation. When `name` changes dynamically, all descendant components are re-created.
 
 ### Transform Helpers
 

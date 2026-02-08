@@ -7,6 +7,7 @@ import {
   contextStorageSessionStorageHandlerInjectKey,
 } from './injectionSymbols'
 import type { RegisterWebStorageHandlerOptions } from './handlers/web-storage-base/types'
+import { registerKnownHandlerKey } from './handlers/helpers'
 
 /**
  * Augmentable interface mapping handler names to their options types.
@@ -34,6 +35,7 @@ export function defineContextStorageHandler<T, O extends object>(
   injectionKey: InjectionKey<ContextStorageHandler<T, O>>,
 ): void {
   handlerRegistry.set(name, injectionKey)
+  registerKnownHandlerKey(injectionKey, name)
 }
 
 export function resolveHandlerInjectionKey<K extends keyof ContextStorageHandlerMap<T>, T>(

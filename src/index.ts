@@ -4,6 +4,7 @@ export { default as ContextStorageActivator } from './components/ContextStorageA
 export { default as ContextStorageCollection } from './components/ContextStorageCollection.vue'
 export { default as ContextStorageProvider } from './components/ContextStorageProvider.vue'
 export { default as ContextStorage } from './components/ContextStorage.vue'
+export { default as ContextStoragePrefix } from './components/ContextStoragePrefix.vue'
 
 export { VueContextStoragePlugin } from './plugin'
 
@@ -58,6 +59,7 @@ export {
   contextStorageHandlersInjectKey,
   contextStorageLocalStorageHandlerInjectKey,
   contextStorageQueryHandlerInjectKey,
+  contextStoragePrefixSegmentsInjectKey,
   contextStorageSessionStorageHandlerInjectKey,
 } from './injectionSymbols'
 
@@ -71,3 +73,5 @@ export type {
   LocalStorageHandlerBaseOptions,
   RegisterLocalStorageHandlerBaseOptions,
 } from './handlers/local-storage/types'
+
+export type { ContextStoragePrefixSegment } from './prefix'

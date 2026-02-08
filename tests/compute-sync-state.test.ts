@@ -237,6 +237,83 @@ describe('computeSyncState', () => {
     })
   })
 
+  describe('nested bracket prefixes', () => {
+    it('should traverse nested objects with bracket prefix', () => {
+      const result = computeSyncState(
+        createInput({
+          deserializedState: { tables: { first: { search: 'test' } } },
+          initialData: { search: '' },
+          prefix: 'tables[first]',
+        }),
+      )
+
+      expect(result).toEqual({ type: 'sync', data: { search: 'test' } })
+    })
+
+    it('should traverse deeply nested bracket prefix', () => {
+      const result = computeSyncState(
+        createInput({
+          deserializedState: { a: { b: { c: { page: '2' } } } },
+          initialData: { page: '1' },
+          prefix: 'a[b][c]',
+        }),
+      )
+
+      expect(result).toEqual({ type: 'sync', data: { page: '2' } })
+    })
+
+    it('should return none when nested bracket path is missing', () => {
+      const result = computeSyncState(
+        createInput({
+          deserializedState: { tables: { second: { search: 'test' } } },
+          initialData: { search: '' },
+          prefix: 'tables[first]',
+        }),
+      )
+
+      expect(result).toEqual({ type: 'none' })
+    })
+
+    it('should return none when intermediate bracket path is missing', () => {
+      const result = computeSyncState(
+        createInput({
+          deserializedState: { other: {} },
+          initialData: { search: '' },
+          prefix: 'tables[first]',
+        }),
+      )
+
+      expect(result).toEqual({ type: 'none' })
+    })
+
+    it('should return reset when nested bracket prefix extracts empty object', () => {
+      const initialData = { search: '' }
+
+      const result = computeSyncState(
+        createInput({
+          deserializedState: { tables: { first: {} } },
+          initialData,
+          prefix: 'tables[first]',
+        }),
+      )
+
+      expect(result).toEqual({ type: 'reset', data: initialData })
+    })
+
+    it('should handle bracket prefix with empty placeholder', () => {
+      const result = computeSyncState(
+        createInput({
+          deserializedState: { tables: { first: { _: null } } },
+          initialData: { search: '' },
+          prefix: 'tables[first]',
+          emptyPlaceholder: '_',
+        }),
+      )
+
+      expect(result).toEqual({ type: 'sync', data: {} })
+    })
+  })
+
   describe('edge cases', () => {
     it('should handle nested objects in deserialized state', () => {
       const result = computeSyncState(

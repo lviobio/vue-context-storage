@@ -14,13 +14,20 @@ export type ComputeSyncStateResult<T extends Record<string, unknown>> =
   | { type: 'reset'; data: T }
   | { type: 'sync'; data: Record<string, unknown> }
 
+type InitialState = Record<string, unknown> | undefined | null
+
 export function computeSyncState<T extends Record<string, unknown>>(
   input: ComputeSyncStateInput<T>,
 ): ComputeSyncStateResult<T> {
-  let state: Record<string, unknown> | undefined | null = input.deserializedState
+  let state: InitialState = input.deserializedState
 
   if (typeof input.prefix === 'string' && input.prefix.length > 0) {
-    state = state[input.prefix] as Record<string, unknown> | undefined | null
+    // Support nested bracket prefixes (e.g. 'tables[first]' → traverse state.tables.first)
+    const parts = input.prefix.split(/[\[\]]/).filter(Boolean)
+    for (const part of parts) {
+      if (state === undefined || state === null) break
+      state = (state as Record<string, unknown>)[part] as InitialState
+    }
   }
 
   if (state === undefined) {

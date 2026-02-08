@@ -3,6 +3,7 @@ import ContextStorageActivator from './components/ContextStorageActivator.vue'
 import ContextStorageCollection from './components/ContextStorageCollection.vue'
 import ContextStorageProvider from './components/ContextStorageProvider.vue'
 import ContextStorage from './components/ContextStorage.vue'
+import ContextStoragePrefix from './components/ContextStoragePrefix.vue'
 
 export const VueContextStoragePlugin: Plugin = {
   install(app: App) {
@@ -10,6 +11,7 @@ export const VueContextStoragePlugin: Plugin = {
     app.component('ContextStorageCollection', ContextStorageCollection)
     app.component('ContextStorageProvider', ContextStorageProvider)
     app.component('ContextStorage', ContextStorage)
+    app.component('ContextStoragePrefix', ContextStoragePrefix)
   },
 }
 

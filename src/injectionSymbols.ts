@@ -29,3 +29,5 @@ export const contextStorageLocalStorageHandlerInjectKey: InjectionKey<
 export const contextStorageSessionStorageHandlerInjectKey: InjectionKey<
   InstanceType<typeof ContextStorageSessionStorageHandler>
 > = contextStorageSessionStorageHandler
+
+export { contextStoragePrefixSegmentsInjectKey } from './prefix'
