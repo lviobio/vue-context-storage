@@ -350,16 +350,23 @@ useContextStorage('query', filters, {
 
 ### Configure Query Handler
 
-Customize global behavior:
+Customize behavior by passing options to the factory:
 
 ```typescript
-import { ContextStorageQueryHandler } from 'vue-context-storage'
+import { createQueryHandler, createLocalStorageHandler, createSessionStorageHandler } from 'vue-context-storage'
 
-ContextStorageQueryHandler.configure({
-  mode: 'push', // 'replace' (default) or 'push' for history
-  preserveUnusedKeys: true, // Keep other query params
-  preserveEmptyState: false,
-})
+const customHandlers = [
+  createQueryHandler({
+    mode: 'push', // 'replace' (default) or 'push' for history
+    preserveUnusedKeys: true, // Keep other query params
+    preserveEmptyState: false,
+  }),
+  createLocalStorageHandler(),
+  createSessionStorageHandler(),
+]
+
+// Pass to ContextStorage or ContextStorageCollection component:
+// <ContextStorage :handlers="customHandlers">
 ```
 
 ## Use localStorage Handler in Components
@@ -397,9 +404,9 @@ useContextStorageLocalStorage(settings, {
 ### Configure localStorage Handler
 
 ```typescript
-import { ContextStorageLocalStorageHandler } from 'vue-context-storage'
+import { createLocalStorageHandler } from 'vue-context-storage'
 
-ContextStorageLocalStorageHandler.configure({
+const customLocalStorage = createLocalStorageHandler({
   listenToStorageEvents: true, // Cross-tab sync (default: true)
 })
 ```
@@ -548,22 +555,35 @@ Registers reactive data for URL query synchronization.
   - `preserveEmptyState?: boolean` - Keep empty state in URL
   - `mergeOnlyExistingKeysWithoutTransform?: boolean` - Only merge existing keys (default: true)
 
-### Classes
+### Handler Factories
 
-#### `ContextStorageQueryHandler`
+#### `createQueryHandler(options?)`
 
-Main handler for URL query synchronization.
+Creates a query handler factory for URL query synchronization.
 
-**Static Methods:**
+**Options:**
 
-- `configure(options): ContextStorageHandlerConstructor` - Configure global options
-- `getInitialStateResolver(): () => LocationQuery` - Get initial state resolver
+- `mode?: 'replace' | 'push'` - Router navigation mode (default: `'replace'`)
+- `preserveUnusedKeys?: boolean` - Keep other query params (default: `false`)
+- `preserveEmptyState?: boolean` - Preserve empty state in URL (default: `false`)
+- `emptyPlaceholder?: string` - Placeholder for empty state (default: `'_'`)
+- `onlyChanges?: boolean` - Only write changed values to URL (default: `true`)
 
-**Methods:**
+#### `createLocalStorageHandler(options?)`
 
-- `register<T>(data, options): () => void` - Register data for sync
-- `setEnabled(state, initial): void` - Enable/disable handler
-- `setInitialState(state): void` - Set initial state
+Creates a localStorage handler factory.
+
+**Options:**
+
+- `listenToStorageEvents?: boolean` - Enable cross-tab sync (default: `true`)
+
+#### `createSessionStorageHandler(options?)`
+
+Creates a sessionStorage handler factory.
+
+**Options:**
+
+- `listenToStorageEvents?: boolean` - Listen to storage events (default: `false`)
 
 #### `useContextStorageLocalStorage<T>(data, options)`
 
@@ -583,26 +603,6 @@ Registers reactive data for localStorage synchronization.
 #### `useContextStorageSessionStorage<T>(data, options)`
 
 Registers reactive data for sessionStorage synchronization. Same options as `useContextStorageLocalStorage`.
-
-### Classes
-
-#### `ContextStorageLocalStorageHandler`
-
-Handler for localStorage synchronization. Supports cross-tab sync via `storage` events.
-
-**Static Methods:**
-
-- `configure(options): ContextStorageHandlerConstructor` - Configure global options
-  - `listenToStorageEvents?: boolean` - Enable cross-tab sync (default: `true`)
-
-#### `ContextStorageSessionStorageHandler`
-
-Handler for sessionStorage synchronization. Data is scoped to the current tab.
-
-**Static Methods:**
-
-- `configure(options): ContextStorageHandlerConstructor` - Configure global options
-  - `listenToStorageEvents?: boolean` - Listen to storage events (default: `false`)
 
 ### Components
 
@@ -635,10 +635,8 @@ Full TypeScript support with type inference:
 ```typescript
 import type {
   ContextStorageHandler,
-  ContextStorageHandlerConstructor,
-  IContextStorageQueryHandler,
+  ContextStorageHandlerFactory,
   QueryValue,
-  SerializeOptions,
 } from 'vue-context-storage'
 ```
 

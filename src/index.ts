@@ -8,11 +8,15 @@ export { default as ContextStoragePrefix } from './components/ContextStoragePref
 
 export { VueContextStoragePlugin } from './plugin'
 
-export { CollectionManager, type CollectionManagerItem } from './collection'
+export {
+  createCollectionManager,
+  type CollectionManager,
+  type CollectionManagerItem,
+} from './collection'
 
 export type {
   ContextStorageHandler,
-  ContextStorageHandlerConstructor,
+  ContextStorageHandlerFactory,
   RegisterBaseOptions,
 } from './handlers'
 
@@ -21,15 +25,12 @@ export { useContextStorageActivator } from './composables/useContextStorageActiv
 export { useContextStorageCollection } from './composables/useContextStorageCollection'
 export { useContextStorageProvider } from './composables/useContextStorageProvider'
 
-export { ContextStorageQueryHandler, useContextStorageQueryHandler } from './handlers/query'
+export { createQueryHandler, useContextStorageQueryHandler } from './handlers/query'
+
+export { createLocalStorageHandler, useContextStorageLocalStorage } from './handlers/local-storage'
 
 export {
-  ContextStorageLocalStorageHandler,
-  useContextStorageLocalStorage,
-} from './handlers/local-storage'
-
-export {
-  ContextStorageSessionStorageHandler,
+  createSessionStorageHandler,
   useContextStorageSessionStorage,
 } from './handlers/session-storage'
 

@@ -1,13 +1,13 @@
-import type { ContextStorageHandlerConstructor } from '../handlers'
-import { CollectionManager } from '../collection'
+import type { ContextStorageHandlerFactory } from '../handlers'
+import { createCollectionManager } from '../collection'
 import { provide } from 'vue'
 import { contextStorageCollectionInjectKey } from '../injectionSymbols'
 import { defaultHandlers } from '../constants'
 
 export function useContextStorageCollection(
-  handlers: ContextStorageHandlerConstructor[] = defaultHandlers,
+  handlers: ContextStorageHandlerFactory[] = defaultHandlers,
 ) {
-  const collection = new CollectionManager(handlers)
+  const collection = createCollectionManager(handlers)
 
   provide(contextStorageCollectionInjectKey, collection)
 

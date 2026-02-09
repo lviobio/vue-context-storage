@@ -32,7 +32,7 @@ Tests for Zod schema validation integration:
 - Error handling
 
 #### `collection.test.ts` (24 tests)
-Tests for CollectionManager class:
+Tests for createCollectionManager factory:
 - Initialization and ready state
 - Adding/removing items
 - Finding items by key

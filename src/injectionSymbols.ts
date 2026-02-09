@@ -1,7 +1,5 @@
-import { CollectionManager, type CollectionManagerItem } from './collection'
-import { ContextStorageLocalStorageHandler } from './handlers/local-storage'
-import { ContextStorageQueryHandler } from './handlers/query'
-import { ContextStorageSessionStorageHandler } from './handlers/session-storage'
+import type { CollectionManager, CollectionManagerItem } from './collection'
+import type { ContextStorageHandler } from './handlers'
 import {
   collection,
   collectionItem,
@@ -18,16 +16,15 @@ export const contextStorageCollectionItemInjectKey: InjectionKey<CollectionManag
 export const contextStorageHandlersInjectKey: InjectionKey<CollectionManagerItem['handlers']> =
   handlers
 
-export const contextStorageQueryHandlerInjectKey: InjectionKey<
-  InstanceType<typeof ContextStorageQueryHandler>
-> = contextStorageQueryHandler
+export const contextStorageQueryHandlerInjectKey: InjectionKey<ContextStorageHandler<any, any>> =
+  contextStorageQueryHandler
 
 export const contextStorageLocalStorageHandlerInjectKey: InjectionKey<
-  InstanceType<typeof ContextStorageLocalStorageHandler>
+  ContextStorageHandler<any, any>
 > = contextStorageLocalStorageHandler
 
 export const contextStorageSessionStorageHandlerInjectKey: InjectionKey<
-  InstanceType<typeof ContextStorageSessionStorageHandler>
+  ContextStorageHandler<any, any>
 > = contextStorageSessionStorageHandler
 
 export { contextStoragePrefixSegmentsInjectKey } from './prefix'

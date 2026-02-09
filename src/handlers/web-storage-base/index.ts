@@ -17,42 +17,32 @@ import type {
 import type { ContextStorageHandler } from '../../handlers'
 import type { UseContextStorageResult } from '../../composables/types'
 
-export abstract class ContextStorageWebStorageHandler<
-  T extends Record<string, unknown>,
-> implements ContextStorageHandler<T, RegisterWebStorageHandlerOptions<T>> {
-  protected enabled = false
-  protected registered: ContextStorageWebStorageRegisteredItem<any>[] = []
-  private registeredDataObjects = new Set<object>()
-  protected initialState?: Record<string, unknown>
-  protected hasAnyRegistered = false
-  protected preventSyncToStorage = false
+interface WebStorageHandlerConfig {
+  storage: Storage
+  injectionKey: InjectionKey<any>
+  handlerName: string
+  options: Required<WebStorageHandlerBaseOptions>
+}
 
-  protected abstract readonly storage: Storage
-  protected abstract readonly injectionKey: InjectionKey<ContextStorageWebStorageHandler<T>>
-  protected abstract readonly handlerName: string
+export function createWebStorageHandlerInstance<T extends Record<string, unknown>>(
+  config: WebStorageHandlerConfig,
+): ContextStorageHandler<T, RegisterWebStorageHandlerOptions<T>> {
+  let enabled = false
+  const registered: ContextStorageWebStorageRegisteredItem<any>[] = []
+  const registeredDataObjects = new Set<object>()
+  let hasAnyRegistered = false
+  const preventSyncToStorage = false
 
-  protected readonly options: Required<WebStorageHandlerBaseOptions>
-
-  private storageEventHandler: ((event: StorageEvent) => void) | null = null
-
-  protected constructor(defaultOptions: Required<WebStorageHandlerBaseOptions>) {
-    this.options = { ...defaultOptions }
-  }
-
-  protected initializeStorageListener(): void {
-    if (this.options.listenToStorageEvents && typeof window !== 'undefined') {
-      this.storageEventHandler = (event: StorageEvent): void => {
-        this.handleStorageEvent(event)
-      }
-      window.addEventListener('storage', this.storageEventHandler)
-
-      onBeforeUnmount(() => {
-        if (this.storageEventHandler) {
-          window.removeEventListener('storage', this.storageEventHandler)
-          this.storageEventHandler = null
-        }
-      })
+  // Storage listener
+  if (config.options.listenToStorageEvents && typeof window !== 'undefined') {
+    const handler = (event: StorageEvent): void => {
+      handleStorageEvent(event)
     }
+    window.addEventListener('storage', handler)
+
+    onBeforeUnmount(() => {
+      window.removeEventListener('storage', handler)
+    })
   }
 
   /**
@@ -61,7 +51,7 @@ export abstract class ContextStorageWebStorageHandler<
    * e.g. key='form', prefix='filters'    → 'form[filters]'
    * e.g. key='form', prefix='a[b][d]'    → 'form[a][b][d]'
    */
-  private resolveStorageKey(key: string, prefix?: string): string {
+  function resolveStorageKey(key: string, prefix?: string): string {
     if (prefix) {
       // prefix may already contain brackets (e.g. 'a[b][d]'),
       // wrap only the first segment to avoid double-nesting
@@ -74,62 +64,67 @@ export abstract class ContextStorageWebStorageHandler<
     return key
   }
 
-  protected handleStorageEvent(event: StorageEvent): void {
-    if (!this.enabled) {
+  function handleStorageEvent(event: StorageEvent): void {
+    if (!enabled) {
       return
     }
 
     // Find registered items that match the changed key
-    this.registered.forEach((item) => {
-      const effectiveKey = this.resolveStorageKey(item.options.key!, item.options.prefix)
+    registered.forEach((item) => {
+      const effectiveKey = resolveStorageKey(item.options.key!, item.options.prefix)
       if (event.key === effectiveKey) {
-        this.syncStorageToRegisteredItem(item)
+        syncStorageToRegisteredItem(item)
       }
     })
   }
 
-  getInjectionKey(): InjectionKey<ContextStorageWebStorageHandler<T>> {
-    return this.injectionKey
+  function getInjectionKey(): InjectionKey<
+    ContextStorageHandler<T, RegisterWebStorageHandlerOptions<T>>
+  > {
+    return config.injectionKey
   }
 
-  setInitialState(state: Record<string, unknown> | undefined): void {
-    this.initialState = state
+  function setInitialState(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    state: Record<string, unknown> | undefined,
+  ): void {
+    // Web storage handlers don't use initial state from navigation
   }
 
-  setEnabled(state: boolean, initial: boolean): void {
-    const prevState = this.enabled
-    this.enabled = state
+  function setEnabled(state: boolean, initial: boolean): void {
+    const prevState = enabled
+    enabled = state
 
-    if (this.hasAnyRegistered) {
+    if (hasAnyRegistered) {
       if (initial) {
-        this.syncStorageToRegistered()
+        syncStorageToRegistered()
       }
 
       if ((state && !prevState) || !initial) {
-        this.syncRegisteredToStorage()
+        syncRegisteredToStorage()
       }
     }
   }
 
-  syncRegisteredToStorage(): void {
-    if (!this.enabled) {
+  function syncRegisteredToStorage(): void {
+    if (!enabled) {
       return
     }
 
-    if (this.preventSyncToStorage) {
+    if (preventSyncToStorage) {
       return
     }
 
-    this.registered.forEach((item) => {
-      const effectiveKey = this.resolveStorageKey(item.options.key!, item.options.prefix)
+    registered.forEach((item) => {
+      const effectiveKey = resolveStorageKey(item.options.key!, item.options.prefix)
       const data = toValue(item.data)
       const { serializer } = item.options
 
       try {
         if (serializer) {
-          this.storage.setItem(effectiveKey, serializer(data))
+          config.storage.setItem(effectiveKey, serializer(data))
         } else {
-          this.storage.setItem(effectiveKey, JSON.stringify(data))
+          config.storage.setItem(effectiveKey, JSON.stringify(data))
         }
       } catch (e) {
         console.error('[vue-context-storage] Error writing to storage', e)
@@ -137,15 +132,15 @@ export abstract class ContextStorageWebStorageHandler<
     })
   }
 
-  syncStorageToRegisteredItem<T extends Record<string, unknown>>(
+  function syncStorageToRegisteredItem<T extends Record<string, unknown>>(
     item: ContextStorageWebStorageRegisteredItem<T>,
   ): void {
     const { key, prefix, deserializer } = item.options
-    const effectiveKey = this.resolveStorageKey(key!, prefix)
+    const effectiveKey = resolveStorageKey(key!, prefix)
 
     let stored: string | null = null
     try {
-      stored = this.storage.getItem(effectiveKey)
+      stored = config.storage.getItem(effectiveKey)
     } catch {
       return
     }
@@ -189,11 +184,11 @@ export abstract class ContextStorageWebStorageHandler<
     syncReactive(itemData, transformed.data)
   }
 
-  syncStorageToRegistered(): void {
-    this.registered.forEach((item) => this.syncStorageToRegisteredItem(item))
+  function syncStorageToRegistered(): void {
+    registered.forEach((item) => syncStorageToRegisteredItem(item))
   }
 
-  register<T extends Record<string, unknown>>(
+  function register<T extends Record<string, unknown>>(
     data: MaybeRefOrGetter<T>,
     options: RegisterWebStorageHandlerOptions<T>,
   ) {
@@ -202,17 +197,17 @@ export abstract class ContextStorageWebStorageHandler<
     }
 
     const resolvedData = toValue(data)
-    if (this.registeredDataObjects.has(resolvedData)) {
+    if (registeredDataObjects.has(resolvedData)) {
       console.warn(
-        `[vue-context-storage] The same data object is already registered in ${this.handlerName}.`,
+        `[vue-context-storage] The same data object is already registered in ${config.handlerName}.`,
         { key: options.key, prefix: options.prefix },
       )
     }
-    this.registeredDataObjects.add(resolvedData)
+    registeredDataObjects.add(resolvedData)
 
-    this.hasAnyRegistered = true
+    hasAnyRegistered = true
 
-    const watchHandle = watch(data, () => this.syncRegisteredToStorage(), {
+    const watchHandle = watch(data, () => syncRegisteredToStorage(), {
       deep: true,
     })
 
@@ -222,21 +217,21 @@ export abstract class ContextStorageWebStorageHandler<
       options,
       watchHandle,
     }
-    this.registered.push(item)
+    registered.push(item)
 
-    this.syncStorageToRegisteredItem(item)
-    this.syncRegisteredToStorage()
+    syncStorageToRegisteredItem(item)
+    syncRegisteredToStorage()
 
     const wasChanged = computed(() => !isEqual(toValue(data), item.initialData))
 
     return {
       stop: () => {
         watchHandle.stop()
-        const index = this.registered.indexOf(item)
+        const index = registered.indexOf(item)
         if (index !== -1) {
-          this.registered.splice(index, 1)
+          registered.splice(index, 1)
         }
-        this.registeredDataObjects.delete(resolvedData)
+        registeredDataObjects.delete(resolvedData)
       },
       reset: () => {
         syncReactive(toValue(data) as Record<string, unknown>, cloneDeep(item.initialData))
@@ -244,23 +239,25 @@ export abstract class ContextStorageWebStorageHandler<
       wasChanged,
     }
   }
+
+  return {
+    register,
+    setInitialState,
+    setEnabled,
+    getInjectionKey,
+  }
 }
 
-// /**
-//  * Options for the web storage composable with required key
-//  */
-// export type UseWebStorageOptions<T> = RegisterWebStorageHandlerBaseOptions<T> &
-//   Required<Pick<RegisterWebStorageHandlerBaseOptions<T>, 'key'>>
-
-export function createWebStorageComposable<
-  Handler extends ContextStorageWebStorageHandler<T>,
-  T extends Record<string, unknown>,
->(injectionKey: InjectionKey<Handler>, handlerName: string) {
+export function createWebStorageComposable<T extends Record<string, unknown>>(
+  injectionKey: InjectionKey<ContextStorageHandler<T, RegisterWebStorageHandlerOptions<T>>>,
+  handlerName: string,
+) {
   return function useContextStorageWebStorage(
     data: MaybeRefOrGetter<T>,
     options: RegisterWebStorageHandlerOptions<T>,
   ): UseContextStorageResult<T> {
-    const handler = inject<Handler>(injectionKey)
+    const handler =
+      inject<ContextStorageHandler<T, RegisterWebStorageHandlerOptions<T>>>(injectionKey)
 
     if (!handler) {
       throw new Error(`[vue-context-storage] ${handlerName} is not provided`)

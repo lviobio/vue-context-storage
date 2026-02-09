@@ -1,10 +1,10 @@
-import type { ContextStorageHandlerConstructor } from './handlers'
-import { ContextStorageQueryHandler } from './handlers/query'
-import { ContextStorageLocalStorageHandler } from './handlers/local-storage'
-import { ContextStorageSessionStorageHandler } from './handlers/session-storage'
+import type { ContextStorageHandlerFactory } from './handlers'
+import { createQueryHandler } from './handlers/query'
+import { createLocalStorageHandler } from './handlers/local-storage'
+import { createSessionStorageHandler } from './handlers/session-storage'
 
-export const defaultHandlers: ContextStorageHandlerConstructor[] = [
-  ContextStorageQueryHandler,
-  ContextStorageLocalStorageHandler,
-  ContextStorageSessionStorageHandler,
+export const defaultHandlers: ContextStorageHandlerFactory[] = [
+  createQueryHandler(),
+  createLocalStorageHandler(),
+  createSessionStorageHandler(),
 ]

@@ -1,32 +1,47 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { CollectionManager } from '../src/collection'
-import type { ContextStorageHandler, ContextStorageHandlerConstructor } from '../src/handlers'
+import { createCollectionManager, type CollectionManager } from '../src/collection'
+import type { ContextStorageHandler, ContextStorageHandlerFactory } from '../src/handlers'
 
 // Mock handler for testing
-class MockHandler implements ContextStorageHandler {
-  setEnabledCalls: Array<{ state: boolean; initial: boolean }> = []
-
-  register() {
-    return () => {}
-  }
-
-  getInjectionKey() {
-    return Symbol('mock-handler')
-  }
-
-  setEnabled(state: boolean, initial: boolean) {
-    this.setEnabledCalls.push({ state, initial })
-  }
+interface MockHandler extends ContextStorageHandler<any, any> {
+  setEnabledCalls: Array<{ state: boolean; initial: boolean }>
 }
 
-// Mock handler constructor
-const MockHandlerConstructor = MockHandler as unknown as ContextStorageHandlerConstructor
+function createMockHandlerFactory(): ContextStorageHandlerFactory {
+  const factory: ContextStorageHandlerFactory = () => {
+    const setEnabledCalls: Array<{ state: boolean; initial: boolean }> = []
 
-describe('CollectionManager', () => {
+    return {
+      register() {
+        return {
+          stop: () => {},
+          reset: () => {},
+          wasChanged: { value: false } as any,
+        }
+      },
+
+      getInjectionKey() {
+        return Symbol('mock-handler')
+      },
+
+      setEnabled(state: boolean, initial: boolean) {
+        setEnabledCalls.push({ state, initial })
+      },
+
+      get setEnabledCalls() {
+        return setEnabledCalls
+      },
+    } as MockHandler
+  }
+
+  return factory
+}
+
+describe('createCollectionManager', () => {
   let collection: CollectionManager
 
   beforeEach(() => {
-    collection = new CollectionManager([MockHandlerConstructor])
+    collection = createCollectionManager([createMockHandlerFactory()])
   })
 
   describe('initialization', () => {
@@ -65,7 +80,8 @@ describe('CollectionManager', () => {
       expect(item).toBeDefined()
       expect(item.key).toBe('test-1')
       expect(item.handlers).toHaveLength(1)
-      expect(item.handlers[0]).toBeInstanceOf(MockHandler)
+      expect(item.handlers[0]).toHaveProperty('register')
+      expect(item.handlers[0]).toHaveProperty('getInjectionKey')
     })
 
     it('should add multiple items', () => {
@@ -82,8 +98,8 @@ describe('CollectionManager', () => {
       const item2 = collection.add({ key: 'test-2' })
 
       expect(item1.handlers[0]).not.toBe(item2.handlers[0])
-      expect(item1.handlers[0]).toBeInstanceOf(MockHandler)
-      expect(item2.handlers[0]).toBeInstanceOf(MockHandler)
+      expect(item1.handlers[0]).toHaveProperty('register')
+      expect(item2.handlers[0]).toHaveProperty('register')
     })
   })
 
@@ -126,7 +142,7 @@ describe('CollectionManager', () => {
 
     it('should throw error when removing non-existent item', () => {
       collection.add({ key: 'test-1' })
-      const otherCollection = new CollectionManager([MockHandlerConstructor])
+      const otherCollection = createCollectionManager([createMockHandlerFactory()])
       const item2 = otherCollection.add({ key: 'test-2' })
 
       expect(() => collection.remove(item2)).toThrow('[vue-context-storage] Item not found')
@@ -170,8 +186,8 @@ describe('CollectionManager', () => {
 
       collection.setActive(item1)
 
-      const handler1 = item1.handlers[0] as MockHandler
-      const handler2 = item2.handlers[0] as MockHandler
+      const handler1 = item1.handlers[0] as unknown as MockHandler
+      const handler2 = item2.handlers[0] as unknown as MockHandler
 
       expect(handler1.setEnabledCalls).toHaveLength(1)
       expect(handler1.setEnabledCalls[0]).toEqual({ state: true, initial: true })
@@ -186,12 +202,12 @@ describe('CollectionManager', () => {
 
       collection.setActive(item1)
 
-      const handler1 = item1.handlers[0] as MockHandler
-      const handler2 = item2.handlers[0] as MockHandler
+      const handler1 = item1.handlers[0] as unknown as MockHandler
+      const handler2 = item2.handlers[0] as unknown as MockHandler
 
       // Clear previous calls
-      handler1.setEnabledCalls = []
-      handler2.setEnabledCalls = []
+      handler1.setEnabledCalls.length = 0
+      handler2.setEnabledCalls.length = 0
 
       collection.setActive(item2)
 
@@ -207,8 +223,8 @@ describe('CollectionManager', () => {
 
       collection.setActive(item)
 
-      const handler = item.handlers[0] as MockHandler
-      handler.setEnabledCalls = []
+      const handler = item.handlers[0] as unknown as MockHandler
+      handler.setEnabledCalls.length = 0
 
       collection.setActive(item)
 
@@ -216,18 +232,20 @@ describe('CollectionManager', () => {
     })
 
     it('should work with handlers that do not implement setEnabled', () => {
-      class HandlerWithoutSetEnabled implements ContextStorageHandler {
+      const factoryWithoutSetEnabled: ContextStorageHandlerFactory = () => ({
         register() {
-          return () => {}
-        }
+          return {
+            stop: () => {},
+            reset: () => {},
+            wasChanged: { value: false } as any,
+          }
+        },
         getInjectionKey() {
           return Symbol('handler')
-        }
-      }
+        },
+      })
 
-      const collection = new CollectionManager([
-        HandlerWithoutSetEnabled as unknown as ContextStorageHandlerConstructor,
-      ])
+      const collection = createCollectionManager([factoryWithoutSetEnabled])
       const item = collection.add({ key: 'test' })
 
       expect(() => collection.setActive(item)).not.toThrow()
@@ -302,8 +320,8 @@ describe('CollectionManager', () => {
       collection.setActive(item2)
       collection.setActive(item1)
 
-      const handler1 = item1.handlers[0] as MockHandler
-      const handler2 = item2.handlers[0] as MockHandler
+      const handler1 = item1.handlers[0] as unknown as MockHandler
+      const handler2 = item2.handlers[0] as unknown as MockHandler
 
       // item1: enabled(true,true) -> disabled(false,false) -> enabled(true,false)
       expect(handler1.setEnabledCalls).toHaveLength(3)

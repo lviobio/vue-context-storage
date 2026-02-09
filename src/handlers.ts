@@ -1,11 +1,11 @@
 import type { ComputedRef, InjectionKey, MaybeRefOrGetter } from 'vue'
 import type { HandlerSchema } from './handlers/types'
 
-export interface ContextStorageHandlerConstructor<
+export interface ContextStorageHandlerFactory<
   T extends Record<string, unknown> = {},
   O extends RegisterOptions<T> = RegisterOptions<T>,
 > {
-  new (): ContextStorageHandler<T, O>
+  (): ContextStorageHandler<T, O>
   getInitialStateResolver?: () => () => Record<string, unknown>
 }
 

@@ -1,6 +1,6 @@
 import type {
   ContextStorageHandler,
-  ContextStorageHandlerConstructor,
+  ContextStorageHandlerFactory,
   RegisterOptions,
 } from './handlers'
 
@@ -9,87 +9,84 @@ export type CollectionManagerItem = {
   handlers: ContextStorageHandler<any, RegisterOptions<any>>[]
 }
 
-interface ItemOptions {
+export interface ItemOptions {
   key: string
 }
 
 export function createItem(
-  handlerConstructors: ContextStorageHandlerConstructor[],
+  handlerFactories: ContextStorageHandlerFactory[],
   options: ItemOptions,
 ): CollectionManagerItem {
-  const handlers = handlerConstructors.map((constructor) => new constructor())
+  const handlers = handlerFactories.map((factory) => factory())
 
   return { handlers, key: options.key }
 }
 
-export class CollectionManager {
-  public active?: CollectionManagerItem = undefined
-  private collection: CollectionManagerItem[] = []
-  private onActiveChangeCallbacks: ((item: CollectionManagerItem) => void)[] = []
-  private readonly isReadyPromise: Promise<void>
-  private resolveMarkAsReady: (() => void) | undefined = undefined
+export function createCollectionManager(handlerFactories: ContextStorageHandlerFactory[]) {
+  let active: CollectionManagerItem | undefined = undefined
+  const collection: CollectionManagerItem[] = []
+  const onActiveChangeCallbacks: ((item: CollectionManagerItem) => void)[] = []
+  let resolveMarkAsReady: (() => void) | undefined = undefined
+  const isReadyPromise = new Promise<void>((resolve) => {
+    resolveMarkAsReady = resolve
+  })
 
-  constructor(private handlerConstructors: ContextStorageHandlerConstructor[]) {
-    this.isReadyPromise = new Promise((resolve) => {
-      this.resolveMarkAsReady = resolve
-    })
+  function isReady() {
+    return isReadyPromise
   }
 
-  isReady() {
-    return this.isReadyPromise
+  function markAsReady() {
+    resolveMarkAsReady?.()
   }
 
-  markAsReady() {
-    this.resolveMarkAsReady?.()
-  }
-
-  onActiveChange(callback: (item: CollectionManagerItem) => void): () => void {
-    this.onActiveChangeCallbacks.push(callback)
+  function onActiveChange(callback: (item: CollectionManagerItem) => void): () => void {
+    onActiveChangeCallbacks.push(callback)
     return () => {
-      const index = this.onActiveChangeCallbacks.indexOf(callback)
+      const index = onActiveChangeCallbacks.indexOf(callback)
       if (index !== -1) {
-        this.onActiveChangeCallbacks.splice(index, 1)
+        onActiveChangeCallbacks.splice(index, 1)
       }
     }
   }
 
-  first(): CollectionManagerItem | undefined {
-    return this.collection[0]
+  function first(): CollectionManagerItem | undefined {
+    return collection[0]
   }
 
-  findItemByKey(key: string): CollectionManagerItem | undefined {
-    return this.collection.find((item) => item.key === key)
+  function findItemByKey(key: string): CollectionManagerItem | undefined {
+    return collection.find((item) => item.key === key)
   }
 
-  add(options: ItemOptions): CollectionManagerItem {
-    const item = createItem(this.handlerConstructors, options)
+  function add(options: ItemOptions): CollectionManagerItem {
+    const item = createItem(handlerFactories, options)
 
-    this.collection.push(item)
+    collection.push(item)
 
     return item
   }
 
-  remove(removeItem: CollectionManagerItem): void {
-    if (this.collection.indexOf(removeItem) === -1) {
+  function remove(removeItem: CollectionManagerItem): void {
+    if (collection.indexOf(removeItem) === -1) {
       throw new Error('[vue-context-storage] Item not found in collection')
     }
 
-    this.collection = this.collection.filter((item) => item !== removeItem)
+    const idx = collection.indexOf(removeItem)
+    collection.splice(idx, 1)
 
-    if (this.active === removeItem && this.collection.length > 0) {
-      this.setActive(this.collection[this.collection.length - 1])
+    if (active === removeItem && collection.length > 0) {
+      setActive(collection[collection.length - 1])
     }
   }
 
-  setActive(activeItem: CollectionManagerItem): void {
-    if (this.active === activeItem) {
+  function setActive(activeItem: CollectionManagerItem): void {
+    if (active === activeItem) {
       return
     }
 
-    const hasActiveBefore = this.active !== undefined
-    this.active = activeItem
+    const hasActiveBefore = active !== undefined
+    active = activeItem
 
-    this.collection.forEach((item) => {
+    collection.forEach((item) => {
       Object.values(item.handlers).forEach((handler) => {
         if (handler.setEnabled) {
           handler.setEnabled(item === activeItem, !hasActiveBefore)
@@ -97,6 +94,22 @@ export class CollectionManager {
       })
     })
 
-    this.onActiveChangeCallbacks.forEach((callback) => callback(activeItem))
+    onActiveChangeCallbacks.forEach((callback) => callback(activeItem))
+  }
+
+  return {
+    get active() {
+      return active
+    },
+    isReady,
+    markAsReady,
+    onActiveChange,
+    first,
+    findItemByKey,
+    add,
+    remove,
+    setActive,
   }
 }
+
+export type CollectionManager = ReturnType<typeof createCollectionManager>

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { type ContextStorageHandlerConstructor } from '../handlers'
+import { type ContextStorageHandlerFactory } from '../handlers'
 import { defaultHandlers } from '../constants'
 import { useRouter } from 'vue-router'
 import { createItem } from '../collection'
@@ -9,54 +9,40 @@ import { defineComponent, type PropType } from 'vue'
 export default defineComponent({
   props: {
     handlers: {
-      type: Object as PropType<ContextStorageHandlerConstructor[]>,
+      type: Object as PropType<ContextStorageHandlerFactory[]>,
       default: () => defaultHandlers,
     },
   },
-  setup({ handlers }, { slots }) {
-    const item = createItem(handlers, { key: 'main' })
+  setup({ handlers: factories }, { slots }) {
+    const item = createItem(factories, { key: 'main' })
 
     useContextStorageItemProvider(item)
 
     const router = useRouter()
 
-    const initialNavigatorState = new Map<
-      ContextStorageHandlerConstructor,
-      Record<string, unknown>
-    >()
-    const initialNavigatorStateResolvers = new Map<
-      ContextStorageHandlerConstructor,
-      () => Record<string, unknown>
-    >()
+    const initialStateResolvers = new Map<number, () => Record<string, unknown>>()
 
-    handlers.forEach((handler) => {
-      if (!handler.getInitialStateResolver) {
+    factories.forEach((factory, index) => {
+      if (!factory.getInitialStateResolver) {
         return
       }
 
-      initialNavigatorStateResolvers.set(handler, handler.getInitialStateResolver())
+      initialStateResolvers.set(index, factory.getInitialStateResolver())
     })
 
     const initItem = () => {
-      item.handlers.forEach((handler) => {
-        const state = initialNavigatorState.get(
-          handler.constructor as ContextStorageHandlerConstructor,
-        )
+      item.handlers.forEach((handler, index) => {
+        const resolver = initialStateResolvers.get(index)
 
-        if (state) {
-          handler.setInitialState?.(state)
+        if (resolver) {
+          handler.setInitialState?.(resolver())
         }
 
         handler.setEnabled?.(true, true)
       })
     }
 
-    router.isReady().then(() => {
-      initialNavigatorStateResolvers.forEach((resolver, handler) => {
-        initialNavigatorState.set(handler, resolver())
-      })
-      initItem()
-    })
+    router.isReady().then(initItem)
 
     return () => slots.default?.()
   },

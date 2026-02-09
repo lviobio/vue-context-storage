@@ -1,5 +1,5 @@
 <script lang="ts">
-import { type ContextStorageHandlerConstructor } from '../handlers'
+import { type ContextStorageHandlerFactory } from '../handlers'
 import { defineComponent, type PropType } from 'vue'
 import { useRouter } from 'vue-router'
 import { defaultHandlers } from '../constants'
@@ -8,7 +8,7 @@ import { useContextStorageCollection } from '../composables/useContextStorageCol
 export default defineComponent({
   props: {
     handlers: {
-      type: Object as PropType<ContextStorageHandlerConstructor[]>,
+      type: Object as PropType<ContextStorageHandlerFactory[]>,
       default: () => defaultHandlers,
     },
   },
