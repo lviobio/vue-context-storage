@@ -417,6 +417,7 @@ export class ContextStorageQueryHandler<
     return {
       stop: () => {
         console.debug('[query-handler] unregister', { prefix: options.prefix })
+        item.watchHandle.stop()
         const index = this.registered.indexOf(item)
         if (index !== -1) {
           this.registered.splice(index, 1)
