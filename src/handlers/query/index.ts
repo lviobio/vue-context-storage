@@ -1,8 +1,8 @@
 import type { ContextStorageHandler, ContextStorageHandlerConstructor } from '../../handlers'
 import { deserializeParams, serializeParams } from './helpers'
 import { contextStorageQueryHandler } from '../../symbols'
-import { cloneDeep, isEqual, pick } from 'lodash'
-import { syncReactive } from '../helpers'
+import { cloneDeep, isEqual } from 'lodash'
+import { applyTransform, syncReactive } from '../helpers'
 import { buildQuery } from './build-query'
 import { computeSyncState } from './compute-sync-state'
 import { computed, inject, type MaybeRefOrGetter, onBeforeUnmount, toValue, watch } from 'vue'
@@ -14,7 +14,6 @@ import type {
 } from './types'
 import { buildContextStorageHandler } from '../helpers'
 import type { UseContextStorageResult } from '../../composables/types'
-import type { HandlerSchema } from '../types'
 
 export function useContextStorageQueryHandler<T extends Record<string, unknown>>(
   data: MaybeRefOrGetter<T>,
@@ -29,57 +28,6 @@ export function useContextStorageQueryHandler<T extends Record<string, unknown>>
   }
 
   return buildContextStorageHandler(handler, data, options)
-}
-
-export interface ApplyTransformInput<T extends Record<string, unknown>> {
-  state: Record<string, unknown>
-  initialData: T
-  schema?: Pick<HandlerSchema<T>, 'safeParse'>
-  transform?: (deserialized: any, initialData: T) => any
-  mergeOnlyExistingKeysWithoutTransform: boolean
-}
-
-export interface ApplyTransformWarning {
-  message: string
-  args: unknown[]
-}
-
-export interface ApplyTransformResult {
-  data: Record<string, unknown>
-  warnings: ApplyTransformWarning[]
-}
-
-export function applyTransform<T extends Record<string, unknown>>(
-  input: ApplyTransformInput<T>,
-): ApplyTransformResult {
-  const warnings: ApplyTransformWarning[] = []
-  let data: Record<string, unknown> = input.state
-
-  // Priority: schema > transform > default merge
-  if (input.schema) {
-    const result = input.schema.safeParse(data)
-
-    if (result.success) {
-      data = result.data
-    } else {
-      warnings.push({ message: '[vue-context-storage] schema parse failed', args: [result.error] })
-    }
-
-    if (input.transform) {
-      warnings.push({
-        message: '[vue-context-storage] transform is not supported with schema',
-        args: [],
-      })
-    }
-  } else if (input.transform) {
-    data = input.transform(data as any, input.initialData)
-  } else {
-    if (input.mergeOnlyExistingKeysWithoutTransform) {
-      data = pick(data, Object.keys(input.initialData))
-    }
-  }
-
-  return { data, warnings }
 }
 
 export class ContextStorageQueryHandler<

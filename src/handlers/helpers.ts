@@ -6,7 +6,9 @@ import {
   onBeforeUnmount,
   toValue,
 } from 'vue'
+import { pick } from 'lodash'
 import type { ContextStorageHandler, RegisterBaseOptions } from '../handlers'
+import type { HandlerSchema } from './types'
 import { contextStoragePrefixSegmentsInjectKey, resolvePrefixSegments } from '../prefix'
 
 /**
@@ -26,6 +28,64 @@ export function syncReactive<T extends Record<string, unknown>>(
   }
   // Assign all keys from source
   Object.assign(target, source)
+}
+
+export interface ApplyTransformInput<T extends Record<string, unknown>> {
+  state: Record<string, unknown>
+  initialData: T
+  schema?: Pick<HandlerSchema<T>, 'safeParse'>
+  transform?: (deserialized: any, initialData: T) => any
+  mergeOnlyExistingKeysWithoutTransform: boolean
+}
+
+export interface ApplyTransformWarning {
+  message: string
+  args: unknown[]
+}
+
+export interface ApplyTransformResult {
+  data: Record<string, unknown>
+  warnings: ApplyTransformWarning[]
+}
+
+/**
+ * Applies schema validation, transform function, or default key-picking to deserialized state.
+ * Priority: schema > transform > default merge (pick existing keys).
+ *
+ * On schema parse failure, falls back to initialData.
+ */
+export function applyTransform<T extends Record<string, unknown>>(
+  input: ApplyTransformInput<T>,
+): ApplyTransformResult {
+  const warnings: ApplyTransformWarning[] = []
+  let data: Record<string, unknown> = input.state
+
+  // Priority: schema > transform > default merge
+  if (input.schema) {
+    const result = input.schema.safeParse(data)
+
+    if (result.success) {
+      data = result.data
+    } else {
+      warnings.push({ message: '[vue-context-storage] schema parse failed', args: [result.error] })
+      data = { ...input.initialData }
+    }
+
+    if (input.transform) {
+      warnings.push({
+        message: '[vue-context-storage] transform is not supported with schema',
+        args: [],
+      })
+    }
+  } else if (input.transform) {
+    data = input.transform(data as any, input.initialData)
+  } else {
+    if (input.mergeOnlyExistingKeysWithoutTransform) {
+      data = pick(data, Object.keys(input.initialData))
+    }
+  }
+
+  return { data, warnings }
 }
 
 /**

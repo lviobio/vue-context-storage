@@ -1,5 +1,5 @@
-import { cloneDeep, isEqual, pick } from 'lodash'
-import { syncReactive } from '../helpers'
+import { cloneDeep, isEqual } from 'lodash'
+import { applyTransform, buildContextStorageHandler, syncReactive } from '../helpers'
 import {
   computed,
   inject,
@@ -14,7 +14,6 @@ import type {
   RegisterWebStorageHandlerOptions,
   WebStorageHandlerBaseOptions,
 } from './types'
-import { buildContextStorageHandler } from '../helpers'
 import type { ContextStorageHandler } from '../../handlers'
 import type { UseContextStorageResult } from '../../composables/types'
 
@@ -173,37 +172,21 @@ export abstract class ContextStorageWebStorageHandler<
 
     const itemData = toValue(item.data)
 
-    // Priority: schema > transform > default merge
-    if (item.options?.schema) {
-      const result = item.options.schema.safeParse(deserialized)
+    const transformed = applyTransform({
+      state: deserialized,
+      initialData: item.initialData,
+      schema: item.options?.schema,
+      transform: item.options?.transform,
+      mergeOnlyExistingKeysWithoutTransform: true,
+    })
 
-      if (result.success) {
-        deserialized = result.data as Record<string, unknown>
-      } else {
-        console.warn('[vue-context-storage] schema parse failed', result.error)
-        // Fall back to initial data on schema failure
-        syncReactive(itemData, item.initialData)
-        return
-      }
+    transformed.warnings.forEach((w) => console.warn(w.message, ...w.args))
 
-      if (item.options?.transform) {
-        console.warn('[vue-context-storage] transform is not supported with schema')
-      }
-    } else if (item.options?.transform) {
-      deserialized = item.options.transform(deserialized, item.initialData) as Record<
-        string,
-        unknown
-      >
-    } else {
-      // Without transform, only merge existing keys
-      deserialized = pick(deserialized, Object.keys(item.initialData))
-    }
-
-    if (isEqual(itemData, deserialized)) {
+    if (isEqual(itemData, transformed.data)) {
       return
     }
 
-    syncReactive(itemData, deserialized)
+    syncReactive(itemData, transformed.data)
   }
 
   syncStorageToRegistered(): void {
