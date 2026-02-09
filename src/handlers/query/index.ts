@@ -1,7 +1,8 @@
 import type { ContextStorageHandler, ContextStorageHandlerConstructor } from '../../handlers'
 import { deserializeParams, serializeParams } from './helpers'
 import { contextStorageQueryHandler } from '../../symbols'
-import { cloneDeep, isEqual, merge, pick } from 'lodash'
+import { cloneDeep, isEqual, pick } from 'lodash'
+import { syncReactive } from '../helpers'
 import { buildQuery } from './build-query'
 import { computeSyncState } from './compute-sync-state'
 import { computed, inject, type MaybeRefOrGetter, onBeforeUnmount, toValue, watch } from 'vue'
@@ -307,7 +308,7 @@ export class ContextStorageQueryHandler<
         prefix,
         data: result.data,
       })
-      merge(itemState, result.data)
+      syncReactive(itemState, result.data)
       return
     }
 
@@ -347,7 +348,7 @@ export class ContextStorageQueryHandler<
       from: { ...itemState },
       to: finalData,
     })
-    merge(itemState, finalData)
+    syncReactive(itemState, finalData)
   }
 
   register<T extends Record<string, unknown>>(
@@ -428,7 +429,7 @@ export class ContextStorageQueryHandler<
       },
       reset: () => {
         console.debug('[query-handler] reset', { prefix: options.prefix })
-        merge(toValue(data), cloneDeep(initialData))
+        syncReactive(toValue(data) as Record<string, unknown>, cloneDeep(initialData))
       },
       wasChanged,
     }

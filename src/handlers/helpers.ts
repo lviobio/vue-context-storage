@@ -10,6 +10,25 @@ import type { ContextStorageHandler, RegisterBaseOptions } from '../handlers'
 import { contextStoragePrefixSegmentsInjectKey, resolvePrefixSegments } from '../prefix'
 
 /**
+ * Fully synchronizes a reactive target object with source data.
+ * Unlike lodash `merge`, this also removes keys from target that are not present in source.
+ * This is necessary because Vue reactive proxies cannot be replaced — only mutated in place.
+ */
+export function syncReactive<T extends Record<string, unknown>>(
+  target: T,
+  source: Record<string, unknown>,
+): void {
+  // Remove keys that are not in source
+  for (const key of Object.keys(target)) {
+    if (!(key in source)) {
+      delete target[key]
+    }
+  }
+  // Assign all keys from source
+  Object.assign(target, source)
+}
+
+/**
  * Maps handler injection keys to their handler type names (e.g. 'query', 'localStorage').
  * This is used to resolve per-handler prefix segments from ContextStoragePrefix components.
  */

@@ -1,4 +1,5 @@
-import { cloneDeep, isEqual, merge, pick } from 'lodash'
+import { cloneDeep, isEqual, pick } from 'lodash'
+import { syncReactive } from '../helpers'
 import {
   computed,
   inject,
@@ -181,7 +182,7 @@ export abstract class ContextStorageWebStorageHandler<
       } else {
         console.warn('[vue-context-storage] schema parse failed', result.error)
         // Fall back to initial data on schema failure
-        merge(itemData, item.initialData)
+        syncReactive(itemData, item.initialData)
         return
       }
 
@@ -202,7 +203,7 @@ export abstract class ContextStorageWebStorageHandler<
       return
     }
 
-    merge(itemData, deserialized)
+    syncReactive(itemData, deserialized)
   }
 
   syncStorageToRegistered(): void {
@@ -255,7 +256,7 @@ export abstract class ContextStorageWebStorageHandler<
         this.registeredDataObjects.delete(resolvedData)
       },
       reset: () => {
-        merge(toValue(data), cloneDeep(item.initialData))
+        syncReactive(toValue(data) as Record<string, unknown>, cloneDeep(item.initialData))
       },
       wasChanged,
     }
