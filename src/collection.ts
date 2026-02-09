@@ -43,8 +43,14 @@ export class CollectionManager {
     this.resolveMarkAsReady?.()
   }
 
-  onActiveChange(callback: (item: CollectionManagerItem) => void): void {
+  onActiveChange(callback: (item: CollectionManagerItem) => void): () => void {
     this.onActiveChangeCallbacks.push(callback)
+    return () => {
+      const index = this.onActiveChangeCallbacks.indexOf(callback)
+      if (index !== -1) {
+        this.onActiveChangeCallbacks.splice(index, 1)
+      }
+    }
   }
 
   first(): CollectionManagerItem | undefined {
