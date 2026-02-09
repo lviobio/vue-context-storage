@@ -7,12 +7,12 @@ export default defineConfig({
   dts: { vue: true },
   plugins: [
     {
-      name: 'drop-console',
+      name: 'drop-console-debug',
       async transform(code, id) {
         if ((id.endsWith('.ts') && !id.endsWith('.d.ts')) || id.endsWith('.vue')) {
           const result = await transform(code, {
             loader: 'ts',
-            drop: ['console'],
+            pure: ['console.debug'],
           })
           return { code: result.code }
         }
