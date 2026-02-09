@@ -417,7 +417,10 @@ export class ContextStorageQueryHandler<
     return {
       stop: () => {
         console.debug('[query-handler] unregister', { prefix: options.prefix })
-        this.registered.splice(this.registered.indexOf(item), 1)
+        const index = this.registered.indexOf(item)
+        if (index !== -1) {
+          this.registered.splice(index, 1)
+        }
         this.registeredDataObjects.delete(resolvedData)
         this.registeredVersion++
         this.syncRegisteredToQuery()
