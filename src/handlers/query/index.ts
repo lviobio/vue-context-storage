@@ -159,8 +159,9 @@ export class ContextStorageQueryHandler<
       }
     } catch (e) {
       console.error('[vue-context-storage] Got error while routing', e)
+    } finally {
+      this.preventAfterEachRouteCallsWhileCallingRouter--
     }
-    this.preventAfterEachRouteCallsWhileCallingRouter--
   }
 
   private scheduleSyncToQuery(): void {
