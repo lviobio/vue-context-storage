@@ -84,7 +84,7 @@ export function buildQuery(input: BuildQueryInput): BuildQueryResult {
     // If there are key intersections between the query and the patch, a warning is issued.
     // Patches should not overwrite each other, otherwise, upon reload, an incorrect value will be restored.
     patchKeys.forEach((key) => {
-      if (newQueryRaw.hasOwnProperty(key)) {
+      if (Object.hasOwn(newQueryRaw, key)) {
         warnings.push(
           `[vue-context-storage] Key ${key} is already present, overriding ` + (item.causer || ''),
         )
@@ -114,7 +114,7 @@ export function buildQuery(input: BuildQueryInput): BuildQueryResult {
     // Perform a diff of keys between currentQuery and newQueryRaw, and remove the keys that are in currentQuery but not in newQueryRaw.
     // This is necessary to ensure that the query string does not contain keys that are no longer used.
     Object.keys(input.currentQuery).forEach((key) => {
-      if (!newQueryRaw.hasOwnProperty(key)) {
+      if (!Object.hasOwn(newQueryRaw, key)) {
         delete newQuery[key]
       }
     })
