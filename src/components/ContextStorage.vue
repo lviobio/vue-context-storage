@@ -20,29 +20,11 @@ export default defineComponent({
 
     const router = useRouter()
 
-    const initialStateResolvers = new Map<number, () => Record<string, unknown>>()
-
-    factories.forEach((factory, index) => {
-      if (!factory.getInitialStateResolver) {
-        return
-      }
-
-      initialStateResolvers.set(index, factory.getInitialStateResolver())
-    })
-
-    const initItem = () => {
-      item.handlers.forEach((handler, index) => {
-        const resolver = initialStateResolvers.get(index)
-
-        if (resolver) {
-          handler.setInitialState?.(resolver())
-        }
-
+    router.isReady().then(() => {
+      item.handlers.forEach((handler) => {
         handler.setEnabled?.(true, true)
       })
-    }
-
-    router.isReady().then(initItem)
+    })
 
     return () => slots.default?.()
   },

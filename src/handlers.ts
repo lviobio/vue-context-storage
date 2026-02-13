@@ -6,7 +6,6 @@ export interface ContextStorageHandlerFactory<
   O extends RegisterOptions<T> = RegisterOptions<T>,
 > {
   (): ContextStorageHandler<T, O>
-  getInitialStateResolver?: () => () => Record<string, unknown>
 }
 
 export interface RegisterBaseOptions<T> {
@@ -49,7 +48,6 @@ export interface RegisterResult {
 
 export interface ContextStorageHandler<T, O> {
   register: (data: MaybeRefOrGetter<T>, options: O) => RegisterResult
-  setInitialState?: (state: Record<string, unknown>) => void
   setEnabled?: (enabled: boolean, initial: boolean) => void
   getInjectionKey(): InjectionKey<ContextStorageHandler<T, O>>
 }

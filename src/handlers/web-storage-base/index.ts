@@ -84,13 +84,6 @@ export function createWebStorageHandlerInstance<T extends Record<string, unknown
     return config.injectionKey
   }
 
-  function setInitialState(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    state: Record<string, unknown> | undefined,
-  ): void {
-    // Web storage handlers don't use initial state from navigation
-  }
-
   function setEnabled(state: boolean, initial: boolean): void {
     const prevState = enabled
     enabled = state
@@ -242,7 +235,6 @@ export function createWebStorageHandlerInstance<T extends Record<string, unknown
 
   return {
     register,
-    setInitialState,
     setEnabled,
     getInjectionKey,
   }

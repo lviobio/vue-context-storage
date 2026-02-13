@@ -41,7 +41,6 @@ export function createQueryHandler(
     const registered: ContextStorageQueryRegisteredItem<any>[] = []
     const registeredDataObjects = new Set<object>()
     let currentQuery: LocationQuery | undefined = undefined
-    let initialState: Record<string, unknown> | undefined
     let hasAnyRegistered = false
     let preventSyncRegisteredToQueryByAfterEachRoute = false
     let preventAfterEachRouteCallsWhileCallingRouter = 0
@@ -70,10 +69,6 @@ export function createQueryHandler(
       return contextStorageQueryHandler
     }
 
-    function setInitialState(state: Record<string, unknown> | undefined): void {
-      initialState = state
-    }
-
     function setEnabled(state: boolean, initial: boolean): void {
       const prevState = enabled
       enabled = state
@@ -86,7 +81,7 @@ export function createQueryHandler(
 
       if (hasAnyRegistered) {
         if (initial) {
-          console.debug('[query-handler] setEnabled → syncInitialStateToRegistered', initialState)
+          console.debug('[query-handler] setEnabled → syncInitialStateToRegistered', route.query)
           syncInitialStateToRegistered()
         }
 
@@ -169,17 +164,13 @@ export function createQueryHandler(
         return
       }
 
-      console.debug(
-        '[query-handler] afterEachRoute — setting initial state from route query',
-        route.query,
-      )
-      setInitialState(route.query)
+      console.debug('[query-handler] afterEachRoute — syncing from route query', route.query)
 
       preventSyncRegisteredToQueryByAfterEachRoute = true
       queueMicrotask(() => {
         console.debug(
           '[query-handler] afterEachRoute microtask — syncInitialStateToRegistered + syncRegisteredToQuery',
-          initialState,
+          route.query,
         )
         preventSyncRegisteredToQueryByAfterEachRoute = false
 
@@ -197,16 +188,6 @@ export function createQueryHandler(
     ): void {
       const prefix = item.options?.prefix
 
-      if (initialState === undefined) {
-        console.debug(
-          '[query-handler] syncInitialStateToRegisteredItem — skipped (no initial state)',
-          {
-            prefix,
-          },
-        )
-        return
-      }
-
       const {
         mergeOnlyExistingKeysWithoutTransform = options.mergeOnlyExistingKeysWithoutTransform,
       } = item.options || {}
@@ -214,7 +195,7 @@ export function createQueryHandler(
       const itemState = toValue(item.data)
 
       const result = computeSyncState({
-        deserializedState: deserializeParams(initialState),
+        deserializedState: deserializeParams(route.query),
         initialData: item.initialData,
         prefix,
         emptyPlaceholder: options.emptyPlaceholder,
@@ -349,7 +330,9 @@ export function createQueryHandler(
           }
           registeredDataObjects.delete(resolvedData)
           registeredVersion++
-          syncRegisteredToQuery()
+          // Reset currentQuery so that subsequent syncs from remaining items
+          // won't treat the unregistered item's keys as "owned" and delete them.
+          currentQuery = undefined
         },
         reset: () => {
           console.debug('[query-handler] reset', { prefix: registerOptions.prefix })
@@ -382,12 +365,7 @@ export function createQueryHandler(
       return { newQuery: result.newQuery, newQueryRaw: result.newQueryRaw }
     }
 
-    return { register, setInitialState, setEnabled, getInjectionKey }
-  }
-
-  factory.getInitialStateResolver = () => {
-    const route = useRoute()
-    return () => route.query
+    return { register, setEnabled, getInjectionKey }
   }
 
   return factory
