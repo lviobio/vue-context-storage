@@ -131,6 +131,33 @@ export interface RegisterQueryHandlerBaseOptions<T> extends QueryHandlerSharedOp
     deserialized: DeepTransformValuesToLocationQueryValue<UnwrapNestedRefs<T>>,
     initialData: T,
   ) => UnwrapNestedRefs<T>
+
+  /**
+   * Additional default values for `onlyChanges` comparison.
+   *
+   * When `onlyChanges` is enabled, a key is omitted from the URL if its current value
+   * equals the initial snapshot **or** a value specified here.
+   *
+   * This is useful when the initial reactive data contains `undefined` for a field,
+   * but you also want a specific value (e.g. `1`) to be treated as a default
+   * and not appear in the query string.
+   *
+   * @example
+   * ```ts
+   * const data = ref({ page: undefined as number | undefined })
+   *
+   * useContextStorageQueryHandler(data, {
+   *   prefix: 'filters',
+   *   onlyChanges: true,
+   *   additionalDefaultData: { page: 1 },
+   * })
+   *
+   * // page=undefined → not in query (matches initial)
+   * // page=1         → not in query (matches additionalDefaultData)
+   * // page=2         → appears in query
+   * ```
+   */
+  additionalDefaultData?: Partial<UnwrapNestedRefs<T>>
 }
 
 export interface RegisterQueryHandlerOptions<T>
@@ -140,6 +167,7 @@ export interface ContextStorageQueryRegisteredItem<T extends Record<string, unkn
   data: MaybeRefOrGetter<T>
   initialData: T
   initialQueryData: LocationQuery
+  additionalDefaultQueryData: LocationQuery | undefined
   options: RegisterQueryHandlerOptions<T>
   watchHandle: WatchHandle
 }

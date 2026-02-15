@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest'
-import { buildQuery, type BuildQueryInput, type BuildQueryItem } from '../src/handlers/query/build-query'
+import { describe, expect, it } from 'vitest'
+import {
+  buildQuery,
+  type BuildQueryInput,
+  type BuildQueryItem,
+} from '../src/handlers/query/build-query'
 import { serializeParams } from '../src/handlers/query/helpers'
 
 function createInput(overrides: Partial<BuildQueryInput> = {}): BuildQueryInput {
@@ -17,14 +21,20 @@ function createInput(overrides: Partial<BuildQueryInput> = {}): BuildQueryInput 
 
 function createItem(
   data: Record<string, unknown>,
-  overrides: Partial<Omit<BuildQueryItem, 'data' | 'initialQueryData'>> & {
+  overrides: Partial<
+    Omit<BuildQueryItem, 'data' | 'initialQueryData' | 'additionalDefaultQueryData'>
+  > & {
     initialData?: Record<string, unknown>
+    additionalDefaultData?: Record<string, unknown>
   } = {},
 ): BuildQueryItem {
-  const { initialData, ...rest } = overrides
+  const { initialData, additionalDefaultData, ...rest } = overrides
   return {
     data,
     initialQueryData: serializeParams(initialData ?? data, { prefix: rest.prefix }),
+    additionalDefaultQueryData: additionalDefaultData
+      ? serializeParams(additionalDefaultData, { prefix: rest.prefix })
+      : undefined,
     ...rest,
   }
 }
@@ -81,10 +91,7 @@ describe('buildQuery', () => {
       const result = buildQuery(
         createInput({
           items: [
-            createItem(
-              { search: 'test', page: 1 },
-              { initialData: { search: '', page: 1 } },
-            ),
+            createItem({ search: 'test', page: 1 }, { initialData: { search: '', page: 1 } }),
           ],
           onlyChanges: true,
         }),
@@ -98,10 +105,7 @@ describe('buildQuery', () => {
       const result = buildQuery(
         createInput({
           items: [
-            createItem(
-              { search: 'test', page: 1 },
-              { initialData: { search: '', page: 1 } },
-            ),
+            createItem({ search: 'test', page: 1 }, { initialData: { search: '', page: 1 } }),
           ],
           onlyChanges: false,
         }),
@@ -142,6 +146,102 @@ describe('buildQuery', () => {
 
       expect(result.newQuery).toEqual({ 'f[search]': 'test' })
     })
+
+    describe('additionalDefaultData', () => {
+      it('should remove keys matching additionalDefaultData when onlyChanges is true', () => {
+        // initial page is undefined (not serialized), but page=1 should also be treated as default
+        const result = buildQuery(
+          createInput({
+            items: [
+              createItem(
+                { page: 1, search: 'test' },
+                { initialData: {}, additionalDefaultData: { page: 1 } },
+              ),
+            ],
+            onlyChanges: true,
+          }),
+        )
+
+        expect(result.newQuery).toEqual({ search: 'test' })
+      })
+
+      it('should still remove keys matching initialData', () => {
+        const result = buildQuery(
+          createInput({
+            items: [
+              createItem(
+                { page: 1, search: '' },
+                { initialData: { search: '' }, additionalDefaultData: { page: 1 } },
+              ),
+            ],
+            onlyChanges: true,
+          }),
+        )
+
+        // page=1 matches additionalDefaultData, search='' matches initialData — both removed
+        expect(result.newQuery).toEqual({})
+      })
+
+      it('should keep keys that differ from both initialData and additionalDefaultData', () => {
+        const result = buildQuery(
+          createInput({
+            items: [
+              createItem(
+                { page: 2, search: 'hello' },
+                { initialData: { search: '' }, additionalDefaultData: { page: 1 } },
+              ),
+            ],
+            onlyChanges: true,
+          }),
+        )
+
+        expect(result.newQuery).toEqual({ page: '2', search: 'hello' })
+      })
+
+      it('should have no effect when onlyChanges is false', () => {
+        const result = buildQuery(
+          createInput({
+            items: [
+              createItem(
+                { page: 1, search: 'test' },
+                { initialData: {}, additionalDefaultData: { page: 1 } },
+              ),
+            ],
+            onlyChanges: false,
+          }),
+        )
+
+        expect(result.newQuery).toEqual({ page: '1', search: 'test' })
+      })
+
+      it('should work with prefix', () => {
+        const result = buildQuery(
+          createInput({
+            items: [
+              createItem(
+                { page: 1, search: 'test' },
+                { prefix: 'f', initialData: {}, additionalDefaultData: { page: 1 } },
+              ),
+            ],
+            onlyChanges: true,
+          }),
+        )
+
+        expect(result.newQuery).toEqual({ 'f[search]': 'test' })
+      })
+
+      it('should not affect behavior when additionalDefaultData is undefined', () => {
+        const result = buildQuery(
+          createInput({
+            items: [createItem({ page: 1, search: 'test' }, { initialData: { search: '' } })],
+            onlyChanges: true,
+          }),
+        )
+
+        // page=1 does not match initialData (no page key), so it stays
+        expect(result.newQuery).toEqual({ page: '1', search: 'test' })
+      })
+    })
   })
 
   describe('preserveEmptyState', () => {
@@ -162,7 +262,10 @@ describe('buildQuery', () => {
       const result = buildQuery(
         createInput({
           items: [
-            createItem({ tags: undefined }, { prefix: 'filters', initialData: { tags: undefined } }),
+            createItem(
+              { tags: undefined },
+              { prefix: 'filters', initialData: { tags: undefined } },
+            ),
           ],
           preserveEmptyState: true,
         }),

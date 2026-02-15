@@ -282,11 +282,17 @@ export function createQueryHandler(
 
       const initialData = cloneDeep(resolvedData) as T
       const initialQueryData = serializeParams(initialData, { prefix: registerOptions.prefix })
+      const additionalDefaultQueryData = registerOptions.additionalDefaultData
+        ? serializeParams(registerOptions.additionalDefaultData as Record<string, unknown>, {
+            prefix: registerOptions.prefix,
+          })
+        : undefined
 
       const item: ContextStorageQueryRegisteredItem<T> = {
         data,
         initialData,
         initialQueryData,
+        additionalDefaultQueryData,
         options: registerOptions,
         watchHandle,
       }
@@ -347,6 +353,7 @@ export function createQueryHandler(
         items: registered.map((item) => ({
           data: toValue(item.data) as Record<string, unknown>,
           initialQueryData: item.initialQueryData,
+          additionalDefaultQueryData: item.additionalDefaultQueryData,
           prefix: item.options?.prefix,
           onlyChanges: item.options?.onlyChanges,
           preserveEmptyState: item.options?.preserveEmptyState,

@@ -7,6 +7,8 @@ export interface BuildQueryItem {
   data: Record<string, unknown>
   /** Serialized initial data snapshot */
   initialQueryData: LocationQuery
+  /** Serialized additional default data for extended onlyChanges comparison */
+  additionalDefaultQueryData?: LocationQuery
   prefix?: string
   onlyChanges?: boolean
   preserveEmptyState?: boolean
@@ -73,7 +75,11 @@ export function buildQuery(input: BuildQueryInput): BuildQueryResult {
       }
 
       Object.keys(patch).forEach((key) => {
-        if (isEqual(patch[key], item.initialQueryData[key])) {
+        if (
+          isEqual(patch[key], item.initialQueryData[key]) ||
+          (item.additionalDefaultQueryData &&
+            isEqual(patch[key], item.additionalDefaultQueryData[key]))
+        ) {
           delete patch[key]
         }
       })
