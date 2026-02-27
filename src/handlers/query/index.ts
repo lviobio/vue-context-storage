@@ -321,7 +321,7 @@ export function createQueryHandler(
         console.debug('[query-handler] register — scheduling syncCallback via microtask', {
           prefix: registerOptions.prefix,
         })
-        queueMicrotask(syncCallback)
+        syncCallback()
       }
 
       const wasChanged = computed(() => !isEqual(toValue(data), initialData))
