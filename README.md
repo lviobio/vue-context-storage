@@ -70,7 +70,7 @@ Import ContextStorage component in your `App.vue`:
 </template>
 
 <script setup lang="ts">
-import { ContextStorage } from 'vue-context-storage/components'
+import { ContextStorage } from 'vue-context-storage'
 </script>
 ```
 
@@ -80,7 +80,7 @@ Register the plugin in your main app file:
 
 ```typescript
 import { createApp } from 'vue'
-import { VueContextStoragePlugin } from 'vue-context-storage/plugin'
+import { VueContextStoragePlugin } from 'vue-context-storage'
 import App from './App.vue'
 
 const app = createApp(App)
