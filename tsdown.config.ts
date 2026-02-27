@@ -2,7 +2,7 @@ import { defineConfig } from 'tsdown'
 import { transform } from 'esbuild'
 
 export default defineConfig({
-  platform: 'neutral',
+  platform: 'browser',
   fromVite: true,
   dts: { vue: true },
   plugins: [
