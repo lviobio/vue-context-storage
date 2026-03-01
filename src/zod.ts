@@ -40,3 +40,34 @@ export function zObjectArray<T extends z.ZodTypeAny>(itemSchema: T) {
         .map(([, v]) => v),
     )
 }
+
+/**
+ * Creates a Zod schema for booleans serialized as URL query parameters.
+ *
+ * URL query parameters serialize booleans as `'1'`/`'0'` strings.
+ * `z.coerce.boolean()` cannot be used because `Boolean('0')` is `true` in JavaScript.
+ *
+ * This helper correctly handles `'1'`, `'true'`, `'0'`, `'false'`, and native booleans.
+ *
+ * @param defaultValue - The default value when the field is missing (defaults to `false`)
+ *
+ * @example
+ * ```ts
+ * import { z } from 'zod'
+ * import { zUrlBoolean } from 'vue-context-storage/zod'
+ *
+ * const Schema = z.object({
+ *   active: zUrlBoolean(),        // defaults to false
+ *   enabled: zUrlBoolean(true),   // defaults to true
+ * })
+ * ```
+ */
+export function zUrlBoolean(defaultValue = false) {
+  return z
+    .union([z.boolean(), z.string()])
+    .transform((val) => {
+      if (typeof val === 'boolean') return val
+      return val === '1' || val === 'true'
+    })
+    .default(defaultValue)
+}
