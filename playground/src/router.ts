@@ -18,9 +18,9 @@ const routes = [
             component: () => import('./views/demo/query/DifferentTypes.vue'),
           },
           {
-            path: 'complex-form',
-            name: 'demo.query.complex-form',
-            component: () => import('./views/demo/query/ComplexForm.vue'),
+            path: 'repeater',
+            name: 'demo.query.repeater',
+            component: () => import('./views/demo/query/Repeater.vue'),
           },
         ],
       },

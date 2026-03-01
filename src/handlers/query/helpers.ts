@@ -65,8 +65,27 @@ export function serializeParams(
 
     if (typeof value === 'object') {
       if (Array.isArray(value)) {
-        // Serialize arrays directly: a=1&a=2&a=3
-        result[formattedKey] = value.map(String)
+        const hasObjects = value.some(
+          (item) => typeof item === 'object' && item !== null && !Array.isArray(item),
+        )
+
+        if (hasObjects) {
+          // Serialize arrays of objects as indexed keys: items[0][name]=A&items[1][name]=B
+          const indexed: Record<string, unknown> = {}
+          value.forEach((item, i) => {
+            indexed[String(i)] = item
+          })
+          Object.assign(
+            result,
+            serializeParams(indexed, {
+              ...options,
+              prefix: formattedKey,
+            }),
+          )
+        } else {
+          // Serialize flat arrays directly: a=1&a=2&a=3
+          result[formattedKey] = value.map(String)
+        }
       } else {
         Object.assign(
           result,

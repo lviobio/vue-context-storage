@@ -1,5 +1,132 @@
 import { describe, it, expect } from 'vitest'
 import { z } from 'zod'
+import { zObjectArray } from '../src/zod'
+import { serializeParams, deserializeParams } from '../src/handlers/query/helpers'
+
+describe('zObjectArray', () => {
+  const ItemSchema = z.object({
+    product: z.string().default(''),
+    quantity: z.coerce.number().default(0),
+  })
+
+  describe('basic usage', () => {
+    it('should convert indexed object to sorted array', () => {
+      const Schema = z.object({
+        items: zObjectArray(ItemSchema),
+      })
+
+      const result = Schema.safeParse({
+        items: {
+          '0': { product: 'Apple', quantity: '5' },
+          '1': { product: 'Banana', quantity: '10' },
+        },
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.items).toEqual([
+          { product: 'Apple', quantity: 5 },
+          { product: 'Banana', quantity: 10 },
+        ])
+      }
+    })
+
+    it('should sort entries by numeric key', () => {
+      const Schema = z.object({
+        items: zObjectArray(ItemSchema),
+      })
+
+      const result = Schema.safeParse({
+        items: {
+          '2': { product: 'C', quantity: '3' },
+          '0': { product: 'A', quantity: '1' },
+          '1': { product: 'B', quantity: '2' },
+        },
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.items).toEqual([
+          { product: 'A', quantity: 1 },
+          { product: 'B', quantity: 2 },
+          { product: 'C', quantity: 3 },
+        ])
+      }
+    })
+
+    it('should default to empty array when items is undefined', () => {
+      const Schema = z.object({
+        items: zObjectArray(ItemSchema),
+      })
+
+      const result = Schema.safeParse({})
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.items).toEqual([])
+      }
+    })
+
+    it('should apply item schema defaults', () => {
+      const Schema = z.object({
+        items: zObjectArray(ItemSchema),
+      })
+
+      const result = Schema.safeParse({
+        items: { '0': {} },
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.items).toEqual([{ product: '', quantity: 0 }])
+      }
+    })
+  })
+
+  describe('roundtrip with serialization', () => {
+    it('should roundtrip through serialize → deserialize → zObjectArray', () => {
+      const Schema = z.object({
+        title: z.string().default(''),
+        items: zObjectArray(ItemSchema),
+      })
+
+      const original = {
+        title: 'Order',
+        items: [
+          { product: 'Apple', quantity: 5 },
+          { product: 'Banana', quantity: 10 },
+        ],
+      }
+
+      const serialized = serializeParams(original)
+      const deserialized = deserializeParams(serialized)
+      const result = Schema.safeParse(deserialized)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toEqual(original)
+      }
+    })
+
+    it('should handle empty items in roundtrip', () => {
+      const Schema = z.object({
+        title: z.string().default(''),
+        items: zObjectArray(ItemSchema),
+      })
+
+      const original = { title: 'Empty', items: [] as { product: string; quantity: number }[] }
+
+      const serialized = serializeParams(original)
+      const deserialized = deserializeParams(serialized)
+      const result = Schema.safeParse(deserialized)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toEqual(original)
+      }
+    })
+  })
+})
 
 describe('Zod Schema Integration', () => {
   describe('basic schemas', () => {

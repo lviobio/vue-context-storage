@@ -37,12 +37,7 @@ module.exports = {
       from: {},
       to: {
         dependencyTypes: ['core'],
-        path: [
-          '^punycode$',
-          '^domain$',
-          '^constants$',
-          '^sys$',
-        ],
+        path: ['^punycode$', '^domain$', '^constants$', '^sys$'],
       },
     },
     {
@@ -65,6 +60,7 @@ module.exports = {
       from: {},
       to: {
         dependencyTypes: ['npm-no-pkg', 'npm-unknown'],
+        pathNot: ['node_modules/zod'],
       },
     },
     {
@@ -93,8 +89,7 @@ module.exports = {
     },
     {
       name: 'not-to-spec',
-      comment:
-        'This module depends on a spec (test) file. Factor it out into a separate utility.',
+      comment: 'This module depends on a spec (test) file. Factor it out into a separate utility.',
       severity: 'error',
       from: {},
       to: {

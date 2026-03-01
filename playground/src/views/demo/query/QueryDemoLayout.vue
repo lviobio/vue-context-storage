@@ -12,9 +12,9 @@ const menuOptions = [
     route: { name: 'demo.query.different-types' },
   },
   {
-    label: 'Complex form',
-    key: 'complex-form',
-    route: { name: 'demo.query.complex-form' },
+    label: 'Repeater',
+    key: 'repeater',
+    route: { name: 'demo.query.repeater' },
   },
 ]
 const activeKey = ref(menuOptions[0].key)

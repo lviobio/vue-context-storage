@@ -294,16 +294,104 @@ export function asBoolean(
   return fallbackValue
 }
 
+interface AsObjectArrayOptions<T> {
+  nullable?: boolean
+  missable?: boolean
+  transform?: (value: Record<string, unknown>) => T
+}
+
+export function asObjectArray(value: unknown): Record<string, unknown>[]
+export function asObjectArray<T>(
+  value: unknown,
+  transform: (value: Record<string, unknown>) => T,
+): T[]
+export function asObjectArray<T>(
+  value: unknown,
+  options: {
+    nullable: true
+    missable: true
+    transform?: (value: Record<string, unknown>) => T
+  },
+): T[] | null | undefined
+export function asObjectArray<T>(
+  value: unknown,
+  options: {
+    nullable: true
+    missable?: false
+    transform?: (value: Record<string, unknown>) => T
+  },
+): T[] | null
+export function asObjectArray<T>(
+  value: unknown,
+  options: {
+    nullable?: false
+    missable: true
+    transform?: (value: Record<string, unknown>) => T
+  },
+): T[] | undefined
+export function asObjectArray<T>(
+  value: unknown,
+  options: {
+    nullable?: false
+    missable?: false
+    transform?: (value: Record<string, unknown>) => T
+  },
+): T[]
+export function asObjectArray<T>(
+  value: unknown,
+  optionsOrTransform?: AsObjectArrayOptions<T> | ((value: Record<string, unknown>) => T),
+): T[] | Record<string, unknown>[] | null | undefined {
+  const options: AsObjectArrayOptions<T> =
+    typeof optionsOrTransform === 'function'
+      ? { transform: optionsOrTransform }
+      : optionsOrTransform || {}
+  const { nullable = false, missable = false, transform } = options
+
+  if (value === null && nullable) {
+    return null
+  }
+
+  if (value === undefined && missable) {
+    return undefined
+  }
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return nullable ? null : []
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>).sort(
+    ([a], [b]) => Number(a) - Number(b),
+  )
+
+  if (transform) {
+    return entries.map(([, val]) => {
+      const entry =
+        val && typeof val === 'object' && !Array.isArray(val)
+          ? (val as Record<string, unknown>)
+          : {}
+      return transform(entry)
+    })
+  }
+
+  return entries.map(([, val]) => {
+    return val && typeof val === 'object' && !Array.isArray(val)
+      ? (val as Record<string, unknown>)
+      : {}
+  })
+}
+
 export const transform: {
   asString: typeof asString
   asNumber: typeof asNumber
   asArray: typeof asArray
   asNumberArray: typeof asNumberArray
   asBoolean: typeof asBoolean
+  asObjectArray: typeof asObjectArray
 } = {
   asString,
   asNumber,
   asArray,
   asNumberArray,
   asBoolean,
+  asObjectArray,
 }

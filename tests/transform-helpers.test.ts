@@ -1,11 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import {
-  asNumber,
-  asString,
-  asBoolean,
-  asArray,
-  asNumberArray,
-} from '../src/handlers/query/transform-helpers'
+import { asNumber, asString, asBoolean, asArray, asNumberArray, asObjectArray } from '../src'
+import type { QueryValue } from '../src'
 
 describe('asNumber', () => {
   describe('basic usage', () => {
@@ -232,12 +227,12 @@ describe('asArray', () => {
 
   describe('with transform', () => {
     it('should apply transform to each element', () => {
-      const transform = (v: string | null) => (v ? v.toUpperCase() : '')
+      const transform = (v: QueryValue) => (v ? String(v).toUpperCase() : '')
       expect(asArray(['a', 'b', 'c'], { transform })).toEqual(['A', 'B', 'C'])
     })
 
     it('should transform single value', () => {
-      const transform = (v: string | null) => Number(v)
+      const transform = (v: QueryValue) => Number(v)
       expect(asArray('42', { transform })).toEqual([42])
     })
   })
@@ -295,6 +290,143 @@ describe('asNumberArray', () => {
 
     it('should return null for undefined when nullable', () => {
       expect(asNumberArray(undefined, { nullable: true })).toBe(null)
+    })
+  })
+})
+
+describe('asObjectArray', () => {
+  describe('basic usage', () => {
+    it('should convert indexed object to array', () => {
+      const input = {
+        '0': { name: 'Apple', price: '10' },
+        '1': { name: 'Banana', price: '20' },
+      }
+      const result = asObjectArray(input)
+      expect(result).toEqual([
+        { name: 'Apple', price: '10' },
+        { name: 'Banana', price: '20' },
+      ])
+    })
+
+    it('should sort entries by numeric key', () => {
+      const input = {
+        '2': { name: 'C' },
+        '0': { name: 'A' },
+        '1': { name: 'B' },
+      }
+      const result = asObjectArray(input)
+      expect(result).toEqual([{ name: 'A' }, { name: 'B' }, { name: 'C' }])
+    })
+
+    it('should return empty array for empty object', () => {
+      expect(asObjectArray({})).toEqual([])
+    })
+
+    it('should return empty array for null', () => {
+      expect(asObjectArray(null)).toEqual([])
+    })
+
+    it('should return empty array for undefined', () => {
+      expect(asObjectArray(undefined)).toEqual([])
+    })
+
+    it('should return empty array for non-object values', () => {
+      expect(asObjectArray('string')).toEqual([])
+      expect(asObjectArray(42)).toEqual([])
+      expect(asObjectArray(true)).toEqual([])
+    })
+
+    it('should return empty object for non-object entries', () => {
+      const input = { '0': 'not-an-object', '1': 42 }
+      const result = asObjectArray(input)
+      expect(result).toEqual([{}, {}])
+    })
+
+    it('should return empty object for array entries', () => {
+      const input = { '0': ['a', 'b'] }
+      const result = asObjectArray(input)
+      expect(result).toEqual([{}])
+    })
+  })
+
+  describe('with transform option', () => {
+    it('should apply transform to each entry', () => {
+      const input = {
+        '0': { product: 'Apple', quantity: '5' },
+        '1': { product: 'Banana', quantity: '10' },
+      }
+      const result = asObjectArray(input, {
+        transform: (entry) => ({
+          product: String(entry.product ?? ''),
+          quantity: Number(entry.quantity ?? 0),
+        }),
+      })
+      expect(result).toEqual([
+        { product: 'Apple', quantity: 5 },
+        { product: 'Banana', quantity: 10 },
+      ])
+    })
+
+    it('should accept callback shorthand instead of options object', () => {
+      const input = {
+        '0': { product: 'Apple', quantity: '5' },
+        '1': { product: 'Banana', quantity: '10' },
+      }
+      const result = asObjectArray(input, (entry) => ({
+        product: String(entry.product ?? ''),
+        quantity: Number(entry.quantity ?? 0),
+      }))
+      expect(result).toEqual([
+        { product: 'Apple', quantity: 5 },
+        { product: 'Banana', quantity: 10 },
+      ])
+    })
+
+    it('should pass empty object to transform for non-object entries', () => {
+      const input = { '0': 'not-an-object' }
+      const result = asObjectArray(input, {
+        transform: (entry) => ({ keys: Object.keys(entry).length }),
+      })
+      expect(result).toEqual([{ keys: 0 }])
+    })
+  })
+
+  describe('with nullable option', () => {
+    it('should return null for null value', () => {
+      expect(asObjectArray(null, { nullable: true })).toBe(null)
+    })
+
+    it('should return null for non-object values when nullable', () => {
+      expect(asObjectArray(undefined, { nullable: true })).toBe(null)
+      expect(asObjectArray('string', { nullable: true })).toBe(null)
+    })
+
+    it('should still process valid objects when nullable', () => {
+      const input = { '0': { name: 'A' } }
+      const result = asObjectArray(input, { nullable: true })
+      expect(result).toEqual([{ name: 'A' }])
+    })
+  })
+
+  describe('with missable option', () => {
+    it('should return undefined for undefined value', () => {
+      expect(asObjectArray(undefined, { missable: true })).toBe(undefined)
+    })
+
+    it('should still process valid objects when missable', () => {
+      const input = { '0': { name: 'A' } }
+      const result = asObjectArray(input, { missable: true })
+      expect(result).toEqual([{ name: 'A' }])
+    })
+  })
+
+  describe('with nullable and missable', () => {
+    it('should return null for null', () => {
+      expect(asObjectArray(null, { nullable: true, missable: true })).toBe(null)
+    })
+
+    it('should return undefined for undefined', () => {
+      expect(asObjectArray(undefined, { nullable: true, missable: true })).toBe(undefined)
     })
   })
 })

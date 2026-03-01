@@ -2,6 +2,7 @@ import { defineConfig } from 'tsdown'
 import { transform } from 'esbuild'
 
 export default defineConfig({
+  entry: ['src/index.ts', 'src/zod.ts'],
   platform: 'browser',
   fromVite: true,
   dts: { vue: true },

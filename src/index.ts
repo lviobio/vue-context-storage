@@ -44,6 +44,7 @@ export {
   asBoolean,
   asNumber,
   asNumberArray,
+  asObjectArray,
   asString,
   transform,
 } from './handlers/query/transform-helpers'

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { serializeParams, deserializeParams } from '../src/handlers/query/helpers'
+import { asObjectArray, asNumber, asString } from '../src/handlers/query/transform-helpers'
 
 describe('serializeParams', () => {
   describe('basic serialization', () => {
@@ -100,6 +101,70 @@ describe('serializeParams', () => {
       expect(result).toEqual({
         'filters[date][from]': '2024-01-01',
         'filters[date][to]': '2024-12-31',
+      })
+    })
+  })
+
+  describe('arrays of objects', () => {
+    it('should serialize array of objects as indexed keys', () => {
+      const result = serializeParams({
+        items: [
+          { product: 'Apple', quantity: 5 },
+          { product: 'Banana', quantity: 10 },
+        ],
+      })
+      expect(result).toEqual({
+        'items[0][product]': 'Apple',
+        'items[0][quantity]': '5',
+        'items[1][product]': 'Banana',
+        'items[1][quantity]': '10',
+      })
+    })
+
+    it('should serialize array of objects with prefix', () => {
+      const result = serializeParams(
+        {
+          items: [{ name: 'A' }, { name: 'B' }],
+        },
+        { prefix: 'data' },
+      )
+      expect(result).toEqual({
+        'data[items][0][name]': 'A',
+        'data[items][1][name]': 'B',
+      })
+    })
+
+    it('should serialize single-item array of objects', () => {
+      const result = serializeParams({
+        items: [{ product: 'Apple', quantity: 1 }],
+      })
+      expect(result).toEqual({
+        'items[0][product]': 'Apple',
+        'items[0][quantity]': '1',
+      })
+    })
+
+    it('should skip empty array of objects', () => {
+      const result = serializeParams({ items: [], name: 'test' })
+      expect(result).toEqual({ name: 'test' })
+    })
+
+    it('should handle nested objects inside array items', () => {
+      const result = serializeParams({
+        items: [{ meta: { color: 'red' } }],
+      })
+      expect(result).toEqual({
+        'items[0][meta][color]': 'red',
+      })
+    })
+
+    it('should handle boolean values inside array items', () => {
+      const result = serializeParams({
+        items: [{ name: 'A', active: true }],
+      })
+      expect(result).toEqual({
+        'items[0][name]': 'A',
+        'items[0][active]': '1',
       })
     })
   })
@@ -381,5 +446,32 @@ describe('serializeParams and deserializeParams roundtrip', () => {
         tags: ['a', 'b', 'c'],
       },
     })
+  })
+
+  it('should roundtrip array of objects via asObjectArray', () => {
+    const original = {
+      items: [
+        { product: 'Apple', quantity: 5 },
+        { product: 'Banana', quantity: 10 },
+      ],
+    }
+    const serialized = serializeParams(original)
+    const deserialized = deserializeParams(serialized)
+
+    // deserializeParams returns indexed objects (keys are strings from URL)
+    expect(deserialized).toEqual({
+      items: {
+        '0': { product: 'Apple', quantity: '5' },
+        '1': { product: 'Banana', quantity: '10' },
+      },
+    })
+
+    // asObjectArray converts indexed object back to a typed array
+    const items = asObjectArray(deserialized.items, (entry) => ({
+      product: asString(entry.product as string | null | undefined),
+      quantity: asNumber(entry.quantity as string | number | null | undefined),
+    }))
+
+    expect(items).toEqual(original.items)
   })
 })
