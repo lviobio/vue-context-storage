@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, computed } from 'vue'
 import {
   NButton,
   NCode,
@@ -10,9 +10,71 @@ import {
   NInput,
   NInputNumber,
 } from 'naive-ui'
+import { z } from 'zod'
 import { transform, useContextStorage } from '../../../../../src'
+import { zUrlBoolean } from '../../../../../src/zod'
 
-const { onlyChanges } = defineProps<{ onlyChanges: boolean }>()
+const { onlyChanges, transformMethod } = defineProps<{
+  onlyChanges: boolean
+  transformMethod: 'manual' | 'schema'
+}>()
+
+const codeExpanded = defineModel<boolean>('codeExpanded', { default: false })
+
+const data = reactive({
+  name: 'John',
+  title: null as string | null,
+  search: undefined as string | undefined,
+  number: 42 as number | null,
+  switch: true,
+})
+
+// --- Schema approach (Zod) ---
+
+const DataSchema = z.object({
+  name: z.string().default('John'),
+  title: z.string().nullable().default(null),
+  search: z.string().optional(),
+  number: z.coerce.number().nullable().default(42),
+  switch: zUrlBoolean(true),
+})
+
+// --- Manual approach (transform helpers) ---
+
+if (transformMethod === 'schema') {
+  useContextStorage('query', data, {
+    onlyChanges,
+    // search is `string | undefined` in data but `search?: string` in Zod's output —
+    // functionally equivalent at runtime, so we cast to satisfy the type checker.
+    schema: DataSchema as any,
+  })
+} else {
+  useContextStorage('query', data, {
+    onlyChanges,
+    transform: (value) => ({
+      name: transform.asString(value.name),
+      title: transform.asString(value.title, { nullable: true }),
+      search: transform.asString(value.search, { missable: true }),
+      number: transform.asNumber(value.number, { nullable: true }),
+      switch: transform.asBoolean(value.switch),
+    }),
+  })
+}
+
+const exampleCode = computed(() =>
+  transformMethod === 'schema'
+    ? `import { reactive } from 'vue'
+import { z } from 'zod'
+import { useContextStorage } from 'vue-context-storage'
+import { zUrlBoolean } from 'vue-context-storage/zod'
+
+const DataSchema = z.object({
+  name: z.string().default('John'),
+  title: z.string().nullable().default(null),
+  search: z.string().optional(),
+  number: z.coerce.number().nullable().default(42),
+  switch: zUrlBoolean(true),
+})
 
 const data = reactive({
   name: 'John',
@@ -23,19 +85,10 @@ const data = reactive({
 })
 
 useContextStorage('query', data, {
-  onlyChanges: onlyChanges,
-  transform: (value) => {
-    return {
-      name: transform.asString(value.name),
-      title: transform.asString(value.title, { nullable: true }),
-      search: transform.asString(value.search, { missable: true }),
-      number: transform.asNumber(value.number, { nullable: true }),
-      switch: transform.asBoolean(value.switch),
-    }
-  },
-})
-
-const exampleCode = `import { reactive } from 'vue'
+  onlyChanges: ${onlyChanges},
+  schema: DataSchema,
+})`
+    : `import { reactive } from 'vue'
 import { transform, useContextStorage } from 'vue-context-storage'
 
 const data = reactive({
@@ -48,7 +101,6 @@ const data = reactive({
 
 useContextStorage('query', data, {
   onlyChanges: ${onlyChanges},
-  preserveEmptyState: true,
   transform: (value) => ({
     name: transform.asString(value.name),
     title: transform.asString(value.title, { nullable: true }),
@@ -56,7 +108,8 @@ useContextStorage('query', data, {
     number: transform.asNumber(value.number, { nullable: true }),
     switch: transform.asBoolean(value.switch),
   }),
-})`
+})`,
+)
 </script>
 
 <template>
@@ -94,7 +147,10 @@ useContextStorage('query', data, {
     <code class="text-sm">{{ data }}</code>
   </div>
 
-  <NCollapse>
+  <NCollapse
+    :expanded-names="codeExpanded ? ['code'] : []"
+    @update:expanded-names="codeExpanded = ($event as string[]).includes('code')"
+  >
     <NCollapseItem title="Code Example" name="code">
       <NCode :code="exampleCode" language="typescript" word-wrap />
     </NCollapseItem>

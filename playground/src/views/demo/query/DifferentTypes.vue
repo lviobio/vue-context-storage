@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { NFormItem } from 'naive-ui'
+import { NFormItem, NRadioGroup, NRadioButton } from 'naive-ui'
 import DifferentTypesForm from './DifferentTypesForm.vue'
 import { useContextStorage } from '../../../../../src'
 
 const onlyChanges = ref(true)
+const transformMethod = ref<'manual' | 'schema'>('manual')
+const codeExpanded = ref(false)
 
 useContextStorage(
   'sessionStorage',
   ref({
     onlyChanges,
+    transformMethod,
+    codeExpanded,
   }),
   {
     key: 'query-demo-simple-form',
@@ -18,9 +22,23 @@ useContextStorage(
 </script>
 
 <template>
-  <NFormItem label="Sync only changed values" label-placement="left">
-    <NSwitch v-model:value="onlyChanges" />
-  </NFormItem>
+  <div class="flex flex-wrap gap-x-8 gap-y-2 mb-4">
+    <NFormItem label="Sync only changed values" label-placement="left">
+      <NSwitch v-model:value="onlyChanges" />
+    </NFormItem>
 
-  <DifferentTypesForm :only-changes="onlyChanges" :key="`only-changes-${onlyChanges}`" />
+    <NFormItem label="Transform method" label-placement="left">
+      <NRadioGroup v-model:value="transformMethod" size="small">
+        <NRadioButton value="manual">Manual</NRadioButton>
+        <NRadioButton value="schema">Schema (Zod)</NRadioButton>
+      </NRadioGroup>
+    </NFormItem>
+  </div>
+
+  <DifferentTypesForm
+    :only-changes="onlyChanges"
+    :transform-method="transformMethod"
+    v-model:code-expanded="codeExpanded"
+    :key="`${onlyChanges}-${transformMethod}`"
+  />
 </template>

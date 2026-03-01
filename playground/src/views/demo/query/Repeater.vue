@@ -28,7 +28,7 @@ useContextStorage(
     </NFormItem>
 
     <NFormItem label="Transform method" label-placement="left">
-      <NRadioGroup v-model:value="transformMethod">
+      <NRadioGroup v-model:value="transformMethod" size="small">
         <NRadioButton value="manual">Manual</NRadioButton>
         <NRadioButton value="schema">Schema (Zod)</NRadioButton>
       </NRadioGroup>
