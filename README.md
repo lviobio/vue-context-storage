@@ -302,6 +302,7 @@ useContextStorage('query', state, {
 - `asBoolean(value, options)` - Convert to boolean
 - `asArray(value, options)` - Convert to array
 - `asNumberArray(value, options)` - Convert to number array
+- `asObjectArray(value, options)` - Convert indexed object to array of objects (see [Arrays of Objects](#arrays-of-objects))
 
 ### Using Zod Schemas
 
@@ -335,6 +336,61 @@ useContextStorage('query', filters, {
 - Less boilerplate code
 - Single source of truth for structure and validation
 
+### Arrays of Objects
+
+The query handler supports arrays of objects. They are serialized as indexed query parameters:
+
+```
+?items[0][product]=Apple&items[0][quantity]=5&items[1][product]=Banana&items[1][quantity]=10
+```
+
+After deserialization, URL parameters produce indexed objects (`{ '0': {...}, '1': {...} }`) rather than arrays. Use `transform.asObjectArray` or the Zod helper `zObjectArray` to convert them back.
+
+**With transform helpers:**
+
+```typescript
+import { reactive } from 'vue'
+import { useContextStorage, transform } from 'vue-context-storage'
+
+const data = reactive({
+  title: '',
+  items: [] as { product: string; quantity: number }[],
+})
+
+useContextStorage('query', data, {
+  transform: (value) => ({
+    title: transform.asString(value.title),
+    items: transform.asObjectArray(value.items, (entry) => ({
+      product: transform.asString(entry.product),
+      quantity: transform.asNumber(entry.quantity),
+    })),
+  }),
+})
+```
+
+`asObjectArray` also supports a callback shorthand — pass a function as the second argument instead of an options object.
+
+**With Zod schema:**
+
+```typescript
+import { z } from 'zod'
+import { zObjectArray } from 'vue-context-storage/zod'
+
+const ItemSchema = z.object({
+  product: z.string().default(''),
+  quantity: z.coerce.number().default(0),
+})
+
+const DataSchema = z.object({
+  title: z.string().default(''),
+  items: zObjectArray(ItemSchema),
+})
+
+useContextStorage('query', data, { schema: DataSchema })
+```
+
+See [Zod Helpers](#zod-helpers-vue-context-storagezod) for more details.
+
 ### Preserve Empty State
 
 Keep empty state in URL to prevent resetting on reload:
@@ -348,12 +404,36 @@ useContextStorage('query', filters, {
 })
 ```
 
+### Additional Default Data
+
+When `onlyChanges` is enabled (the default), a key is omitted from the URL if its current value matches the initial snapshot. `additionalDefaultData` lets you specify extra values that should also be treated as defaults and excluded from the URL.
+
+This is useful when the initial reactive data starts with `undefined` (e.g. before an API response), but you also want a specific value (like `1`) to be considered a default:
+
+```typescript
+const data = ref({ page: undefined as number | undefined })
+
+useContextStorage('query', data, {
+  prefix: 'filters',
+  onlyChanges: true,
+  additionalDefaultData: { page: 1 },
+})
+
+// page=undefined → not in query (matches initial)
+// page=1         → not in query (matches additionalDefaultData)
+// page=2         → appears in query as ?filters[page]=2
+```
+
 ### Configure Query Handler
 
 Customize behavior by passing options to the factory:
 
 ```typescript
-import { createQueryHandler, createLocalStorageHandler, createSessionStorageHandler } from 'vue-context-storage'
+import {
+  createQueryHandler,
+  createLocalStorageHandler,
+  createSessionStorageHandler,
+} from 'vue-context-storage'
 
 const customHandlers = [
   createQueryHandler({
@@ -551,9 +631,12 @@ Registers reactive data for URL query synchronization.
 - `data: MaybeRefOrGetter<T>` - Reactive reference to sync
 - `options?: RegisterQueryHandlerOptions<T>`
   - `prefix?: string` - Query parameter prefix
+  - `onlyChanges?: boolean` - Only write changed values to URL (default: `true`)
   - `transform?: (deserialized, initial) => T` - Transform function
+  - `schema?: ZodSchema` - Zod schema for validation (takes priority over `transform`)
+  - `additionalDefaultData?: Partial<T>` - Extra values treated as defaults for `onlyChanges` comparison
   - `preserveEmptyState?: boolean` - Keep empty state in URL
-  - `mergeOnlyExistingKeysWithoutTransform?: boolean` - Only merge existing keys (default: true)
+  - `mergeOnlyExistingKeysWithoutTransform?: boolean` - Only merge existing keys (default: `true`)
 
 ### Handler Factories
 
@@ -627,6 +710,91 @@ transform.asNumber(value, {
   missable: false, // Allow undefined return
 })
 ```
+
+## Zod Helpers (`vue-context-storage/zod`)
+
+The library provides a separate entry point with Zod-specific helpers. Since `zod` is an optional peer dependency, these helpers are isolated in `vue-context-storage/zod` to avoid importing Zod in the main bundle.
+
+```bash
+npm install zod
+```
+
+### `zObjectArray(itemSchema)`
+
+Creates a Zod schema for arrays of objects serialized as indexed query parameters. Wraps `z.record()` + `.transform()` to convert indexed objects back to sorted arrays.
+
+```typescript
+import { z } from 'zod'
+import { zObjectArray } from 'vue-context-storage/zod'
+
+const ItemSchema = z.object({
+  product: z.string().default(''),
+  quantity: z.coerce.number().default(0),
+})
+
+const DataSchema = z.object({
+  title: z.string().default(''),
+  items: zObjectArray(ItemSchema),
+})
+```
+
+### `zUrlBoolean(defaultValue?)`
+
+Creates a Zod schema for booleans serialized as URL query parameters. Standard `z.coerce.boolean()` cannot be used because `Boolean('0')` is `true` in JavaScript. This helper correctly handles `'1'`, `'true'`, `'0'`, `'false'`, and native booleans.
+
+```typescript
+import { z } from 'zod'
+import { zUrlBoolean } from 'vue-context-storage/zod'
+
+const Schema = z.object({
+  active: zUrlBoolean(), // defaults to false
+  enabled: zUrlBoolean(true), // defaults to true
+})
+```
+
+### `createSchemaObject(schema, options?)`
+
+Creates a plain object with empty/default values based on a Zod schema. Useful for initializing reactive data from a schema definition.
+
+```typescript
+import { z } from 'zod'
+import { createSchemaObject } from 'vue-context-storage/zod'
+
+const FiltersSchema = z.object({
+  search: z.string().default(''),
+  page: z.coerce.number().default(1),
+  active: z.boolean().default(false),
+  score: z.number().nullable(),
+})
+
+const filters = reactive(createSchemaObject(FiltersSchema))
+// Result: { search: '', page: 1, active: false, score: null }
+```
+
+**Options:**
+
+- `useDefaults` (default: `true`) — When `true`, uses `.default()` values from the schema. When `false`, uses type-based empty values (`''` for strings, `0` for numbers, `false` for booleans, etc.).
+- `withSchema` (default: `false`) — When `true`, attaches the schema to the result object via `SCHEMA_SYMBOL` (wrapped with `markRaw`). Nested objects also receive their respective schemas.
+
+```typescript
+import { createSchemaObject, SCHEMA_SYMBOL } from 'vue-context-storage/zod'
+
+const data = createSchemaObject(FiltersSchema, { withSchema: true })
+data[SCHEMA_SYMBOL] // → FiltersSchema
+```
+
+**Type-based defaults** (when `useDefaults: false` or no `.default()` is set):
+
+| Zod type      | Default value                                |
+| ------------- | -------------------------------------------- |
+| `z.string()`  | `''`                                         |
+| `z.number()`  | `0` (respects `.min()` / `.positive()`)      |
+| `z.boolean()` | `false`                                      |
+| `z.array()`   | `[]`                                         |
+| `z.object()`  | Recursively created via `createSchemaObject` |
+| `z.date()`    | `null`                                       |
+| `.nullable()` | `null`                                       |
+| `.optional()` | `undefined`                                  |
 
 ## TypeScript Support
 
