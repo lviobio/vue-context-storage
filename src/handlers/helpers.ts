@@ -6,7 +6,7 @@ import {
   onBeforeUnmount,
   toValue,
 } from 'vue'
-import { pick } from 'lodash'
+import { merge, pick } from 'lodash'
 import type { ContextStorageHandler, RegisterBaseOptions } from '../handlers'
 import type { HandlerSchema } from './types'
 import { contextStoragePrefixSegmentsInjectKey, resolvePrefixSegments } from '../prefix'
@@ -62,7 +62,11 @@ export function applyTransform<T extends Record<string, unknown>>(
 
   // Priority: schema > transform > default merge
   if (input.schema) {
-    const result = input.schema.safeParse(data)
+    // Deep merge initialData with state so missing nested objects
+    // don't cause "expected object, received undefined" schema errors.
+    // State values take priority over initialData.
+    const merged = merge({}, input.initialData, data)
+    const result = input.schema.safeParse(merged)
 
     if (result.success) {
       data = result.data
