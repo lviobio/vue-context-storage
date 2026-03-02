@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, h, ref } from 'vue'
 import { useContextStorage } from 'vue-context-storage'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 
 const router = useRouter()
 
@@ -21,13 +21,14 @@ const menuOptions = [
     key: 'table',
     route: { name: 'demo.query.table' },
   },
-]
-const activeKey = ref(menuOptions[0].key)
+].map((option) => ({
+  ...option,
+  label: () => h(RouterLink, { to: option.route }, () => option.label),
+}))
 
-function handleUpdateActiveKey(key: string): void {
-  activeKey.value = key
-  router.push(menuOptions.find((option) => option.key === key)!.route)
-}
+const activeKey = computed(
+  () => menuOptions.find((option) => option.route.name === router.currentRoute.value.name)?.key,
+)
 
 useContextStorage(
   'sessionStorage',
@@ -47,13 +48,7 @@ useContextStorage(
       Data is synced with URL query parameters. Changes are reflected in the URL.
     </p>
     <NCard size="small">
-      <NMenu
-        mode="horizontal"
-        :value="activeKey"
-        @update:value="handleUpdateActiveKey"
-        :options="menuOptions"
-        class="nav-menu"
-      />
+      <NMenu mode="horizontal" :value="activeKey" :options="menuOptions" class="nav-menu" />
     </NCard>
     <NCard size="small">
       <RouterView />
