@@ -12,7 +12,7 @@ import {
   NSpace,
 } from 'naive-ui'
 import { z } from 'zod'
-import { transform, useContextStorage } from '../../../../../src'
+import { transform, useContextStorage } from 'vue-context-storage'
 
 const { onlyChanges, transformMethod } = defineProps<{
   onlyChanges: boolean

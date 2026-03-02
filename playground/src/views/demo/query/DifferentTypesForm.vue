@@ -11,8 +11,8 @@ import {
   NInputNumber,
 } from 'naive-ui'
 import { z } from 'zod'
-import { transform, useContextStorage } from '../../../../../src'
-import { zUrlBoolean } from '../../../../../src/zod'
+import { transform, useContextStorage } from 'vue-context-storage'
+import { zUrlBoolean } from 'vue-context-storage/zod'
 
 const { onlyChanges, transformMethod } = defineProps<{
   onlyChanges: boolean

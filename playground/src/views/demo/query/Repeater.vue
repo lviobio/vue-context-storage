@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { NFormItem, NRadioGroup, NRadioButton } from 'naive-ui'
 import RepeaterForm from './RepeaterForm.vue'
-import { useContextStorage } from '../../../../../src'
+import { useContextStorage } from 'vue-context-storage'
 
 const onlyChanges = ref(true)
 const transformMethod = ref<'manual' | 'schema'>('manual')
