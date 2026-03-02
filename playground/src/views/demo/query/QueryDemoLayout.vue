@@ -16,6 +16,11 @@ const menuOptions = [
     key: 'repeater',
     route: { name: 'demo.query.repeater' },
   },
+  {
+    label: 'Table',
+    key: 'table',
+    route: { name: 'demo.query.table' },
+  },
 ]
 const activeKey = ref(menuOptions[0].key)
 

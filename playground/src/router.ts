@@ -22,6 +22,11 @@ const routes = [
             name: 'demo.query.repeater',
             component: () => import('./views/demo/query/Repeater.vue'),
           },
+          {
+            path: 'table',
+            name: 'demo.query.table',
+            component: () => import('./views/demo/query/TableDemo.vue'),
+          },
         ],
       },
       {
