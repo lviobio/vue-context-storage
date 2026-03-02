@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { z } from 'zod'
-import { applyTransform } from '../src/handlers/helpers'
+import { applyTransform, syncReactive } from '../src/handlers/helpers'
+import { computeSyncState } from '../src/handlers/query/compute-sync-state'
+import { cloneDeep } from 'lodash'
 
 describe('applyTransform', () => {
   describe('schema with partial state', () => {
@@ -188,5 +190,100 @@ describe('applyTransform', () => {
 
       expect(result.data).toEqual({ page: '2', unknown: 'value' })
     })
+  })
+})
+
+describe('syncReactive + initialData reference safety', () => {
+  it('should not corrupt initialData when syncReactive uses cloneDeep', () => {
+    const initialData = {
+      page: 1,
+      filters: {
+        title: '',
+        created_at: { from: null as number | null, to: null as number | null },
+      },
+    }
+
+    // Simulate what the query handler does: itemState is a mutable object
+    const itemState: Record<string, unknown> = cloneDeep(initialData)
+
+    // 1. First reset: navigate to empty URL → computeSyncState returns reset with initialData
+    const result1 = computeSyncState({
+      deserializedState: {},
+      initialData,
+      emptyPlaceholder: '_',
+    })
+    expect(result1.type).toBe('reset')
+    if (result1.type !== 'reset') return
+
+    // Apply reset WITH cloneDeep (the fix)
+    syncReactive(itemState, cloneDeep(result1.data))
+
+    // 2. User mutates nested data
+    ;(itemState.filters as any).title = 'hello'
+
+    // 3. initialData must NOT be corrupted
+    expect(initialData.filters.title).toBe('')
+  })
+
+  it('corrupts initialData when syncReactive is used WITHOUT cloneDeep (demonstrates the bug)', () => {
+    const initialData = {
+      page: 1,
+      filters: { title: '' },
+    }
+
+    const itemState: Record<string, unknown> = cloneDeep(initialData)
+
+    const result = computeSyncState({
+      deserializedState: {},
+      initialData,
+      emptyPlaceholder: '_',
+    })
+    expect(result.type).toBe('reset')
+    if (result.type !== 'reset') return
+
+    // Without cloneDeep — shared reference
+    syncReactive(itemState, result.data)
+
+    // Now itemState.filters === initialData.filters (same object!)
+    expect(itemState.filters).toBe(initialData.filters)
+
+    // Mutating itemState also mutates initialData
+    ;(itemState.filters as any).title = 'corrupted'
+    expect(initialData.filters.title).toBe('corrupted')
+  })
+
+  it('second reset should restore original values after cloneDeep fix', () => {
+    const initialData = {
+      page: 1,
+      filters: { title: '', score: null as number | null },
+    }
+
+    const itemState: Record<string, unknown> = cloneDeep(initialData)
+
+    // First reset
+    const result1 = computeSyncState({
+      deserializedState: {},
+      initialData,
+      emptyPlaceholder: '_',
+    })
+    if (result1.type !== 'reset') return
+    syncReactive(itemState, cloneDeep(result1.data))
+
+    // User changes data
+    ;(itemState.filters as any).title = 'changed'
+    ;(itemState as any).page = 5
+
+    // Second reset — should restore to original initialData
+    const result2 = computeSyncState({
+      deserializedState: {},
+      initialData,
+      emptyPlaceholder: '_',
+    })
+    if (result2.type !== 'reset') return
+    syncReactive(itemState, cloneDeep(result2.data))
+
+    expect(itemState).toEqual({ page: 1, filters: { title: '', score: null } })
+    // initialData is still clean
+    expect(initialData).toEqual({ page: 1, filters: { title: '', score: null } })
   })
 })

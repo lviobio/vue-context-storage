@@ -211,7 +211,10 @@ export function createQueryHandler(
           prefix,
           data: result.data,
         })
-        syncReactive(itemState, result.data)
+        // Must cloneDeep to avoid sharing nested object references with initialData.
+        // Without cloning, Object.assign makes itemState.nested === initialData.nested,
+        // so subsequent mutations to itemState also corrupt initialData.
+        syncReactive(itemState, cloneDeep(result.data))
         return
       }
 
