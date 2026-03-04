@@ -43,7 +43,7 @@ interface QueryHandlerSharedOptions {
    * Useful, when you have default values, and want to preserve empty state in query.
    * @example
    * ```
-   * Options: {preserveEmptyState: true, prefix: 'filters'}
+   * Options: {preserveEmptyState: true, key: 'filters'}
    *
    * When filters are empty we will get this in query string:
    *
@@ -54,7 +54,7 @@ interface QueryHandlerSharedOptions {
    *
    * @example
    * ```
-   * Options: {preserveEmptyState: false, prefix: 'filters'}
+   * Options: {preserveEmptyState: false, key: 'filters'}
    *
    * When filters are empty we will get this in query string:
    *
@@ -113,14 +113,14 @@ export interface QueryHandlerBaseOptions extends QueryHandlerSharedOptions {
 
 export interface RegisterQueryHandlerBaseOptions<T> extends QueryHandlerSharedOptions {
   /**
-   * Prefix in query string.
+   * Key in query string.
    *
    * @example
    * ```
    * filters, table-1[filters], table-2[filters]
    * ```
    */
-  prefix?: string
+  key?: string
 
   /**
    * Transform function to convert deserialized query parameters to the expected type.
@@ -147,7 +147,7 @@ export interface RegisterQueryHandlerBaseOptions<T> extends QueryHandlerSharedOp
    * const data = ref({ page: undefined as number | undefined })
    *
    * useContextStorageQueryHandler(data, {
-   *   prefix: 'filters',
+   *   key: 'filters',
    *   onlyChanges: true,
    *   additionalDefaultData: { page: 1 },
    * })

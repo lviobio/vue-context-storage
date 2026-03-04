@@ -5,7 +5,7 @@ export interface ComputeSyncStateInput<T extends Record<string, unknown>> {
   deserializedState: Record<string, unknown>
   /** Snapshot of data at registration time */
   initialData: T
-  prefix?: string
+  key?: string
   emptyPlaceholder: string
 }
 
@@ -21,9 +21,9 @@ export function computeSyncState<T extends Record<string, unknown>>(
 ): ComputeSyncStateResult<T> {
   let state: InitialState = input.deserializedState
 
-  if (typeof input.prefix === 'string' && input.prefix.length > 0) {
-    // Support nested bracket prefixes (e.g. 'tables[first]' → traverse state.tables.first)
-    const parts = input.prefix.split(/[\[\]]/).filter(Boolean)
+  if (typeof input.key === 'string' && input.key.length > 0) {
+    // Support nested bracket keys (e.g. 'tables[first]' → traverse state.tables.first)
+    const parts = input.key.split(/[\[\]]/).filter(Boolean)
     for (const part of parts) {
       if (state === undefined || state === null) break
       state = (state as Record<string, unknown>)[part] as InitialState

@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest'
-import type { InjectionKey } from 'vue'
 import {
   parsePrefixParts,
   getByPrefix,
@@ -89,76 +88,65 @@ describe('setByPrefix', () => {
 })
 
 describe('resolvePrefixSegments', () => {
-  const queryKey: InjectionKey<unknown> = Symbol('query')
-  const localStorageKey: InjectionKey<unknown> = Symbol('localStorage')
-  const unknownKey: InjectionKey<unknown> = Symbol('unknown')
-
-  const knownHandlerKeys = new Map<InjectionKey<unknown>, string>([
-    [queryKey, 'query'],
-    [localStorageKey, 'localStorage'],
-  ])
-
   describe('string segments (apply to all handlers)', () => {
     it('should return empty string for empty segments', () => {
-      expect(resolvePrefixSegments([], queryKey, knownHandlerKeys)).toBe('')
+      expect(resolvePrefixSegments([], 'query')).toBe('')
     })
 
     it('should return single segment as-is', () => {
-      expect(resolvePrefixSegments(['tables'], queryKey, knownHandlerKeys)).toBe('tables')
+      expect(resolvePrefixSegments(['tables'], 'query')).toBe('tables')
     })
 
     it('should concatenate multiple segments with bracket notation', () => {
-      expect(resolvePrefixSegments(['tables', 'first'], queryKey, knownHandlerKeys)).toBe(
-        'tables[first]',
-      )
+      expect(resolvePrefixSegments(['tables', 'first'], 'query')).toBe('tables[first]')
     })
 
     it('should concatenate three segments', () => {
-      expect(resolvePrefixSegments(['a', 'b', 'c'], queryKey, knownHandlerKeys)).toBe('a[b][c]')
+      expect(resolvePrefixSegments(['a', 'b', 'c'], 'query')).toBe('a[b][c]')
     })
 
     it('should apply string segments to any handler type', () => {
       const segments: ContextStoragePrefixSegment[] = ['tables']
-      expect(resolvePrefixSegments(segments, queryKey, knownHandlerKeys)).toBe('tables')
-      expect(resolvePrefixSegments(segments, localStorageKey, knownHandlerKeys)).toBe('tables')
+      expect(resolvePrefixSegments(segments, 'query')).toBe('tables')
+      expect(resolvePrefixSegments(segments, 'localStorage')).toBe('tables')
     })
   })
 
   describe('object segments (per-handler)', () => {
     it('should resolve segment for matching handler type', () => {
       const segments: ContextStoragePrefixSegment[] = [{ query: 'q-prefix' }]
-      expect(resolvePrefixSegments(segments, queryKey, knownHandlerKeys)).toBe('q-prefix')
+      expect(resolvePrefixSegments(segments, 'query')).toBe('q-prefix')
     })
 
     it('should skip segment for non-matching handler type', () => {
       const segments: ContextStoragePrefixSegment[] = [{ query: 'q-prefix' }]
-      expect(resolvePrefixSegments(segments, localStorageKey, knownHandlerKeys)).toBe('')
+      expect(resolvePrefixSegments(segments, 'localStorage')).toBe('')
     })
 
     it('should resolve different prefixes for different handlers', () => {
       const segments: ContextStoragePrefixSegment[] = [
         { query: 'url-tables', localStorage: 'ls-tables' },
       ]
-      expect(resolvePrefixSegments(segments, queryKey, knownHandlerKeys)).toBe('url-tables')
-      expect(resolvePrefixSegments(segments, localStorageKey, knownHandlerKeys)).toBe('ls-tables')
+      expect(resolvePrefixSegments(segments, 'query')).toBe('url-tables')
+      expect(resolvePrefixSegments(segments, 'localStorage')).toBe('ls-tables')
     })
 
-    it('should return empty for unknown handler key', () => {
+    it('should return empty for unknown handler type', () => {
       const segments: ContextStoragePrefixSegment[] = [{ query: 'q-prefix' }]
-      expect(resolvePrefixSegments(segments, unknownKey, knownHandlerKeys)).toBe('')
+      expect(resolvePrefixSegments(segments, undefined)).toBe('')
     })
   })
 
   describe('mixed segments', () => {
     it('should concatenate string and object segments', () => {
       const segments: ContextStoragePrefixSegment[] = ['tables', { query: 'first' }]
-      expect(resolvePrefixSegments(segments, queryKey, knownHandlerKeys)).toBe('tables[first]')
+      expect(resolvePrefixSegments(segments, 'query')).toBe('tables[first]')
     })
 
     it('should skip non-matching object segments in the chain', () => {
       const segments: ContextStoragePrefixSegment[] = ['tables', { query: 'first' }]
       // localStorage handler should only get 'tables' (object segment doesn't match)
-      expect(resolvePrefixSegments(segments, localStorageKey, knownHandlerKeys)).toBe('tables')
+      expect(resolvePrefixSegments(segments, 'localStorage')).toBe('tables')
     })
 
     it('should handle complex stacking scenario', () => {
@@ -167,10 +155,8 @@ describe('resolvePrefixSegments', () => {
         { query: 'page1', localStorage: 'settings' },
         'data',
       ]
-      expect(resolvePrefixSegments(segments, queryKey, knownHandlerKeys)).toBe('app[page1][data]')
-      expect(resolvePrefixSegments(segments, localStorageKey, knownHandlerKeys)).toBe(
-        'app[settings][data]',
-      )
+      expect(resolvePrefixSegments(segments, 'query')).toBe('app[page1][data]')
+      expect(resolvePrefixSegments(segments, 'localStorage')).toBe('app[settings][data]')
     })
   })
 })

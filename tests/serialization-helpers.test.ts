@@ -35,24 +35,24 @@ describe('serializeParams', () => {
     })
   })
 
-  describe('with prefix', () => {
-    it('should add prefix to keys', () => {
-      const result = serializeParams({ status: 'active' }, { prefix: 'filters' })
+  describe('with key', () => {
+    it('should add key to serialized keys', () => {
+      const result = serializeParams({ status: 'active' }, { key: 'filters' })
       expect(result).toEqual({
         'filters[status]': 'active',
       })
     })
 
-    it('should add prefix to multiple keys', () => {
-      const result = serializeParams({ page: 1, search: 'test' }, { prefix: 'query' })
+    it('should add key to multiple serialized keys', () => {
+      const result = serializeParams({ page: 1, search: 'test' }, { key: 'query' })
       expect(result).toEqual({
         'query[page]': '1',
         'query[search]': 'test',
       })
     })
 
-    it('should add prefix to arrays', () => {
-      const result = serializeParams({ tags: ['a', 'b'] }, { prefix: 'filters' })
+    it('should add key to arrays', () => {
+      const result = serializeParams({ tags: ['a', 'b'] }, { key: 'filters' })
       expect(result).toEqual({
         'filters[tags]': ['a', 'b'],
       })
@@ -60,7 +60,7 @@ describe('serializeParams', () => {
   })
 
   describe('nested objects', () => {
-    it('should serialize nested objects without prefix', () => {
+    it('should serialize nested objects without key', () => {
       const result = serializeParams({
         user: {
           name: 'John',
@@ -73,7 +73,7 @@ describe('serializeParams', () => {
       })
     })
 
-    it('should serialize nested objects with prefix', () => {
+    it('should serialize nested objects with key', () => {
       const result = serializeParams(
         {
           user: {
@@ -81,7 +81,7 @@ describe('serializeParams', () => {
             active: true,
           },
         },
-        { prefix: 'filters' },
+        { key: 'filters' },
       )
       expect(result).toEqual({
         'filters[user][name]': 'John',
@@ -121,12 +121,12 @@ describe('serializeParams', () => {
       })
     })
 
-    it('should serialize array of objects with prefix', () => {
+    it('should serialize array of objects with key', () => {
       const result = serializeParams(
         {
           items: [{ name: 'A' }, { name: 'B' }],
         },
-        { prefix: 'data' },
+        { key: 'data' },
       )
       expect(result).toEqual({
         'data[items][0][name]': 'A',
@@ -233,7 +233,7 @@ describe('serializeParams', () => {
             name: 'John',
           },
         },
-        { prefix: 'filters' },
+        { key: 'filters' },
       )
       expect(result).toEqual({
         'filters[search]': 'test',
@@ -408,9 +408,9 @@ describe('serializeParams and deserializeParams roundtrip', () => {
     })
   })
 
-  it('should maintain data integrity with prefix', () => {
+  it('should maintain data integrity with key', () => {
     const original = { status: 'active', page: 1 }
-    const serialized = serializeParams(original, { prefix: 'filters' })
+    const serialized = serializeParams(original, { key: 'filters' })
     const deserialized = deserializeParams(serialized)
 
     expect(deserialized).toEqual({
@@ -438,7 +438,7 @@ describe('serializeParams and deserializeParams roundtrip', () => {
 
   it('should maintain array data', () => {
     const original = { tags: ['a', 'b', 'c'] }
-    const serialized = serializeParams(original, { prefix: 'filters' })
+    const serialized = serializeParams(original, { key: 'filters' })
     const deserialized = deserializeParams(serialized)
 
     expect(deserialized).toEqual({

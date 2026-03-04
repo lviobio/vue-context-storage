@@ -24,15 +24,6 @@ function joinPrefix(left: string, right: string): string {
 }
 
 /**
- * Resolves a collected array of prefix segments into a single prefix string
- * for a specific handler type. The segments are concatenated in order using
- * bracket notation (`a[b][c]`).
- *
- * @param segments — array provided via inject (stacked by nested ContextStoragePrefix components)
- * @param handlerInjectionKey — injection key of the handler to resolve for
- * @param knownHandlerKeys — mapping from injection key to handler type name
- */
-/**
  * Splits a bracket-notation prefix into parts.
  *
  * @example
@@ -90,8 +81,7 @@ export function setByPrefix(obj: Record<string, unknown>, prefix: string, value:
  * bracket notation (`a[b][c]`).
  *
  * @param segments — array provided via inject (stacked by nested ContextStoragePrefix components)
- * @param handlerInjectionKey — injection key of the handler to resolve for
- * @param knownHandlerKeys — mapping from injection key to handler type name
+ * @param handlerType — handler type name (e.g. 'query', 'localStorage')
  */
 export const contextStoragePrefixSegmentsInjectKey: InjectionKey<
   MaybeRefOrGetter<ContextStoragePrefixSegment[]>
@@ -99,11 +89,8 @@ export const contextStoragePrefixSegmentsInjectKey: InjectionKey<
 
 export function resolvePrefixSegments(
   segments: ContextStoragePrefixSegment[],
-  handlerInjectionKey: InjectionKey<unknown>,
-  knownHandlerKeys: Map<InjectionKey<unknown>, string>,
+  handlerType: string | undefined,
 ): string {
-  const handlerType = knownHandlerKeys.get(handlerInjectionKey)
-
   let combined = ''
 
   for (const segment of segments) {

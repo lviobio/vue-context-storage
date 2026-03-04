@@ -11,51 +11,51 @@ function createInput<T extends Record<string, unknown>>(
   },
 ): ComputeSyncStateInput<T> {
   return {
-    prefix: undefined,
+    key: undefined,
     emptyPlaceholder: '_',
     ...overrides,
   }
 }
 
 describe('computeSyncState', () => {
-  describe('prefix extraction', () => {
-    it('should extract state by prefix', () => {
+  describe('key extraction', () => {
+    it('should extract state by key', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { filters: { search: 'test' } },
           initialData: { search: '' },
-          prefix: 'filters',
+          key: 'filters',
         }),
       )
 
       expect(result).toEqual({ type: 'sync', data: { search: 'test' } })
     })
 
-    it('should return none when prefix key is undefined', () => {
+    it('should return none when key is undefined in state', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { other: { search: 'test' } },
           initialData: { search: '' },
-          prefix: 'filters',
+          key: 'filters',
         }),
       )
 
       expect(result).toEqual({ type: 'none' })
     })
 
-    it('should return none when prefix key is null (e.g. /?filters)', () => {
+    it('should return none when key is null (e.g. /?filters)', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { filters: null },
           initialData: { search: '' },
-          prefix: 'filters',
+          key: 'filters',
         }),
       )
 
       expect(result).toEqual({ type: 'none' })
     })
 
-    it('should use full state when no prefix', () => {
+    it('should use full state when no key', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { search: 'test', page: '2' },
@@ -69,12 +69,12 @@ describe('computeSyncState', () => {
       })
     })
 
-    it('should use full state when prefix is empty string', () => {
+    it('should use full state when key is empty string', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { search: 'test' },
           initialData: { search: '' },
-          prefix: '',
+          key: '',
         }),
       )
 
@@ -96,14 +96,14 @@ describe('computeSyncState', () => {
       expect(result).toEqual({ type: 'reset', data: initialData })
     })
 
-    it('should return reset when prefix extracts empty object', () => {
+    it('should return reset when key extracts empty object', () => {
       const initialData = { search: '' }
 
       const result = computeSyncState(
         createInput({
           deserializedState: { filters: {} },
           initialData,
-          prefix: 'filters',
+          key: 'filters',
         }),
       )
 
@@ -162,12 +162,12 @@ describe('computeSyncState', () => {
       expect((result as any).data).toHaveProperty('search')
     })
 
-    it('should remove empty placeholder with prefix', () => {
+    it('should remove empty placeholder with key', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { filters: { _: null } },
           initialData: { search: '' },
-          prefix: 'filters',
+          key: 'filters',
           emptyPlaceholder: '_',
         }),
       )
@@ -191,12 +191,12 @@ describe('computeSyncState', () => {
       })
     })
 
-    it('should return only URL key even with prefix', () => {
+    it('should return only URL key even with key option', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { filters: { search: 'hello' } },
           initialData: { search: '', page: 1 },
-          prefix: 'filters',
+          key: 'filters',
         }),
       )
 
@@ -237,25 +237,25 @@ describe('computeSyncState', () => {
     })
   })
 
-  describe('nested bracket prefixes', () => {
-    it('should traverse nested objects with bracket prefix', () => {
+  describe('nested bracket keys', () => {
+    it('should traverse nested objects with bracket key', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { tables: { first: { search: 'test' } } },
           initialData: { search: '' },
-          prefix: 'tables[first]',
+          key: 'tables[first]',
         }),
       )
 
       expect(result).toEqual({ type: 'sync', data: { search: 'test' } })
     })
 
-    it('should traverse deeply nested bracket prefix', () => {
+    it('should traverse deeply nested bracket key', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { a: { b: { c: { page: '2' } } } },
           initialData: { page: '1' },
-          prefix: 'a[b][c]',
+          key: 'a[b][c]',
         }),
       )
 
@@ -267,7 +267,7 @@ describe('computeSyncState', () => {
         createInput({
           deserializedState: { tables: { second: { search: 'test' } } },
           initialData: { search: '' },
-          prefix: 'tables[first]',
+          key: 'tables[first]',
         }),
       )
 
@@ -279,33 +279,33 @@ describe('computeSyncState', () => {
         createInput({
           deserializedState: { other: {} },
           initialData: { search: '' },
-          prefix: 'tables[first]',
+          key: 'tables[first]',
         }),
       )
 
       expect(result).toEqual({ type: 'none' })
     })
 
-    it('should return reset when nested bracket prefix extracts empty object', () => {
+    it('should return reset when nested bracket key extracts empty object', () => {
       const initialData = { search: '' }
 
       const result = computeSyncState(
         createInput({
           deserializedState: { tables: { first: {} } },
           initialData,
-          prefix: 'tables[first]',
+          key: 'tables[first]',
         }),
       )
 
       expect(result).toEqual({ type: 'reset', data: initialData })
     })
 
-    it('should handle bracket prefix with empty placeholder', () => {
+    it('should handle bracket key with empty placeholder', () => {
       const result = computeSyncState(
         createInput({
           deserializedState: { tables: { first: { _: null } } },
           initialData: { search: '' },
-          prefix: 'tables[first]',
+          key: 'tables[first]',
           emptyPlaceholder: '_',
         }),
       )
@@ -322,7 +322,7 @@ describe('computeSyncState', () => {
             filters: { price: { min: '0', max: '100' } },
           },
           initialData: { price: { min: 0, max: 1000 } },
-          prefix: 'filters',
+          key: 'filters',
         }),
       )
 

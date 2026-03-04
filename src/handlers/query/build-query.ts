@@ -9,7 +9,7 @@ export interface BuildQueryItem {
   initialQueryData: LocationQuery
   /** Serialized additional default data for extended onlyChanges comparison */
   additionalDefaultQueryData?: LocationQuery
-  prefix?: string
+  key?: string
   onlyChanges?: boolean
   preserveEmptyState?: boolean
   causer?: string
@@ -62,10 +62,10 @@ export function buildQuery(input: BuildQueryInput): BuildQueryResult {
   const newQueryRaw: LocationQuery = {}
 
   input.items.forEach((item) => {
-    const { prefix, onlyChanges = input.onlyChanges } = item
+    const { key, onlyChanges = input.onlyChanges } = item
     let preserveEmptyState = item.preserveEmptyState ?? input.preserveEmptyState
 
-    const patch = serializeParams(item.data, { prefix })
+    const patch = serializeParams(item.data, { key })
 
     // Remove keys that have the same value as initial
     if (onlyChanges) {
@@ -98,7 +98,7 @@ export function buildQuery(input: BuildQueryInput): BuildQueryResult {
     })
 
     if (!patchKeys.length && preserveEmptyState) {
-      patch[prefix || input.emptyPlaceholder] = null
+      patch[key || input.emptyPlaceholder] = null
     }
 
     Object.assign(newQueryRaw, patch)

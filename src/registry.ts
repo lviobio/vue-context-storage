@@ -33,9 +33,10 @@ const handlerRegistry = new Map<string, InjectionKey<ContextStorageHandler<any, 
 export function defineContextStorageHandler<T, O extends object>(
   name: string,
   injectionKey: InjectionKey<ContextStorageHandler<T, O>>,
+  options?: { prefixProperty?: string; prefixMergeStrategy?: 'prepend' | 'append' },
 ): void {
   handlerRegistry.set(name, injectionKey)
-  registerKnownHandlerKey(injectionKey, name)
+  registerKnownHandlerKey(injectionKey, name, options?.prefixProperty, options?.prefixMergeStrategy)
 }
 
 export function resolveHandlerInjectionKey<K extends keyof ContextStorageHandlerMap<T>, T>(
@@ -45,6 +46,12 @@ export function resolveHandlerInjectionKey<K extends keyof ContextStorageHandler
 }
 
 // Pre-register built-in handlers
-defineContextStorageHandler('query', contextStorageQueryHandlerInjectKey)
-defineContextStorageHandler('localStorage', contextStorageLocalStorageHandlerInjectKey)
-defineContextStorageHandler('sessionStorage', contextStorageSessionStorageHandlerInjectKey)
+defineContextStorageHandler('query', contextStorageQueryHandlerInjectKey, { prefixProperty: 'key' })
+defineContextStorageHandler('localStorage', contextStorageLocalStorageHandlerInjectKey, {
+  prefixProperty: 'key',
+  prefixMergeStrategy: 'append',
+})
+defineContextStorageHandler('sessionStorage', contextStorageSessionStorageHandlerInjectKey, {
+  prefixProperty: 'key',
+  prefixMergeStrategy: 'append',
+})

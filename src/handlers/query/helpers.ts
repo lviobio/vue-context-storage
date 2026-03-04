@@ -2,13 +2,13 @@ import type { LocationQuery } from 'vue-router'
 
 export interface SerializeOptions {
   /**
-   * Custom prefix for serialized keys.
+   * Custom key prefix for serialized keys.
    * @example
-   * - prefix: 'filters' => 'filters[key]'
-   * - prefix: 'search' => 'search[key]'
-   * - prefix: '' => 'key' (no prefix)
+   * - key: 'filters' => 'filters[field]'
+   * - key: 'search' => 'search[field]'
+   * - key: '' => 'field' (no prefix)
    */
-  prefix?: string
+  key?: string
 }
 
 /**
@@ -37,7 +37,7 @@ export function serializeParams(
   params: Record<string, unknown>,
   options: SerializeOptions = {},
 ): LocationQuery {
-  const { prefix = '' } = options
+  const { key: prefix = '' } = options
 
   const result: LocationQuery = {}
 
@@ -79,7 +79,7 @@ export function serializeParams(
             result,
             serializeParams(indexed, {
               ...options,
-              prefix: formattedKey,
+              key: formattedKey,
             }),
           )
         } else {
@@ -91,7 +91,7 @@ export function serializeParams(
           result,
           serializeParams(value as Record<string, unknown>, {
             ...options,
-            prefix: formattedKey,
+            key: formattedKey,
           }),
         )
       }

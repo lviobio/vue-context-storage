@@ -29,7 +29,7 @@ export interface RegisterBaseOptions<T> {
    * })
    *
    * useContextStorageQueryHandler(filters, {
-   *   prefix: 'filters',
+   *   key: 'filters',
    *   schema: FiltersSchema,
    * })
    * ```

@@ -15,12 +15,6 @@ export interface RegisterWebStorageHandlerBaseOptions<T> {
   key?: string
 
   /**
-   * Optional prefix for nested data within the storage key.
-   * When provided, data will be stored under this prefix within the main storage object.
-   */
-  prefix?: string
-
-  /**
    * Transform function to convert deserialized storage data to the expected type.
    *
    * Note: If `schema` is provided, it takes priority over `transform`.

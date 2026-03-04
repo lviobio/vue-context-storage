@@ -31,9 +31,9 @@ function createItem(
   const { initialData, additionalDefaultData, ...rest } = overrides
   return {
     data,
-    initialQueryData: serializeParams(initialData ?? data, { prefix: rest.prefix }),
+    initialQueryData: serializeParams(initialData ?? data, { key: rest.key }),
     additionalDefaultQueryData: additionalDefaultData
-      ? serializeParams(additionalDefaultData, { prefix: rest.prefix })
+      ? serializeParams(additionalDefaultData, { key: rest.key })
       : undefined,
     ...rest,
   }
@@ -41,7 +41,7 @@ function createItem(
 
 describe('buildQuery', () => {
   describe('basic serialization', () => {
-    it('should serialize single item without prefix', () => {
+    it('should serialize single item without key', () => {
       const result = buildQuery(
         createInput({
           items: [createItem({ search: 'test', page: 1 })],
@@ -52,10 +52,10 @@ describe('buildQuery', () => {
       expect(result.newQueryRaw).toEqual({ search: 'test', page: '1' })
     })
 
-    it('should serialize single item with prefix', () => {
+    it('should serialize single item with key', () => {
       const result = buildQuery(
         createInput({
-          items: [createItem({ search: 'test' }, { prefix: 'filters' })],
+          items: [createItem({ search: 'test' }, { key: 'filters' })],
         }),
       )
 
@@ -66,8 +66,8 @@ describe('buildQuery', () => {
       const result = buildQuery(
         createInput({
           items: [
-            createItem({ search: 'test' }, { prefix: 'f1' }),
-            createItem({ page: 2 }, { prefix: 'f2' }),
+            createItem({ search: 'test' }, { key: 'f1' }),
+            createItem({ page: 2 }, { key: 'f2' }),
           ],
         }),
       )
@@ -131,13 +131,13 @@ describe('buildQuery', () => {
       expect(result.newQuery).toEqual({ search: 'test' })
     })
 
-    it('should work with prefix and onlyChanges', () => {
+    it('should work with key and onlyChanges', () => {
       const result = buildQuery(
         createInput({
           items: [
             createItem(
               { search: 'test', page: 1 },
-              { prefix: 'f', initialData: { search: '', page: 1 } },
+              { key: 'f', initialData: { search: '', page: 1 } },
             ),
           ],
           onlyChanges: true,
@@ -214,13 +214,13 @@ describe('buildQuery', () => {
         expect(result.newQuery).toEqual({ page: '1', search: 'test' })
       })
 
-      it('should work with prefix', () => {
+      it('should work with key', () => {
         const result = buildQuery(
           createInput({
             items: [
               createItem(
                 { page: 1, search: 'test' },
-                { prefix: 'f', initialData: {}, additionalDefaultData: { page: 1 } },
+                { key: 'f', initialData: {}, additionalDefaultData: { page: 1 } },
               ),
             ],
             onlyChanges: true,
@@ -258,14 +258,11 @@ describe('buildQuery', () => {
       expect(result.newQuery).toEqual({ _: null })
     })
 
-    it('should use prefix as placeholder key when prefix exists', () => {
+    it('should use key as placeholder key when key exists', () => {
       const result = buildQuery(
         createInput({
           items: [
-            createItem(
-              { tags: undefined },
-              { prefix: 'filters', initialData: { tags: undefined } },
-            ),
+            createItem({ tags: undefined }, { key: 'filters', initialData: { tags: undefined } }),
           ],
           preserveEmptyState: true,
         }),
@@ -340,8 +337,8 @@ describe('buildQuery', () => {
       const result = buildQuery(
         createInput({
           items: [
-            createItem({ search: 'a' }, { prefix: 'f1' }),
-            createItem({ page: 1 }, { prefix: 'f2' }),
+            createItem({ search: 'a' }, { key: 'f1' }),
+            createItem({ page: 1 }, { key: 'f2' }),
           ],
         }),
       )
@@ -429,14 +426,14 @@ describe('buildQuery', () => {
       const result = buildQuery(
         createInput({
           items: [
-            createItem({ tags: undefined }, { prefix: 'f1', preserveEmptyState: true }),
-            createItem({ page: 2 }, { prefix: 'f2' }),
+            createItem({ tags: undefined }, { key: 'f1', preserveEmptyState: true }),
+            createItem({ page: 2 }, { key: 'f2' }),
           ],
         }),
       )
 
       // f1 is empty → placeholder 'f1' added, but f2 has real keys
-      // The placeholder is prefix-based ('f1'), not '_', so cleanup doesn't apply
+      // The placeholder is key-based ('f1'), not '_', so cleanup doesn't apply
       expect(result.newQuery).toHaveProperty('f1')
       expect(result.newQuery).toHaveProperty('f2[page]')
     })
@@ -446,7 +443,7 @@ describe('buildQuery', () => {
         createInput({
           items: [
             createItem({ tags: undefined }, { preserveEmptyState: true }),
-            createItem({ page: 2 }, { prefix: 'f2' }),
+            createItem({ page: 2 }, { key: 'f2' }),
           ],
         }),
       )

@@ -52,7 +52,7 @@ In Vue applications, reactive state often needs to live beyond a single componen
 - **URL query parameters** stay in sync with your data automatically - users can bookmark or share a page and get the exact same state back.
 - **localStorage and sessionStorage** are kept up to date without manual `getItem`/`setItem` calls, including cross-tab synchronization.
 - **Type safety** is preserved end-to-end: URL strings are coerced back to numbers, booleans, and arrays via transform helpers or Zod schemas.
-- **Multiple independent contexts** (e.g. two data tables on the same page) are supported out of the box through the prefix pattern, so query parameters never collide.
+- **Multiple independent contexts** (e.g. two data tables on the same page) are supported out of the box through the key pattern, so query parameters never collide.
 
 The goal is a single, declarative API - `useContextStorage('query', data, options)` - that replaces scattered watchers, router guards, and storage listeners with one composable call per piece of state.
 
@@ -118,7 +118,7 @@ const filters = reactive({
 
 // Sync with URL query
 useContextStorage('query', filters, {
-  prefix: 'filters',
+  key: 'filters',
 })
 
 // Sync with localStorage
@@ -141,7 +141,7 @@ You can also pass an injection key directly instead of a string:
 import { contextStorageQueryHandlerInjectKey } from 'vue-context-storage'
 
 useContextStorage(contextStorageQueryHandlerInjectKey, filters, {
-  prefix: 'filters',
+  key: 'filters',
 })
 ```
 
@@ -181,11 +181,11 @@ The `<ContextStoragePrefix>` component adds a prefix to all `useContextStorage` 
 </template>
 ```
 
-Inside `MyTable`, any `useContextStorage('query', data)` call will automatically get `prefix: 'tables'`. If the composable also specifies its own prefix, they are combined:
+Inside `MyTable`, any `useContextStorage('query', data)` call will automatically get `key: 'tables'`. If the composable also specifies its own key, they are combined:
 
 ```typescript
-// Inside MyTable — effective prefix becomes 'table[filters]'
-useContextStorage('query', filters, { prefix: 'filters' })
+// Inside MyTable — effective key becomes 'table[filters]'
+useContextStorage('query', filters, { key: 'filters' })
 // URL: ?table[filters][search]=...
 ```
 
@@ -248,7 +248,7 @@ const filters = reactive<Filters>({
 
 // Automatically syncs filters with URL query
 useContextStorage('query', filters, {
-  prefix: 'filters', // URL will be: ?filters[search]=...&filters[status]=...
+  key: 'filters', // URL will be: ?filters[search]=...&filters[status]=...
 })
 </script>
 ```
@@ -259,7 +259,7 @@ Also available as a dedicated composable:
 import { useContextStorageQueryHandler } from 'vue-context-storage'
 
 useContextStorageQueryHandler(filters, {
-  prefix: 'filters',
+  key: 'filters',
 })
 ```
 
@@ -286,7 +286,7 @@ const state = ref<TableState>({
 })
 
 useContextStorage('query', state, {
-  prefix: 'table',
+  key: 'table',
   transform: (deserialized, initial) => ({
     page: transform.asNumber(deserialized.page, { fallback: 1 }),
     search: transform.asString(deserialized.search, { fallback: '' }),
@@ -323,7 +323,7 @@ const filters = ref(FiltersSchema.parse({}))
 
 // Use schema for automatic validation
 useContextStorage('query', filters, {
-  prefix: 'filters',
+  key: 'filters',
   schema: FiltersSchema,
 })
 ```
@@ -397,7 +397,7 @@ Keep empty state in URL to prevent resetting on reload:
 
 ```typescript
 useContextStorage('query', filters, {
-  prefix: 'filters',
+  key: 'filters',
   preserveEmptyState: true,
   // Empty filters will show as: ?filters
   // Without this option, empty filters would clear the URL completely
@@ -414,7 +414,7 @@ This is useful when the initial reactive data starts with `undefined` (e.g. befo
 const data = ref({ page: undefined as number | undefined })
 
 useContextStorage('query', data, {
-  prefix: 'filters',
+  key: 'filters',
   onlyChanges: true,
   additionalDefaultData: { page: 1 },
 })
@@ -523,25 +523,25 @@ useContextStorageSessionStorage(formDraft, {
 })
 ```
 
-### Using Prefix
+### Multiple Registrations Under One Root Key
 
-The prefix is appended to the storage key in bracket notation, so each prefixed registration gets its own storage entry:
+Use bracket notation in `key` to store multiple data objects under a common root:
 
 ```typescript
 const filters = reactive({ search: '', status: 'active' })
 
 useContextStorage('sessionStorage', filters, {
-  key: 'app-state',
-  prefix: 'filters', // Storage key: 'app-state[filters]', value: { search: '', status: 'active' }
+  key: 'app-state[filters]', // Storage key: 'app-state[filters]'
 })
 
 const pagination = reactive({ page: 1, perPage: 25 })
 
 useContextStorage('sessionStorage', pagination, {
-  key: 'app-state',
-  prefix: 'pagination', // Storage key: 'app-state[pagination]', value: { page: 1, perPage: 25 }
+  key: 'app-state[pagination]', // Storage key: 'app-state[pagination]'
 })
 ```
+
+Or use `<ContextStoragePrefix>` for automatic scoping (see [Prefix Scoping](#prefix-scoping-with-contextstorageprefix)).
 
 ### Using Transform with Storage Handlers
 
@@ -630,7 +630,7 @@ Registers reactive data for URL query synchronization.
 
 - `data: MaybeRefOrGetter<T>` - Reactive reference to sync
 - `options?: RegisterQueryHandlerOptions<T>`
-  - `prefix?: string` - Query parameter prefix
+  - `key?: string` - Query parameter key
   - `onlyChanges?: boolean` - Only write changed values to URL (default: `true`)
   - `transform?: (deserialized, initial) => T` - Transform function
   - `schema?: ZodSchema` - Zod schema for validation (takes priority over `transform`)
@@ -676,8 +676,7 @@ Registers reactive data for localStorage synchronization.
 
 - `data: MaybeRefOrGetter<T>` - Reactive reference to sync
 - `options: RegisterWebStorageHandlerBaseOptions<T>`
-  - `key: string` - Storage key (required)
-  - `prefix?: string` - Appended to the storage key in bracket notation (e.g. key `'app'` + prefix `'filters'` = storage key `'app[filters]'`)
+  - `key: string` - Storage key (required). Supports bracket notation for namespacing (e.g. `'app-state[filters]'`)
   - `transform?: (deserialized, initial) => T` - Transform function
   - `schema?: ZodSchema` - Zod schema for validation
   - `serializer?: (data: T) => string` - Custom serializer (default: `JSON.stringify`)
@@ -835,7 +834,7 @@ const pagination = ref({
 })
 
 useContextStorageQueryHandler(pagination, {
-  prefix: 'page',
+  key: 'page',
   transform: (data, initial) => ({
     page: transform.asNumber(data.page, { fallback: 1 }),
     perPage: transform.asNumber(data.perPage, { fallback: 25 }),

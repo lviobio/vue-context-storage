@@ -45,25 +45,6 @@ export function createWebStorageHandlerInstance<T extends Record<string, unknown
     })
   }
 
-  /**
-   * Computes the effective storage key by appending the prefix in bracket notation.
-   *
-   * e.g. key='form', prefix='filters'    → 'form[filters]'
-   * e.g. key='form', prefix='a[b][d]'    → 'form[a][b][d]'
-   */
-  function resolveStorageKey(key: string, prefix?: string): string {
-    if (prefix) {
-      // prefix may already contain brackets (e.g. 'a[b][d]'),
-      // wrap only the first segment to avoid double-nesting
-      const bracketIdx = prefix.indexOf('[')
-      if (bracketIdx === -1) {
-        return `${key}[${prefix}]`
-      }
-      return `${key}[${prefix.slice(0, bracketIdx)}]${prefix.slice(bracketIdx)}`
-    }
-    return key
-  }
-
   function handleStorageEvent(event: StorageEvent): void {
     if (!enabled) {
       return
@@ -71,8 +52,7 @@ export function createWebStorageHandlerInstance<T extends Record<string, unknown
 
     // Find registered items that match the changed key
     registered.forEach((item) => {
-      const effectiveKey = resolveStorageKey(item.options.key!, item.options.prefix)
-      if (event.key === effectiveKey) {
+      if (event.key === item.options.key) {
         syncStorageToRegisteredItem(item)
       }
     })
@@ -109,15 +89,15 @@ export function createWebStorageHandlerInstance<T extends Record<string, unknown
     }
 
     registered.forEach((item) => {
-      const effectiveKey = resolveStorageKey(item.options.key!, item.options.prefix)
+      const storageKey = item.options.key!
       const data = toValue(item.data)
       const { serializer } = item.options
 
       try {
         if (serializer) {
-          config.storage.setItem(effectiveKey, serializer(data))
+          config.storage.setItem(storageKey, serializer(data))
         } else {
-          config.storage.setItem(effectiveKey, JSON.stringify(data))
+          config.storage.setItem(storageKey, JSON.stringify(data))
         }
       } catch (e) {
         console.error('[vue-context-storage] Error writing to storage', e)
@@ -128,12 +108,12 @@ export function createWebStorageHandlerInstance<T extends Record<string, unknown
   function syncStorageToRegisteredItem<T extends Record<string, unknown>>(
     item: ContextStorageWebStorageRegisteredItem<T>,
   ): void {
-    const { key, prefix, deserializer } = item.options
-    const effectiveKey = resolveStorageKey(key!, prefix)
+    const { key, deserializer } = item.options
+    const storageKey = key!
 
     let stored: string | null = null
     try {
-      stored = config.storage.getItem(effectiveKey)
+      stored = config.storage.getItem(storageKey)
     } catch {
       return
     }
@@ -150,7 +130,7 @@ export function createWebStorageHandlerInstance<T extends Record<string, unknown
         deserialized = JSON.parse(stored)
       }
     } catch {
-      console.warn('[vue-context-storage] Failed to parse storage data for key:', effectiveKey)
+      console.warn('[vue-context-storage] Failed to parse storage data for key:', storageKey)
       return
     }
 
@@ -193,7 +173,7 @@ export function createWebStorageHandlerInstance<T extends Record<string, unknown
     if (registeredDataObjects.has(resolvedData)) {
       console.warn(
         `[vue-context-storage] The same data object is already registered in ${config.handlerName}.`,
-        { key: options.key, prefix: options.prefix },
+        { key: options.key },
       )
     }
     registeredDataObjects.add(resolvedData)

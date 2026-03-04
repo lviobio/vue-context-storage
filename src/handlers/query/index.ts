@@ -186,7 +186,7 @@ export function createQueryHandler(
     function syncInitialStateToRegisteredItem<T extends Record<string, unknown>>(
       item: ContextStorageQueryRegisteredItem<T>,
     ): void {
-      const prefix = item.options?.prefix
+      const key = item.options?.key
 
       const {
         mergeOnlyExistingKeysWithoutTransform = options.mergeOnlyExistingKeysWithoutTransform,
@@ -197,18 +197,18 @@ export function createQueryHandler(
       const result = computeSyncState({
         deserializedState: deserializeParams(route.query),
         initialData: item.initialData,
-        prefix,
+        key,
         emptyPlaceholder: options.emptyPlaceholder,
       })
 
       if (result.type === 'none') {
-        console.debug('[query-handler] syncInitialStateToRegisteredItem — no changes', { prefix })
+        console.debug('[query-handler] syncInitialStateToRegisteredItem — no changes', { key })
         return
       }
 
       if (result.type === 'reset') {
         console.debug('[query-handler] syncInitialStateToRegisteredItem — reset', {
-          prefix,
+          key,
           data: result.data,
         })
         // Must cloneDeep to avoid sharing nested object references with initialData.
@@ -244,13 +244,13 @@ export function createQueryHandler(
       if (isEqual(itemState, finalData)) {
         console.debug(
           '[query-handler] syncInitialStateToRegisteredItem — skipped (data unchanged after transform)',
-          { prefix },
+          { key },
         )
         return
       }
 
       console.debug('[query-handler] syncInitialStateToRegisteredItem — merging', {
-        prefix,
+        key,
         from: { ...itemState },
         to: finalData,
       })
@@ -265,7 +265,7 @@ export function createQueryHandler(
       if (registeredDataObjects.has(resolvedData)) {
         console.warn(
           '[vue-context-storage] The same data object is already registered in ContextStorageQueryHandler.',
-          { prefix: registerOptions?.prefix },
+          { key: registerOptions?.key },
         )
       }
       registeredDataObjects.add(resolvedData)
@@ -275,7 +275,7 @@ export function createQueryHandler(
       const watchHandle = watch(
         data,
         () => {
-          console.debug('[query-handler] watcher triggered', { prefix: registerOptions.prefix })
+          console.debug('[query-handler] watcher triggered', { key: registerOptions.key })
           scheduleSyncToQuery()
         },
         {
@@ -284,10 +284,10 @@ export function createQueryHandler(
       )
 
       const initialData = cloneDeep(resolvedData) as T
-      const initialQueryData = serializeParams(initialData, { prefix: registerOptions.prefix })
+      const initialQueryData = serializeParams(initialData, { key: registerOptions.key })
       const additionalDefaultQueryData = registerOptions.additionalDefaultData
         ? serializeParams(registerOptions.additionalDefaultData as Record<string, unknown>, {
-            prefix: registerOptions.prefix,
+            key: registerOptions.key,
           })
         : undefined
 
@@ -303,7 +303,7 @@ export function createQueryHandler(
 
       const syncCallback = (): void => {
         console.debug('[query-handler] register syncCallback executing', {
-          prefix: registerOptions.prefix,
+          key: registerOptions.key,
         })
         syncInitialStateToRegisteredItem(item)
         scheduleSyncToQuery()
@@ -313,7 +313,7 @@ export function createQueryHandler(
         console.debug(
           '[query-handler] register — scheduling syncCallback via setTimeout (HMR path)',
           {
-            prefix: registerOptions.prefix,
+            key: registerOptions.key,
           },
         )
         /**
@@ -322,7 +322,7 @@ export function createQueryHandler(
         setTimeout(syncCallback)
       } else {
         console.debug('[query-handler] register — scheduling syncCallback via microtask', {
-          prefix: registerOptions.prefix,
+          key: registerOptions.key,
         })
         syncCallback()
       }
@@ -331,7 +331,7 @@ export function createQueryHandler(
 
       return {
         stop: () => {
-          console.debug('[query-handler] unregister', { prefix: registerOptions.prefix })
+          console.debug('[query-handler] unregister', { key: registerOptions.key })
           item.watchHandle.stop()
           const index = registered.indexOf(item)
           if (index !== -1) {
@@ -344,7 +344,7 @@ export function createQueryHandler(
           currentQuery = undefined
         },
         reset: () => {
-          console.debug('[query-handler] reset', { prefix: registerOptions.prefix })
+          console.debug('[query-handler] reset', { key: registerOptions.key })
           syncReactive(toValue(data) as Record<string, unknown>, cloneDeep(initialData))
         },
         wasChanged,
@@ -357,7 +357,7 @@ export function createQueryHandler(
           data: toValue(item.data) as Record<string, unknown>,
           initialQueryData: item.initialQueryData,
           additionalDefaultQueryData: item.additionalDefaultQueryData,
-          prefix: item.options?.prefix,
+          key: item.options?.key,
           onlyChanges: item.options?.onlyChanges,
           preserveEmptyState: item.options?.preserveEmptyState,
           causer: item.options?.causer,

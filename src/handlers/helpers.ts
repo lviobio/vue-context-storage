@@ -93,16 +93,42 @@ export function applyTransform<T extends Record<string, unknown>>(
 }
 
 /**
- * Maps handler injection keys to their handler type names (e.g. 'query', 'localStorage').
+ * Maps handler injection keys to their handler type names and prefix property names.
  * This is used to resolve per-handler prefix segments from ContextStoragePrefix components.
  */
-const knownHandlerKeys = new Map<InjectionKey<unknown>, string>()
+interface KnownHandlerInfo {
+  handlerType: string
+  /** The options property name that receives the resolved ContextStoragePrefix value (default: 'key'). */
+  prefixProperty: string
+  /**
+   * How ContextStoragePrefix is merged with the user's value:
+   * - 'prepend': `${prefix}[${value}]` (e.g. query: tables[filters])
+   * - 'append':  `${value}[${prefix}]` (e.g. web-storage: app-state[tables])
+   */
+  prefixMergeStrategy: 'prepend' | 'append'
+}
+
+const knownHandlerKeys = new Map<InjectionKey<unknown>, KnownHandlerInfo>()
 
 export function registerKnownHandlerKey(
   injectionKey: InjectionKey<unknown>,
   handlerType: string,
+  prefixProperty: string = 'key',
+  prefixMergeStrategy: 'prepend' | 'append' = 'prepend',
 ): void {
-  knownHandlerKeys.set(injectionKey, handlerType)
+  knownHandlerKeys.set(injectionKey, { handlerType, prefixProperty, prefixMergeStrategy })
+}
+
+/**
+ * Appends a bracket-notation suffix to a base string.
+ * e.g. appendBracketNotation('state', 'tables[first]') → 'state[tables][first]'
+ */
+function appendBracketNotation(base: string, suffix: string): string {
+  const bracketIdx = suffix.indexOf('[')
+  if (bracketIdx === -1) {
+    return `${base}[${suffix}]`
+  }
+  return `${base}[${suffix.slice(0, bracketIdx)}]${suffix.slice(bracketIdx)}`
 }
 
 export function buildContextStorageHandler<T, O extends RegisterBaseOptions<T>>(
@@ -122,18 +148,27 @@ export function buildContextStorageHandler<T, O extends RegisterBaseOptions<T>>(
   const prefixSegments = rawPrefixSegments ? toValue(rawPrefixSegments) : undefined
   if (prefixSegments && prefixSegments.length > 0) {
     const handlerInjectionKey = handler.getInjectionKey()
-    const resolvedPrefix = resolvePrefixSegments(
-      prefixSegments,
-      handlerInjectionKey,
-      knownHandlerKeys,
-    )
+    const handlerInfo = knownHandlerKeys.get(handlerInjectionKey)
+    const resolvedPrefix = resolvePrefixSegments(prefixSegments, handlerInfo?.handlerType)
 
     if (resolvedPrefix) {
-      const optionsPrefix = (mergedOptions as Record<string, unknown>).prefix as string | undefined
-      if (optionsPrefix) {
-        ;(mergedOptions as Record<string, unknown>).prefix = `${resolvedPrefix}[${optionsPrefix}]`
+      const prefixProp = handlerInfo?.prefixProperty ?? 'key'
+      const strategy = handlerInfo?.prefixMergeStrategy ?? 'prepend'
+      const optionsValue = (mergedOptions as Record<string, unknown>)[prefixProp] as
+        | string
+        | undefined
+      if (optionsValue) {
+        if (strategy === 'append') {
+          ;(mergedOptions as Record<string, unknown>)[prefixProp] = appendBracketNotation(
+            optionsValue,
+            resolvedPrefix,
+          )
+        } else {
+          ;(mergedOptions as Record<string, unknown>)[prefixProp] =
+            `${resolvedPrefix}[${optionsValue}]`
+        }
       } else {
-        ;(mergedOptions as Record<string, unknown>).prefix = resolvedPrefix
+        ;(mergedOptions as Record<string, unknown>)[prefixProp] = resolvedPrefix
       }
     }
   }
