@@ -133,6 +133,32 @@ useContextStorage('sessionStorage', filters, {
 </script>
 ```
 
+**Important: Query handler type coercion.** URL query parameters are always strings. When state is restored from the URL, non-string values lose their original types — `{ page: 1 }` becomes `{ page: "1" }`, booleans become `"true"` / `"false"`, and arrays are restored as plain objects. Always use `schema` or `transform` option when using the query handler with non-string values:
+
+```typescript
+// Option 1: Zod schema (recommended)
+useContextStorage('query', filters, {
+  key: 'filters',
+  schema: z.object({
+    page: z.coerce.number().default(1),
+    search: z.string().default(''),
+    status: z.string().default('active'),
+  }),
+})
+
+// Option 2: Transform function
+useContextStorage('query', filters, {
+  key: 'filters',
+  transform: (deserialized, initial) => ({
+    page: asNumber(deserialized.page, { fallback: initial.page }),
+    search: asString(deserialized.search, { fallback: initial.search }),
+    status: asString(deserialized.status, { fallback: initial.status }),
+  }),
+})
+```
+
+Without type coercion, comparisons like `page === 1` will silently fail after URL restore (the actual value will be `"1"`). The library emits a runtime `console.warn` when it detects non-string values registered without `schema` or `transform`.
+
 Options are type-checked per handler — `'query'` accepts query options, `'localStorage'` and `'sessionStorage'` require a `key`, etc.
 
 You can also pass an injection key directly instead of a string:
@@ -143,86 +169,6 @@ import { contextStorageQueryHandlerInjectKey } from 'vue-context-storage'
 useContextStorage(contextStorageQueryHandlerInjectKey, filters, {
   key: 'filters',
 })
-```
-
-### Registering Custom Handlers
-
-Register your own handlers at runtime and extend the type map for full type safety:
-
-```typescript
-import { defineContextStorageHandler } from 'vue-context-storage'
-import { myHandlerInjectionKey } from './my-handler'
-
-// Runtime registration
-defineContextStorageHandler('myHandler', myHandlerInjectionKey)
-
-// TypeScript augmentation (e.g. in a .d.ts or at module level)
-declare module 'vue-context-storage' {
-  interface ContextStorageHandlerMap {
-    myHandler: { key: string }
-  }
-}
-
-// Now fully type-checked
-useContextStorage('myHandler', data, { key: 'example' })
-```
-
-## Prefix Scoping with `<ContextStoragePrefix>`
-
-The `<ContextStoragePrefix>` component adds a prefix to all `useContextStorage` calls within its subtree. Prefixes stack when nested, and are concatenated with bracket notation.
-
-### Basic Usage
-
-```vue
-<template>
-  <ContextStoragePrefix name="table">
-    <MyTable />
-  </ContextStoragePrefix>
-</template>
-```
-
-Inside `MyTable`, any `useContextStorage('query', data)` call will automatically get `key: 'tables'`. If the composable also specifies its own key, they are combined:
-
-```typescript
-// Inside MyTable — effective key becomes 'table[filters]'
-useContextStorage('query', filters, { key: 'filters' })
-// URL: ?table[filters][search]=...
-```
-
-### Stacking Prefixes
-
-Nested `<ContextStoragePrefix>` components stack their prefixes:
-
-```vue
-<ContextStoragePrefix name="tables">
-  <ContextStoragePrefix name="first">
-    <!-- All handlers here get prefix 'tables[first]' -->
-    <!-- useContextStorage('query', data) → URL: ?tables[first][search]=... -->
-    <!-- useContextStorage('localStorage', data, { key: 'state' }) → key: 'state[tables][first]' -->
-  </ContextStoragePrefix>
-</ContextStoragePrefix>
-```
-
-### Per-Handler Prefixes
-
-Pass an object to apply different prefixes per handler type:
-
-```vue
-<ContextStoragePrefix :name="{ query: 'url-tables', localStorage: 'ls-data' }">
-  <!-- query handler gets prefix 'url-tables' -->
-  <!-- localStorage handler gets prefix 'ls-data' -->
-  <!-- sessionStorage handler gets no prefix (not specified) -->
-</ContextStoragePrefix>
-```
-
-### Dynamic Prefix
-
-When the `name` prop changes, all descendant components are re-created and re-registered with the new prefix:
-
-```vue
-<ContextStoragePrefix :name="activeTab">
-  <TabContent />
-</ContextStoragePrefix>
 ```
 
 ## Use Query Handler in Components
@@ -564,6 +510,86 @@ useContextStorage('localStorage', settings, {
   serializer: (data) => btoa(JSON.stringify(data)),
   deserializer: (str) => JSON.parse(atob(str)),
 })
+```
+
+## Prefix Scoping with `<ContextStoragePrefix>`
+
+The `<ContextStoragePrefix>` component adds a prefix to all `useContextStorage` calls within its subtree. Prefixes stack when nested, and are concatenated with bracket notation.
+
+### Basic Usage
+
+```vue
+<template>
+  <ContextStoragePrefix name="table">
+    <MyTable />
+  </ContextStoragePrefix>
+</template>
+```
+
+Inside `MyTable`, any `useContextStorage('query', data)` call will automatically get `key: 'tables'`. If the composable also specifies its own key, they are combined:
+
+```typescript
+// Inside MyTable — effective key becomes 'table[filters]'
+useContextStorage('query', filters, { key: 'filters' })
+// URL: ?table[filters][search]=...
+```
+
+### Stacking Prefixes
+
+Nested `<ContextStoragePrefix>` components stack their prefixes:
+
+```vue
+<ContextStoragePrefix name="tables">
+  <ContextStoragePrefix name="first">
+    <!-- All handlers here get prefix 'tables[first]' -->
+    <!-- useContextStorage('query', data) → URL: ?tables[first][search]=... -->
+    <!-- useContextStorage('localStorage', data, { key: 'state' }) → key: 'state[tables][first]' -->
+  </ContextStoragePrefix>
+</ContextStoragePrefix>
+```
+
+### Per-Handler Prefixes
+
+Pass an object to apply different prefixes per handler type:
+
+```vue
+<ContextStoragePrefix :name="{ query: 'url-tables', localStorage: 'ls-data' }">
+  <!-- query handler gets prefix 'url-tables' -->
+  <!-- localStorage handler gets prefix 'ls-data' -->
+  <!-- sessionStorage handler gets no prefix (not specified) -->
+</ContextStoragePrefix>
+```
+
+### Dynamic Prefix
+
+When the `name` prop changes, all descendant components are re-created and re-registered with the new prefix:
+
+```vue
+<ContextStoragePrefix :name="activeTab">
+  <TabContent />
+</ContextStoragePrefix>
+```
+
+## Registering Custom Handlers
+
+Register your own handlers at runtime and extend the type map for full type safety:
+
+```typescript
+import { defineContextStorageHandler } from 'vue-context-storage'
+import { myHandlerInjectionKey } from './my-handler'
+
+// Runtime registration
+defineContextStorageHandler('myHandler', myHandlerInjectionKey)
+
+// TypeScript augmentation (e.g. in a .d.ts or at module level)
+declare module 'vue-context-storage' {
+  interface ContextStorageHandlerMap {
+    myHandler: { key: string }
+  }
+}
+
+// Now fully type-checked
+useContextStorage('myHandler', data, { key: 'example' })
 ```
 
 ## API Reference

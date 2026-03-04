@@ -253,6 +253,26 @@ export function createQueryHandler(
       }
       registeredDataObjects.add(resolvedData)
 
+      if (!registerOptions.transform && !registerOptions.schema) {
+        const problematicKeys: string[] = []
+        for (const [key, value] of Object.entries(resolvedData)) {
+          if (typeof value === 'number') {
+            problematicKeys.push(`"${key}" (number)`)
+          } else if (typeof value === 'boolean') {
+            problematicKeys.push(`"${key}" (boolean)`)
+          } else if (Array.isArray(value)) {
+            problematicKeys.push(`"${key}" (array)`)
+          }
+        }
+        if (problematicKeys.length > 0) {
+          console.warn(
+            `[vue-context-storage] Query handler registered with non-string values: ${problematicKeys.join(', ')}. ` +
+              `URL query parameters are always strings, so these values will lose their types after restore. ` +
+              `Use "schema" or "transform" option to ensure correct type coercion.`,
+          )
+        }
+      }
+
       hasAnyRegistered = true
 
       const watchHandle = watch(
