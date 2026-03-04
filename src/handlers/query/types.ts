@@ -146,7 +146,7 @@ export interface RegisterQueryHandlerBaseOptions<T> extends QueryHandlerSharedOp
    * ```ts
    * const data = ref({ page: undefined as number | undefined })
    *
-   * useContextStorageQueryHandler(data, {
+   * useContextStorage('query', data, {
    *   key: 'filters',
    *   onlyChanges: true,
    *   additionalDefaultData: { page: 1 },

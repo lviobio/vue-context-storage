@@ -1,8 +1,7 @@
 import { cloneDeep, isEqual } from 'lodash'
-import { applyTransform, buildContextStorageHandler, syncReactive } from '../helpers'
+import { applyTransform, syncReactive } from '../helpers'
 import {
   computed,
-  inject,
   type InjectionKey,
   type MaybeRefOrGetter,
   onBeforeUnmount,
@@ -15,7 +14,6 @@ import type {
   WebStorageHandlerBaseOptions,
 } from './types'
 import type { ContextStorageHandler } from '../../handlers'
-import type { UseContextStorageResult } from '../../composables/types'
 
 interface WebStorageHandlerConfig {
   storage: Storage
@@ -217,24 +215,5 @@ export function createWebStorageHandlerInstance<T extends Record<string, unknown
     register,
     setEnabled,
     getInjectionKey,
-  }
-}
-
-export function createWebStorageComposable<T extends Record<string, unknown>>(
-  injectionKey: InjectionKey<ContextStorageHandler<T, RegisterWebStorageHandlerOptions<T>>>,
-  handlerName: string,
-) {
-  return function useContextStorageWebStorage(
-    data: MaybeRefOrGetter<T>,
-    options: RegisterWebStorageHandlerOptions<T>,
-  ): UseContextStorageResult<T> {
-    const handler =
-      inject<ContextStorageHandler<T, RegisterWebStorageHandlerOptions<T>>>(injectionKey)
-
-    if (!handler) {
-      throw new Error(`[vue-context-storage] ${handlerName} is not provided`)
-    }
-
-    return buildContextStorageHandler(handler, data, options)
   }
 }

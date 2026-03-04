@@ -253,16 +253,6 @@ useContextStorage('query', filters, {
 </script>
 ```
 
-Also available as a dedicated composable:
-
-```typescript
-import { useContextStorageQueryHandler } from 'vue-context-storage'
-
-useContextStorageQueryHandler(filters, {
-  key: 'filters',
-})
-```
-
 ## Advanced Usage
 
 ### Using Transform Helpers
@@ -471,16 +461,6 @@ useContextStorage('localStorage', settings, {
 </script>
 ```
 
-Also available as a dedicated composable:
-
-```typescript
-import { useContextStorageLocalStorage } from 'vue-context-storage'
-
-useContextStorageLocalStorage(settings, {
-  key: 'app-settings',
-})
-```
-
 ### Configure localStorage Handler
 
 ```typescript
@@ -511,16 +491,6 @@ useContextStorage('sessionStorage', formDraft, {
   key: 'contact-form-draft',
 })
 </script>
-```
-
-Also available as a dedicated composable:
-
-```typescript
-import { useContextStorageSessionStorage } from 'vue-context-storage'
-
-useContextStorageSessionStorage(formDraft, {
-  key: 'contact-form-draft',
-})
 ```
 
 ### Multiple Registrations Under One Root Key
@@ -568,7 +538,7 @@ useContextStorage('localStorage', settings, {
 
 ```typescript
 import { z } from 'zod'
-import { useContextStorageLocalStorage } from 'vue-context-storage'
+import { useContextStorage } from 'vue-context-storage'
 
 const SettingsSchema = z.object({
   theme: z.enum(['light', 'dark']).default('light'),
@@ -622,22 +592,6 @@ Unified composable that delegates to the correct handler based on `type`.
 - `defineContextStorageHandler(name, injectionKey)` - Register a custom handler
 - `resolveHandlerInjectionKey(type)` - Look up an injection key by name
 
-#### `useContextStorageQueryHandler<T>(data, options)`
-
-Registers reactive data for URL query synchronization.
-
-**Parameters:**
-
-- `data: MaybeRefOrGetter<T>` - Reactive reference to sync
-- `options?: RegisterQueryHandlerOptions<T>`
-  - `key?: string` - Query parameter key
-  - `onlyChanges?: boolean` - Only write changed values to URL (default: `true`)
-  - `transform?: (deserialized, initial) => T` - Transform function
-  - `schema?: ZodSchema` - Zod schema for validation (takes priority over `transform`)
-  - `additionalDefaultData?: Partial<T>` - Extra values treated as defaults for `onlyChanges` comparison
-  - `preserveEmptyState?: boolean` - Keep empty state in URL
-  - `mergeOnlyExistingKeysWithoutTransform?: boolean` - Only merge existing keys (default: `true`)
-
 ### Handler Factories
 
 #### `createQueryHandler(options?)`
@@ -667,24 +621,6 @@ Creates a sessionStorage handler factory.
 **Options:**
 
 - `listenToStorageEvents?: boolean` - Listen to storage events (default: `false`)
-
-#### `useContextStorageLocalStorage<T>(data, options)`
-
-Registers reactive data for localStorage synchronization.
-
-**Parameters:**
-
-- `data: MaybeRefOrGetter<T>` - Reactive reference to sync
-- `options: RegisterWebStorageHandlerBaseOptions<T>`
-  - `key: string` - Storage key (required). Supports bracket notation for namespacing (e.g. `'app-state[filters]'`)
-  - `transform?: (deserialized, initial) => T` - Transform function
-  - `schema?: ZodSchema` - Zod schema for validation
-  - `serializer?: (data: T) => string` - Custom serializer (default: `JSON.stringify`)
-  - `deserializer?: (str: string) => unknown` - Custom deserializer (default: `JSON.parse`)
-
-#### `useContextStorageSessionStorage<T>(data, options)`
-
-Registers reactive data for sessionStorage synchronization. Same options as `useContextStorageLocalStorage`.
 
 ### Components
 
@@ -825,7 +761,7 @@ type Filters = z.infer<typeof FiltersSchema>
 
 ```typescript
 import { ref } from 'vue'
-import { useContextStorageQueryHandler, transform } from 'vue-context-storage'
+import { useContextStorage, transform } from 'vue-context-storage'
 
 const pagination = ref({
   page: 1,
@@ -833,7 +769,7 @@ const pagination = ref({
   total: 0,
 })
 
-useContextStorageQueryHandler(pagination, {
+useContextStorage('query', pagination, {
   key: 'page',
   transform: (data, initial) => ({
     page: transform.asNumber(data.page, { fallback: 1 }),

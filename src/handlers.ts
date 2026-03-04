@@ -28,7 +28,7 @@ export interface RegisterBaseOptions<T> {
    *   status: z.enum(['active', 'inactive']).default('active'),
    * })
    *
-   * useContextStorageQueryHandler(filters, {
+   * useContextStorage('query', filters, {
    *   key: 'filters',
    *   schema: FiltersSchema,
    * })

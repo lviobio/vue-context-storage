@@ -25,14 +25,11 @@ export { useContextStorageActivator } from './composables/useContextStorageActiv
 export { useContextStorageCollection } from './composables/useContextStorageCollection'
 export { useContextStorageProvider } from './composables/useContextStorageProvider'
 
-export { createQueryHandler, useContextStorageQueryHandler } from './handlers/query'
+export { createQueryHandler } from './handlers/query'
 
-export { createLocalStorageHandler, useContextStorageLocalStorage } from './handlers/local-storage'
+export { createLocalStorageHandler } from './handlers/local-storage'
 
-export {
-  createSessionStorageHandler,
-  useContextStorageSessionStorage,
-} from './handlers/session-storage'
+export { createSessionStorageHandler } from './handlers/session-storage'
 
 // Handler registry
 export { defineContextStorageHandler, resolveHandlerInjectionKey } from './registry'

@@ -1,34 +1,17 @@
-import type { ContextStorageHandler, ContextStorageHandlerFactory } from '../../handlers'
+import type { ContextStorageHandlerFactory } from '../../handlers'
 import { deserializeParams, serializeParams } from './helpers'
 import { contextStorageQueryHandler } from '../../symbols'
 import { cloneDeep, isEqual } from 'lodash'
 import { applyTransform, syncReactive } from '../helpers'
 import { buildQuery } from './build-query'
 import { computeSyncState } from './compute-sync-state'
-import { computed, inject, type MaybeRefOrGetter, onBeforeUnmount, toValue, watch } from 'vue'
+import { computed, type MaybeRefOrGetter, onBeforeUnmount, toValue, watch } from 'vue'
 import { type LocationQuery, useRoute, useRouter } from 'vue-router'
 import type {
   ContextStorageQueryRegisteredItem,
   QueryHandlerBaseOptions,
   RegisterQueryHandlerOptions,
 } from './types'
-import { buildContextStorageHandler } from '../helpers'
-import type { UseContextStorageResult } from '../../composables/types'
-
-export function useContextStorageQueryHandler<T extends Record<string, unknown>>(
-  data: MaybeRefOrGetter<T>,
-  options?: RegisterQueryHandlerOptions<T>,
-): UseContextStorageResult<T> {
-  const handler = inject<ContextStorageHandler<T, RegisterQueryHandlerOptions<T>>>(
-    contextStorageQueryHandler,
-  )
-
-  if (!handler) {
-    throw new Error('[vue-context-storage] ContextStorageQueryHandler is not provided')
-  }
-
-  return buildContextStorageHandler(handler, data, options)
-}
 
 export function createQueryHandler(
   baseOptions?: QueryHandlerBaseOptions,

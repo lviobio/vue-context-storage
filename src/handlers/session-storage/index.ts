@@ -1,6 +1,6 @@
 import type { ContextStorageHandlerFactory } from '../../handlers'
 import { contextStorageSessionStorageHandler } from '../../symbols'
-import { createWebStorageComposable, createWebStorageHandlerInstance } from '../web-storage-base'
+import { createWebStorageHandlerInstance } from '../web-storage-base'
 import type { SessionStorageHandlerBaseOptions } from './types'
 
 export function createSessionStorageHandler(
@@ -16,8 +16,3 @@ export function createSessionStorageHandler(
 
   return factory
 }
-
-export const useContextStorageSessionStorage = createWebStorageComposable(
-  contextStorageSessionStorageHandler,
-  'ContextStorageSessionStorageHandler',
-)

@@ -1,6 +1,6 @@
 import type { ContextStorageHandlerFactory } from '../../handlers'
 import { contextStorageLocalStorageHandler } from '../../symbols'
-import { createWebStorageComposable, createWebStorageHandlerInstance } from '../web-storage-base'
+import { createWebStorageHandlerInstance } from '../web-storage-base'
 import type { LocalStorageHandlerBaseOptions } from './types'
 
 export function createLocalStorageHandler(
@@ -16,8 +16,3 @@ export function createLocalStorageHandler(
 
   return factory
 }
-
-export const useContextStorageLocalStorage = createWebStorageComposable(
-  contextStorageLocalStorageHandler,
-  'ContextStorageLocalStorageHandler',
-)
