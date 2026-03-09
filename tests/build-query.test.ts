@@ -373,6 +373,67 @@ describe('buildQuery', () => {
 
       expect(result.newQuery).toEqual({ search: 'test' })
     })
+
+    it('should not restore owned keys stripped by onlyChanges', () => {
+      const result = buildQuery(
+        createInput({
+          items: [createItem({ name: 'John', search: '' })],
+          routeQuery: { name: 'John' },
+          preserveUnusedKeys: true,
+          onlyChanges: true,
+        }),
+      )
+
+      // name=John matches initial → stripped by onlyChanges
+      // preserveUnusedKeys should NOT restore it because 'name' is an owned key
+      expect(result.newQuery).toEqual({})
+    })
+
+    it('should preserve unowned keys while stripping owned defaults', () => {
+      const result = buildQuery(
+        createInput({
+          items: [createItem({ name: 'John', search: '' })],
+          routeQuery: { name: 'John', foo: 'bar' },
+          preserveUnusedKeys: true,
+          onlyChanges: true,
+        }),
+      )
+
+      // name=John is owned and default → stripped, not restored
+      // foo=bar is unowned → preserved
+      expect(result.newQuery).toEqual({ foo: 'bar' })
+    })
+
+    it('should not restore owned keys with key prefix stripped by onlyChanges', () => {
+      const result = buildQuery(
+        createInput({
+          items: [createItem({ search: 'test' }, { key: 'f' })],
+          routeQuery: { 'f[search]': 'test', tab: 'main' },
+          preserveUnusedKeys: true,
+          onlyChanges: true,
+        }),
+      )
+
+      // f[search]=test matches initial → stripped by onlyChanges
+      // tab=main is unowned → preserved
+      expect(result.newQuery).toEqual({ tab: 'main' })
+    })
+
+    it('should keep owned keys that differ from initial with preserveUnusedKeys', () => {
+      const result = buildQuery(
+        createInput({
+          items: [createItem({ name: 'Jane' }, { initialData: { name: 'John' } })],
+          routeQuery: { name: 'John', foo: 'bar' },
+          preserveUnusedKeys: true,
+          onlyChanges: true,
+        }),
+      )
+
+      // name=Jane differs from initial John → kept in newQueryRaw
+      // foo=bar is unowned → preserved
+      expect(result.newQuery.name).toBe('Jane')
+      expect(result.newQuery.foo).toBe('bar')
+    })
   })
 
   describe('currentQuery diff (stale key removal)', () => {

@@ -61,11 +61,21 @@ export function buildQuery(input: BuildQueryInput): BuildQueryResult {
   const warnings: string[] = []
   const newQueryRaw: LocationQuery = {}
 
+  // Collect all serialized keys that are "owned" by registered items.
+  // This is needed so that preserveUnusedKeys only preserves truly external keys,
+  // and does not restore owned keys that were stripped by onlyChanges.
+  const ownedKeys = new Set<string>()
+
   input.items.forEach((item) => {
     const { key, onlyChanges = input.onlyChanges } = item
     let preserveEmptyState = item.preserveEmptyState ?? input.preserveEmptyState
 
     const patch = serializeParams(item.data, { key })
+
+    // Collect owned keys before onlyChanges filtering removes default-value keys.
+    // Also include initialQueryData keys to cover values that became undefined.
+    Object.keys(patch).forEach((k) => ownedKeys.add(k))
+    Object.keys(item.initialQueryData).forEach((k) => ownedKeys.add(k))
 
     // Remove keys that have the same value as initial
     if (onlyChanges) {
@@ -107,13 +117,16 @@ export function buildQuery(input: BuildQueryInput): BuildQueryResult {
   let newQuery = { ...newQueryRaw }
 
   /*
-   * It will not delete from the query the keys that are not used in the patch.
-   *
-   * It will only work if the registered item has a transform, otherwise without
-   * it - all keys are dumped into item.data during the initial fill from initialState
+   * Preserve query keys that are not owned by any registered item.
+   * Only truly external keys (e.g. added by other code via router.push) are kept.
+   * Owned keys stripped by onlyChanges are NOT restored.
    */
   if (input.preserveUnusedKeys) {
-    newQuery = { ...input.routeQuery, ...newQuery }
+    Object.keys(input.routeQuery).forEach((key) => {
+      if (!ownedKeys.has(key) && !Object.hasOwn(newQuery, key)) {
+        newQuery[key] = input.routeQuery[key]
+      }
+    })
   }
 
   if (input.currentQuery !== undefined) {
