@@ -374,7 +374,7 @@ import {
 const customHandlers = [
   createQueryHandler({
     mode: 'push', // 'replace' (default) or 'push' for history
-    preserveUnusedKeys: true, // Keep other query params
+    preserveUnusedKeys: false, // Default is true — set to false for exclusive query ownership
     preserveEmptyState: false,
   }),
   createLocalStorageHandler(),
@@ -627,7 +627,7 @@ Creates a query handler factory for URL query synchronization.
 **Options:**
 
 - `mode?: 'replace' | 'push'` - Router navigation mode (default: `'replace'`)
-- `preserveUnusedKeys?: boolean` - Keep other query params (default: `false`)
+- `preserveUnusedKeys?: boolean` - Keep other query params (default: `true`)
 - `preserveEmptyState?: boolean` - Preserve empty state in URL (default: `false`)
 - `emptyPlaceholder?: string` - Placeholder for empty state (default: `'_'`)
 - `onlyChanges?: boolean` - Only write changed values to URL (default: `true`)

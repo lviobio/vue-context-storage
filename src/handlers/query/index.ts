@@ -34,7 +34,7 @@ export function createQueryHandler(
       mode: 'replace',
       emptyPlaceholder: '_',
       mergeOnlyExistingKeysWithoutTransform: true,
-      preserveUnusedKeys: false,
+      preserveUnusedKeys: true,
       preserveEmptyState: false,
       onlyChanges: true,
       ...baseOptions,

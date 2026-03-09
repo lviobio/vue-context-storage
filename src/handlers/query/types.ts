@@ -103,10 +103,14 @@ export interface QueryHandlerBaseOptions extends QueryHandlerSharedOptions {
   emptyPlaceholder?: string
 
   /**
-   * Default: false
+   * Default: true
    *
    * If enabled - unused keys will be preserved in query.
    * Unused keys are keys, that are not exists in ref.
+   *
+   * When true, query parameters added by other code (e.g. direct router.push/replace calls)
+   * will not be removed by the handler. Set to false only if you want the handler
+   * to have exclusive ownership of all query parameters.
    */
   preserveUnusedKeys?: boolean
 }
