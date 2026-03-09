@@ -59,5 +59,22 @@ export function computeSyncState<T extends Record<string, unknown>>(
     state = omit(state, [input.emptyPlaceholder]) as Record<string, unknown>
   }
 
+  /**
+   * For unkeyed items: if none of the URL keys overlap with the item's known keys,
+   * the URL effectively has no data for this item (e.g. external navigation set ?foo=bar
+   * but the item manages name, title, etc.). Treat as reset to initial values.
+   *
+   * This check runs after empty placeholder removal so that `?_` (preserveEmptyState)
+   * is correctly handled as sync with empty data rather than a false-positive reset.
+   */
+  if (!input.key) {
+    const remainingKeys = Object.keys(state)
+    const initialDataKeys = Object.keys(input.initialData)
+    const hasOverlap = remainingKeys.some((k) => initialDataKeys.includes(k))
+    if (!hasOverlap && remainingKeys.length > 0) {
+      return { type: 'reset', data: input.initialData }
+    }
+  }
+
   return { type: 'sync', data: state as Record<string, unknown> }
 }

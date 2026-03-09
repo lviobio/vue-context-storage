@@ -207,6 +207,74 @@ describe('computeSyncState', () => {
     })
   })
 
+  describe('unkeyed items with no overlapping URL keys', () => {
+    it('should return reset when URL has only unrelated keys', () => {
+      const initialData = { name: 'John', search: '' }
+
+      const result = computeSyncState(
+        createInput({
+          deserializedState: { foo: 'bar' },
+          initialData,
+        }),
+      )
+
+      expect(result).toEqual({ type: 'reset', data: initialData })
+    })
+
+    it('should return reset when URL has multiple unrelated keys', () => {
+      const initialData = { name: 'John', page: 1 }
+
+      const result = computeSyncState(
+        createInput({
+          deserializedState: { foo: 'bar', baz: 'qux' },
+          initialData,
+        }),
+      )
+
+      expect(result).toEqual({ type: 'reset', data: initialData })
+    })
+
+    it('should return sync when at least one URL key overlaps with initialData', () => {
+      const result = computeSyncState(
+        createInput({
+          deserializedState: { foo: 'bar', name: 'Jane' },
+          initialData: { name: 'John', search: '' },
+        }),
+      )
+
+      expect(result).toEqual({
+        type: 'sync',
+        data: { foo: 'bar', name: 'Jane' },
+      })
+    })
+
+    it('should not apply overlap check to keyed items', () => {
+      const result = computeSyncState(
+        createInput({
+          deserializedState: { filters: { foo: 'bar' } },
+          initialData: { name: 'John' },
+          key: 'filters',
+        }),
+      )
+
+      // Keyed items extract state by key; overlap check does not apply
+      expect(result).toEqual({ type: 'sync', data: { foo: 'bar' } })
+    })
+
+    it('should not interfere with empty placeholder handling', () => {
+      const result = computeSyncState(
+        createInput({
+          deserializedState: { _: null },
+          initialData: { search: '' },
+          emptyPlaceholder: '_',
+        }),
+      )
+
+      // After placeholder removal state is empty — should return sync with empty data
+      expect(result).toEqual({ type: 'sync', data: {} })
+    })
+  })
+
   describe('does not mutate inputs', () => {
     it('should not mutate deserializedState', () => {
       const deserializedState = { search: 'test', _: null }
