@@ -364,6 +364,19 @@ useContextStorage('query', data, {
 
 Customize behavior by passing options to the factory:
 
+```vue
+<template>
+  <!-- Override a single default handler without listing all of them -->
+  <ContextStorage :additional-handlers="[createQueryHandler({ mode: 'push' })]">
+    <RouterView />
+  </ContextStorage>
+</template>
+```
+
+The `additional-handlers` prop merges with the default handlers, replacing any handler of the same type (matched by injection key). This is the recommended way to customize a single handler.
+
+If you need full control over all handlers, use the `handlers` prop instead:
+
 ```typescript
 import {
   createQueryHandler,
