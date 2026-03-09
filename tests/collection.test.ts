@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createCollectionManager, type CollectionManager } from '../src/collection'
-import type { ContextStorageHandler, ContextStorageHandlerFactory } from '../src/handlers'
+import { createCollectionManager, createItem, type CollectionManager } from '../src/collection'
+import type { ContextStorageHandler, ContextStorageHandlerFactory } from '../src'
 
 // Mock handler for testing
 interface MockHandler extends ContextStorageHandler<any, any> {
@@ -36,6 +36,70 @@ function createMockHandlerFactory(): ContextStorageHandlerFactory {
 
   return factory
 }
+
+const sharedKeyA = Symbol('handler-a')
+const sharedKeyB = Symbol('handler-b')
+
+function createMockHandlerFactoryWithKey(
+  injectionKey: symbol,
+  label?: string,
+): ContextStorageHandlerFactory {
+  const factory: ContextStorageHandlerFactory = () => ({
+    register() {
+      return {
+        stop: () => {},
+        reset: () => {},
+        wasChanged: { value: false } as any,
+      }
+    },
+    getInjectionKey() {
+      return injectionKey
+    },
+    label,
+  })
+  return factory
+}
+
+describe('createItem', () => {
+  it('should deduplicate handlers by injection key, keeping the last one', () => {
+    const factory1 = createMockHandlerFactoryWithKey(sharedKeyA, 'first')
+    const factory2 = createMockHandlerFactoryWithKey(sharedKeyB, 'other')
+    const factory3 = createMockHandlerFactoryWithKey(sharedKeyA, 'override')
+
+    const item = createItem([factory1, factory2, factory3], { key: 'test' })
+
+    expect(item.handlers).toHaveLength(2)
+    // The override (last) handler for keyA should win
+    const handlerA = item.handlers.find((h) => h.getInjectionKey() === sharedKeyA) as any
+    expect(handlerA.label).toBe('override')
+    // keyB handler is kept
+    const handlerB = item.handlers.find((h) => h.getInjectionKey() === sharedKeyB) as any
+    expect(handlerB.label).toBe('other')
+  })
+
+  it('should keep all handlers when injection keys are unique', () => {
+    const factory1 = createMockHandlerFactoryWithKey(sharedKeyA)
+    const factory2 = createMockHandlerFactoryWithKey(sharedKeyB)
+
+    const item = createItem([factory1, factory2], { key: 'test' })
+
+    expect(item.handlers).toHaveLength(2)
+  })
+
+  it('should handle single factory', () => {
+    const factory = createMockHandlerFactoryWithKey(sharedKeyA)
+
+    const item = createItem([factory], { key: 'test' })
+
+    expect(item.handlers).toHaveLength(1)
+  })
+
+  it('should handle empty factories array', () => {
+    const item = createItem([], { key: 'test' })
+
+    expect(item.handlers).toHaveLength(0)
+  })
+})
 
 describe('createCollectionManager', () => {
   let collection: CollectionManager

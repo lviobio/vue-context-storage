@@ -12,8 +12,23 @@ export default defineComponent({
       type: Object as PropType<ContextStorageHandlerFactory[]>,
       default: () => defaultHandlers,
     },
+    /**
+     * Additional handler factories that are merged with `handlers` (or defaults).
+     * Handlers with the same injection key are deduplicated — the last one wins.
+     *
+     * This allows overriding a single default handler without listing all of them:
+     * `<ContextStorage :additional-handlers="[createQueryHandler({ mode: 'push' })]">`
+     */
+    additionalHandlers: {
+      type: Object as PropType<ContextStorageHandlerFactory[]>,
+      default: undefined,
+    },
   },
-  setup({ handlers: factories }, { slots }) {
+  setup(props, { slots }) {
+    const factories = props.additionalHandlers
+      ? [...props.handlers, ...props.additionalHandlers]
+      : props.handlers
+
     const item = createItem(factories, { key: 'main' })
 
     useContextStorageItemProvider(item)

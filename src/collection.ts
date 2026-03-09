@@ -13,11 +13,25 @@ export interface ItemOptions {
   key: string
 }
 
+/**
+ * Deduplicates handlers by injection key, keeping the last handler for each key.
+ * This allows `additionalHandlers` to override default handlers of the same type.
+ */
+function deduplicateHandlers(
+  handlers: ContextStorageHandler<any, RegisterOptions<any>>[],
+): ContextStorageHandler<any, RegisterOptions<any>>[] {
+  const map = new Map<unknown, ContextStorageHandler<any, RegisterOptions<any>>>()
+  for (const handler of handlers) {
+    map.set(handler.getInjectionKey(), handler)
+  }
+  return Array.from(map.values())
+}
+
 export function createItem(
   handlerFactories: ContextStorageHandlerFactory[],
   options: ItemOptions,
 ): CollectionManagerItem {
-  const handlers = handlerFactories.map((factory) => factory())
+  const handlers = deduplicateHandlers(handlerFactories.map((factory) => factory()))
 
   return { handlers, key: options.key }
 }
