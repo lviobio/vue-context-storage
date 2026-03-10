@@ -58,7 +58,8 @@ export function zObjectArray<T extends z.ZodTypeAny>(itemSchema: T) {
  * URL query parameters serialize booleans as `'1'`/`'0'` strings.
  * `z.coerce.boolean()` cannot be used because `Boolean('0')` is `true` in JavaScript.
  *
- * This helper correctly handles `'1'`, `'true'`, `'0'`, `'false'`, and native booleans.
+ * This helper accepts only `'1'`/`'0'` strings and native booleans — matching
+ * the serialization format used by the query handler.
  *
  * @param defaultValue - The default value when the field is missing (defaults to `false`)
  *
@@ -75,10 +76,10 @@ export function zObjectArray<T extends z.ZodTypeAny>(itemSchema: T) {
  */
 export function zBoolean(defaultValue = false) {
   return z
-    .union([z.boolean(), z.string()])
+    .union([z.boolean(), z.enum(['1', '0'])])
     .transform((val) => {
       if (typeof val === 'boolean') return val
-      return val === '1' || val === 'true'
+      return val === '1'
     })
     .default(defaultValue)
 }

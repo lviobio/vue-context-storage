@@ -146,14 +146,14 @@ describe('zBoolean', () => {
     expect(Schema.parse({ active: '0' })).toEqual({ active: false })
   })
 
-  it('should parse string "true" as true', () => {
+  it('should reject string "true"', () => {
     const Schema = z.object({ active: zBoolean() })
-    expect(Schema.parse({ active: 'true' })).toEqual({ active: true })
+    expect(Schema.safeParse({ active: 'true' }).success).toBe(false)
   })
 
-  it('should parse string "false" as false', () => {
+  it('should reject string "false"', () => {
     const Schema = z.object({ active: zBoolean() })
-    expect(Schema.parse({ active: 'false' })).toEqual({ active: false })
+    expect(Schema.safeParse({ active: 'false' }).success).toBe(false)
   })
 
   it('should pass through native booleans', () => {

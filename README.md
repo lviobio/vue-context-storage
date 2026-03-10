@@ -714,7 +714,7 @@ const DataSchema = z.object({
 
 ### `zBoolean(defaultValue?)`
 
-Creates a Zod schema for booleans serialized as URL query parameters. Standard `z.coerce.boolean()` cannot be used because `Boolean('0')` is `true` in JavaScript. This helper correctly handles `'1'`, `'true'`, `'0'`, `'false'`, and native booleans.
+Creates a Zod schema for booleans serialized as URL query parameters. Standard `z.coerce.boolean()` cannot be used because `Boolean('0')` is `true` in JavaScript. This helper accepts only `'1'`/`'0'` strings and native booleans — matching the serialization format used by the query handler. Any other string values (e.g. `'true'`, `'false'`) are rejected.
 
 ```typescript
 import { z } from 'zod'
