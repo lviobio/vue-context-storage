@@ -27,6 +27,7 @@ const data = reactive({
   search: undefined as string | undefined,
   number: 42 as number | null,
   switch: true,
+  users_ids: [] as number[],
 })
 
 // --- Schema approach (Zod) ---
@@ -37,6 +38,7 @@ const DataSchema = z.object({
   search: z.string().optional(),
   number: z.coerce.number().nullable().default(42),
   switch: zUrlBoolean(true),
+  users_ids: z.coerce.number().array().default([]),
 })
 
 // --- Manual approach (transform helpers) ---
@@ -57,9 +59,16 @@ if (transformMethod === 'schema') {
       search: transform.asString(value.search, { missable: true }),
       number: transform.asNumber(value.number, { nullable: true }),
       switch: transform.asBoolean(value.switch),
+      users_ids: transform.asNumberArray(value.users_ids),
     }),
   })
 }
+
+const usersOptions = [
+  { label: 'John', value: 1 },
+  { label: 'Jane', value: 2 },
+  { label: 'Jack', value: 3 },
+]
 
 const exampleCode = computed(() =>
   transformMethod === 'schema'
@@ -74,6 +83,7 @@ const DataSchema = z.object({
   search: z.string().optional(),
   number: z.coerce.number().nullable().default(42),
   switch: zUrlBoolean(true),
+  users_ids: z.coerce.number().array().default([]),
 })
 
 const data = reactive({
@@ -82,6 +92,7 @@ const data = reactive({
   search: undefined as string | undefined,
   number: 42 as number | null,
   switch: true,
+  users_ids: [] as number[],
 })
 
 useContextStorage('query', data, {
@@ -97,6 +108,7 @@ const data = reactive({
   search: undefined as string | undefined,
   number: 42 as number | null,
   switch: true,
+  users_ids: [] as number[],
 })
 
 useContextStorage('query', data, {
@@ -107,6 +119,7 @@ useContextStorage('query', data, {
     search: transform.asString(value.search, { missable: true }),
     number: transform.asNumber(value.number, { nullable: true }),
     switch: transform.asBoolean(value.switch),
+    users_ids: transform.asNumberArray(value.users_ids),
   }),
 })`,
 )
@@ -136,6 +149,15 @@ useContextStorage('query', data, {
     </NFormItem>
     <NFormItem label="Switch" feedback="This field can be only boolean">
       <NSwitch v-model:value="data.switch" />
+    </NFormItem>
+    <NFormItem label="Users IDs" feedback="This field can be only array of numbers">
+      <NSelect
+        multiple
+        v-model:value="data.users_ids"
+        :options="usersOptions"
+        placeholder="Users"
+        class="w-full"
+      />
     </NFormItem>
     <NFormItem>
       <NButton @click="data.number = Math.ceil(Math.random() * 1000)">Random number</NButton>

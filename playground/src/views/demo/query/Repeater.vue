@@ -5,7 +5,7 @@ import RepeaterForm from './RepeaterForm.vue'
 import { useContextStorage } from 'vue-context-storage'
 
 const onlyChanges = ref(true)
-const transformMethod = ref<'manual' | 'schema'>('manual')
+const transformMethod = ref<'manual' | 'schema'>('schema')
 const codeExpanded = ref(false)
 
 useContextStorage(
