@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { z } from 'zod'
-import { zObjectArray, zUrlBoolean, createEmptyObject, SCHEMA_SYMBOL } from '../src/zod'
+import {
+  zObjectArray,
+  zUrlBoolean,
+  zNumberArray,
+  zStringArray,
+  createEmptyObject,
+  SCHEMA_SYMBOL,
+} from '../src/zod'
 import { serializeParams, deserializeParams } from '../src/handlers/query/helpers'
 
 describe('zObjectArray', () => {
@@ -163,6 +170,258 @@ describe('zUrlBoolean', () => {
   it('should use custom default value', () => {
     const Schema = z.object({ active: zUrlBoolean(true) })
     expect(Schema.parse({})).toEqual({ active: true })
+  })
+})
+
+describe('zNumberArray', () => {
+  describe('basic usage', () => {
+    it('should convert array of strings to array of numbers', () => {
+      const Schema = z.object({
+        users_ids: zNumberArray(),
+      })
+
+      const result = Schema.safeParse({ users_ids: ['1', '2', '3'] })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.users_ids).toEqual([1, 2, 3])
+      }
+    })
+
+    it('should convert a single string to array with one number', () => {
+      const Schema = z.object({
+        users_ids: zNumberArray(),
+      })
+
+      const result = Schema.safeParse({ users_ids: '1' })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.users_ids).toEqual([1])
+      }
+    })
+
+    it('should convert a single number to array with one number', () => {
+      const Schema = z.object({
+        users_ids: zNumberArray(),
+      })
+
+      const result = Schema.safeParse({ users_ids: 42 })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.users_ids).toEqual([42])
+      }
+    })
+
+    it('should default to empty array when field is missing', () => {
+      const Schema = z.object({
+        users_ids: zNumberArray(),
+      })
+
+      const result = Schema.safeParse({})
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.users_ids).toEqual([])
+      }
+    })
+
+    it('should handle array of numbers (already coerced)', () => {
+      const Schema = z.object({
+        users_ids: zNumberArray(),
+      })
+
+      const result = Schema.safeParse({ users_ids: [1, 2, 3] })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.users_ids).toEqual([1, 2, 3])
+      }
+    })
+  })
+
+  describe('roundtrip with serialization', () => {
+    it('should roundtrip multiple values through serialize → deserialize → zNumberArray', () => {
+      const Schema = z.object({
+        title: z.string().default(''),
+        users_ids: zNumberArray(),
+      })
+
+      const original = {
+        title: 'Test',
+        users_ids: [1, 2, 3],
+      }
+
+      const serialized = serializeParams(original)
+      const deserialized = deserializeParams(serialized)
+      const result = Schema.safeParse(deserialized)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toEqual(original)
+      }
+    })
+
+    it('should roundtrip single value through serialize → deserialize → zNumberArray', () => {
+      const Schema = z.object({
+        users_ids: zNumberArray(),
+      })
+
+      // After serialization of [5], the URL becomes ?users_ids=5
+      // After deserialization, this becomes { users_ids: '5' } (string, not array)
+      const serialized = serializeParams({ users_ids: [5] })
+      const deserialized = deserializeParams(serialized)
+      const result = Schema.safeParse(deserialized)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.users_ids).toEqual([5])
+      }
+    })
+
+    it('should roundtrip empty array through serialize → deserialize → zNumberArray', () => {
+      const Schema = z.object({
+        title: z.string().default(''),
+        users_ids: zNumberArray(),
+      })
+
+      const original = { title: 'Empty', users_ids: [] as number[] }
+
+      const serialized = serializeParams(original)
+      const deserialized = deserializeParams(serialized)
+      const result = Schema.safeParse(deserialized)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toEqual(original)
+      }
+    })
+  })
+})
+
+describe('zStringArray', () => {
+  describe('basic usage', () => {
+    it('should pass through array of strings', () => {
+      const Schema = z.object({
+        tags: zStringArray(),
+      })
+
+      const result = Schema.safeParse({ tags: ['vue', 'react'] })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.tags).toEqual(['vue', 'react'])
+      }
+    })
+
+    it('should convert a single string to array with one element', () => {
+      const Schema = z.object({
+        tags: zStringArray(),
+      })
+
+      const result = Schema.safeParse({ tags: 'vue' })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.tags).toEqual(['vue'])
+      }
+    })
+
+    it('should default to empty array when field is missing', () => {
+      const Schema = z.object({
+        tags: zStringArray(),
+      })
+
+      const result = Schema.safeParse({})
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.tags).toEqual([])
+      }
+    })
+
+    it('should handle empty strings in array', () => {
+      const Schema = z.object({
+        tags: zStringArray(),
+      })
+
+      const result = Schema.safeParse({ tags: ['', 'vue', ''] })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.tags).toEqual(['', 'vue', ''])
+      }
+    })
+
+    it('should convert a single empty string to array', () => {
+      const Schema = z.object({
+        tags: zStringArray(),
+      })
+
+      const result = Schema.safeParse({ tags: '' })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.tags).toEqual([''])
+      }
+    })
+  })
+
+  describe('roundtrip with serialization', () => {
+    it('should roundtrip multiple values through serialize → deserialize → zStringArray', () => {
+      const Schema = z.object({
+        title: z.string().default(''),
+        tags: zStringArray(),
+      })
+
+      const original = {
+        title: 'Test',
+        tags: ['vue', 'react', 'angular'],
+      }
+
+      const serialized = serializeParams(original)
+      const deserialized = deserializeParams(serialized)
+      const result = Schema.safeParse(deserialized)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toEqual(original)
+      }
+    })
+
+    it('should roundtrip single value through serialize → deserialize → zStringArray', () => {
+      const Schema = z.object({
+        tags: zStringArray(),
+      })
+
+      const serialized = serializeParams({ tags: ['vue'] })
+      const deserialized = deserializeParams(serialized)
+      const result = Schema.safeParse(deserialized)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.tags).toEqual(['vue'])
+      }
+    })
+
+    it('should roundtrip empty array through serialize → deserialize → zStringArray', () => {
+      const Schema = z.object({
+        title: z.string().default(''),
+        tags: zStringArray(),
+      })
+
+      const original = { title: 'Empty', tags: [] as string[] }
+
+      const serialized = serializeParams(original)
+      const deserialized = deserializeParams(serialized)
+      const result = Schema.safeParse(deserialized)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toEqual(original)
+      }
+    })
   })
 })
 

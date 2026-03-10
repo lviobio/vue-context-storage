@@ -84,6 +84,70 @@ export function zUrlBoolean(defaultValue = false) {
 }
 
 /**
+ * Creates a Zod schema for arrays of numbers serialized as URL query parameters.
+ *
+ * URL query parameters serialize arrays as repeated keys:
+ * `?users_ids=1&users_ids=2` → `['1', '2']` (array of strings)
+ *
+ * But when only one value is present:
+ * `?users_ids=1` → `'1'` (just a string, not an array)
+ *
+ * `z.coerce.number().array()` would fail with "expected array, received string"
+ * for the single-value case. This helper normalizes the input by wrapping
+ * a single value into an array before coercing each element to a number.
+ *
+ * @example
+ * ```ts
+ * import { z } from 'zod'
+ * import { zNumberArray } from 'vue-context-storage/zod'
+ *
+ * const Schema = z.object({
+ *   users_ids: zNumberArray(),
+ * })
+ *
+ * // All of these work:
+ * Schema.parse({ users_ids: ['1', '2'] })  // → { users_ids: [1, 2] }
+ * Schema.parse({ users_ids: '1' })          // → { users_ids: [1] }
+ * Schema.parse({})                           // → { users_ids: [] }
+ * ```
+ */
+export function zNumberArray() {
+  return z.union([z.coerce.number().array(), z.coerce.number().transform((v) => [v])]).default([])
+}
+
+/**
+ * Creates a Zod schema for arrays of strings serialized as URL query parameters.
+ *
+ * URL query parameters serialize arrays as repeated keys:
+ * `?tags=vue&tags=react` → `['vue', 'react']` (array of strings)
+ *
+ * But when only one value is present:
+ * `?tags=vue` → `'vue'` (just a string, not an array)
+ *
+ * `z.string().array()` would fail with "expected array, received string"
+ * for the single-value case. This helper normalizes the input by wrapping
+ * a single value into an array.
+ *
+ * @example
+ * ```ts
+ * import { z } from 'zod'
+ * import { zStringArray } from 'vue-context-storage/zod'
+ *
+ * const Schema = z.object({
+ *   tags: zStringArray(),
+ * })
+ *
+ * // All of these work:
+ * Schema.parse({ tags: ['vue', 'react'] })  // → { tags: ['vue', 'react'] }
+ * Schema.parse({ tags: 'vue' })              // → { tags: ['vue'] }
+ * Schema.parse({})                            // → { tags: [] }
+ * ```
+ */
+export function zStringArray() {
+  return z.union([z.string().array(), z.string().transform((v) => [v])]).default([])
+}
+
+/**
  * Creates an object with empty values based on a Zod schema.
  * Useful for initializing forms.
  *

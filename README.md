@@ -726,6 +726,44 @@ const Schema = z.object({
 })
 ```
 
+### `zNumberArray()`
+
+Creates a Zod schema for arrays of numbers serialized as URL query parameters. Handles the common issue where a single query value (`?ids=1`) is deserialized as a string `'1'` instead of an array `['1']`, which would cause `z.coerce.number().array()` to fail with `"expected array, received string"`.
+
+This helper normalizes the input by accepting both a single value and an array, coercing each element to a number.
+
+```typescript
+import { z } from 'zod'
+import { zNumberArray } from 'vue-context-storage/zod'
+
+const Schema = z.object({
+  users_ids: zNumberArray(),
+})
+
+// All of these work:
+Schema.parse({ users_ids: ['1', '2'] }) // → { users_ids: [1, 2] }
+Schema.parse({ users_ids: '1' }) // → { users_ids: [1] }
+Schema.parse({}) // → { users_ids: [] }
+```
+
+### `zStringArray()`
+
+Creates a Zod schema for arrays of strings serialized as URL query parameters. Same problem as `zNumberArray()` — a single query value (`?tags=vue`) is deserialized as a string `'vue'` instead of an array `['vue']`, which would cause `z.string().array()` to fail.
+
+```typescript
+import { z } from 'zod'
+import { zStringArray } from 'vue-context-storage/zod'
+
+const Schema = z.object({
+  tags: zStringArray(),
+})
+
+// All of these work:
+Schema.parse({ tags: ['vue', 'react'] }) // → { tags: ['vue', 'react'] }
+Schema.parse({ tags: 'vue' }) // → { tags: ['vue'] }
+Schema.parse({}) // → { tags: [] }
+```
+
 ### `createSchemaObject(schema, options?)`
 
 Creates a plain object with empty/default values based on a Zod schema. Useful for initializing reactive data from a schema definition.

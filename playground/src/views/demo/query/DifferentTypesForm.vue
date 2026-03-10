@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, computed } from 'vue'
+import { computed, reactive } from 'vue'
 import {
   NButton,
   NCode,
@@ -12,7 +12,7 @@ import {
 } from 'naive-ui'
 import { z } from 'zod'
 import { transform, useContextStorage } from 'vue-context-storage'
-import { zUrlBoolean } from 'vue-context-storage/zod'
+import { zNumberArray, zStringArray, zUrlBoolean } from 'vue-context-storage/zod'
 
 const { onlyChanges, transformMethod } = defineProps<{
   onlyChanges: boolean
@@ -28,6 +28,7 @@ const data = reactive({
   number: 42 as number | null,
   switch: true,
   users_ids: [] as number[],
+  string_array: [] as string[],
 })
 
 // --- Schema approach (Zod) ---
@@ -38,7 +39,8 @@ const DataSchema = z.object({
   search: z.string().optional(),
   number: z.coerce.number().nullable().default(42),
   switch: zUrlBoolean(true),
-  users_ids: z.coerce.number().array().default([]),
+  users_ids: zNumberArray(),
+  string_array: zStringArray(),
 })
 
 // --- Manual approach (transform helpers) ---
@@ -60,6 +62,7 @@ if (transformMethod === 'schema') {
       number: transform.asNumber(value.number, { nullable: true }),
       switch: transform.asBoolean(value.switch),
       users_ids: transform.asNumberArray(value.users_ids),
+      string_array: transform.asArray(value.string_array),
     }),
   })
 }
@@ -70,12 +73,18 @@ const usersOptions = [
   { label: 'Jack', value: 3 },
 ]
 
+const stringOptions = [
+  { label: 'John', value: 'John' },
+  { label: 'Jane', value: 'Jane' },
+  { label: 'Jack', value: 'Jack' },
+]
+
 const exampleCode = computed(() =>
   transformMethod === 'schema'
     ? `import { reactive } from 'vue'
 import { z } from 'zod'
 import { useContextStorage } from 'vue-context-storage'
-import { zUrlBoolean } from 'vue-context-storage/zod'
+import { zNumberArray, zStringArray, zUrlBoolean } from 'vue-context-storage/zod'
 
 const DataSchema = z.object({
   name: z.string().default('John'),
@@ -83,7 +92,8 @@ const DataSchema = z.object({
   search: z.string().optional(),
   number: z.coerce.number().nullable().default(42),
   switch: zUrlBoolean(true),
-  users_ids: z.coerce.number().array().default([]),
+  users_ids: zNumberArray(),
+  string_array: zStringArray(),
 })
 
 const data = reactive({
@@ -93,6 +103,7 @@ const data = reactive({
   number: 42 as number | null,
   switch: true,
   users_ids: [] as number[],
+  string_array: [] as string[],
 })
 
 useContextStorage('query', data, {
@@ -109,6 +120,7 @@ const data = reactive({
   number: 42 as number | null,
   switch: true,
   users_ids: [] as number[],
+  string_array: [] as string[],
 })
 
 useContextStorage('query', data, {
@@ -120,6 +132,7 @@ useContextStorage('query', data, {
     number: transform.asNumber(value.number, { nullable: true }),
     switch: transform.asBoolean(value.switch),
     users_ids: transform.asNumberArray(value.users_ids),
+    string_array: transform.asArray(value.string_array),
   }),
 })`,
 )
@@ -158,6 +171,9 @@ useContextStorage('query', data, {
         placeholder="Users"
         class="w-full"
       />
+    </NFormItem>
+    <NFormItem label="String array" feedback="This field contains array of strings">
+      <NSelect v-model:value="data.string_array" multiple :options="stringOptions" class="w-full" />
     </NFormItem>
     <NFormItem>
       <NButton @click="data.number = Math.ceil(Math.random() * 1000)">Random number</NButton>
