@@ -12,7 +12,7 @@ import {
 } from 'naive-ui'
 import { z } from 'zod'
 import { transform, useContextStorage } from 'vue-context-storage'
-import { zNumberArray, zStringArray, zUrlBoolean } from 'vue-context-storage/zod'
+import { zNumberArray, zStringArray, zBoolean } from 'vue-context-storage/zod'
 
 const { onlyChanges, transformMethod } = defineProps<{
   onlyChanges: boolean
@@ -38,7 +38,7 @@ const DataSchema = z.object({
   title: z.string().nullable().default(null),
   search: z.string().optional(),
   number: z.coerce.number().nullable().default(42),
-  switch: zUrlBoolean(true),
+  switch: zBoolean(true),
   users_ids: zNumberArray(),
   string_array: zStringArray(),
 })
@@ -84,14 +84,14 @@ const exampleCode = computed(() =>
     ? `import { reactive } from 'vue'
 import { z } from 'zod'
 import { useContextStorage } from 'vue-context-storage'
-import { zNumberArray, zStringArray, zUrlBoolean } from 'vue-context-storage/zod'
+import { zNumberArray, zStringArray, zBoolean } from 'vue-context-storage/zod'
 
 const DataSchema = z.object({
   name: z.string().default('John'),
   title: z.string().nullable().default(null),
   search: z.string().optional(),
   number: z.coerce.number().nullable().default(42),
-  switch: zUrlBoolean(true),
+  switch: zBoolean(true),
   users_ids: zNumberArray(),
   string_array: zStringArray(),
 })

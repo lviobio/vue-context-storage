@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { z } from 'zod'
 import {
   zObjectArray,
-  zUrlBoolean,
+  zBoolean,
   zNumberArray,
   zStringArray,
   createEmptyObject,
@@ -135,40 +135,40 @@ describe('zObjectArray', () => {
   })
 })
 
-describe('zUrlBoolean', () => {
+describe('zBoolean', () => {
   it('should parse string "1" as true', () => {
-    const Schema = z.object({ active: zUrlBoolean() })
+    const Schema = z.object({ active: zBoolean() })
     expect(Schema.parse({ active: '1' })).toEqual({ active: true })
   })
 
   it('should parse string "0" as false', () => {
-    const Schema = z.object({ active: zUrlBoolean() })
+    const Schema = z.object({ active: zBoolean() })
     expect(Schema.parse({ active: '0' })).toEqual({ active: false })
   })
 
   it('should parse string "true" as true', () => {
-    const Schema = z.object({ active: zUrlBoolean() })
+    const Schema = z.object({ active: zBoolean() })
     expect(Schema.parse({ active: 'true' })).toEqual({ active: true })
   })
 
   it('should parse string "false" as false', () => {
-    const Schema = z.object({ active: zUrlBoolean() })
+    const Schema = z.object({ active: zBoolean() })
     expect(Schema.parse({ active: 'false' })).toEqual({ active: false })
   })
 
   it('should pass through native booleans', () => {
-    const Schema = z.object({ active: zUrlBoolean() })
+    const Schema = z.object({ active: zBoolean() })
     expect(Schema.parse({ active: true })).toEqual({ active: true })
     expect(Schema.parse({ active: false })).toEqual({ active: false })
   })
 
   it('should default to false when not provided', () => {
-    const Schema = z.object({ active: zUrlBoolean() })
+    const Schema = z.object({ active: zBoolean() })
     expect(Schema.parse({})).toEqual({ active: false })
   })
 
   it('should use custom default value', () => {
-    const Schema = z.object({ active: zUrlBoolean(true) })
+    const Schema = z.object({ active: zBoolean(true) })
     expect(Schema.parse({})).toEqual({ active: true })
   })
 })

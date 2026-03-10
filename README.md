@@ -712,17 +712,17 @@ const DataSchema = z.object({
 })
 ```
 
-### `zUrlBoolean(defaultValue?)`
+### `zBoolean(defaultValue?)`
 
 Creates a Zod schema for booleans serialized as URL query parameters. Standard `z.coerce.boolean()` cannot be used because `Boolean('0')` is `true` in JavaScript. This helper correctly handles `'1'`, `'true'`, `'0'`, `'false'`, and native booleans.
 
 ```typescript
 import { z } from 'zod'
-import { zUrlBoolean } from 'vue-context-storage/zod'
+import { zBoolean } from 'vue-context-storage/zod'
 
 const Schema = z.object({
-  active: zUrlBoolean(), // defaults to false
-  enabled: zUrlBoolean(true), // defaults to true
+  active: zBoolean(), // defaults to false
+  enabled: zBoolean(true), // defaults to true
 })
 ```
 

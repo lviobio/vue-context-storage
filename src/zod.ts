@@ -65,15 +65,15 @@ export function zObjectArray<T extends z.ZodTypeAny>(itemSchema: T) {
  * @example
  * ```ts
  * import { z } from 'zod'
- * import { zUrlBoolean } from 'vue-context-storage/zod'
+ * import { zBoolean } from 'vue-context-storage/zod'
  *
  * const Schema = z.object({
- *   active: zUrlBoolean(),        // defaults to false
- *   enabled: zUrlBoolean(true),   // defaults to true
+ *   active: zBoolean(),        // defaults to false
+ *   enabled: zBoolean(true),   // defaults to true
  * })
  * ```
  */
-export function zUrlBoolean(defaultValue = false) {
+export function zBoolean(defaultValue = false) {
   return z
     .union([z.boolean(), z.string()])
     .transform((val) => {
