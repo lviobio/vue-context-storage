@@ -12,7 +12,6 @@ import {
 } from 'naive-ui'
 import { z } from 'zod'
 import { transform, useContextStorage } from 'vue-context-storage'
-import { zNumberArray, zStringArray, zBoolean } from 'vue-context-storage/zod'
 
 const { onlyChanges, transformMethod } = defineProps<{
   onlyChanges: boolean
@@ -21,29 +20,37 @@ const { onlyChanges, transformMethod } = defineProps<{
 
 const codeExpanded = defineModel<boolean>('codeExpanded', { default: false })
 
-const data = reactive({
-  name: 'John',
-  title: null as string | null,
-  search: undefined as string | undefined,
-  number: 42 as number | null,
-  switch: true,
-  users_ids: [] as number[],
-  string_array: [] as string[],
-})
+const enumValues = ['White', 'Gray', 'Black'] as const
+const enumOptions = enumValues.map((v) => ({
+  label: v,
+  value: v,
+}))
 
 // --- Schema approach (Zod) ---
 
 const DataSchema = z.object({
-  name: z.string().default('John'),
-  title: z.string().nullable().default(null),
+  name: z.string(),
+  title: z.string().nullable(),
   search: z.string().optional(),
-  number: z.coerce.number().nullable().default(42),
-  switch: zBoolean(true),
-  users_ids: zNumberArray(),
-  string_array: zStringArray(),
+  number: z.coerce.number().nullable(),
+  switch: z.boolean(),
+  users_ids: z.coerce.number().array(),
+  string_array: z.coerce.string().array(),
+  enum_array: z.enum(enumValues).array(),
 })
 
-// --- Manual approach (transform helpers) ---
+type DataSchemaType = z.infer<typeof DataSchema>
+
+const data = reactive<DataSchemaType>({
+  name: 'John',
+  title: null,
+  search: undefined,
+  number: 42,
+  switch: false,
+  users_ids: [],
+  string_array: [],
+  enum_array: [],
+})
 
 if (transformMethod === 'schema') {
   useContextStorage('query', data, {
@@ -63,6 +70,7 @@ if (transformMethod === 'schema') {
       switch: transform.asBoolean(value.switch),
       users_ids: transform.asNumberArray(value.users_ids),
       string_array: transform.asArray(value.string_array),
+      enum_array: transform.asArray(value.enum_array),
     }),
   })
 }
@@ -84,16 +92,18 @@ const exampleCode = computed(() =>
     ? `import { reactive } from 'vue'
 import { z } from 'zod'
 import { useContextStorage } from 'vue-context-storage'
-import { zNumberArray, zStringArray, zBoolean } from 'vue-context-storage/zod'
+
+const enumValues = ['White', 'Gray', 'Black'] as const
 
 const DataSchema = z.object({
-  name: z.string().default('John'),
-  title: z.string().nullable().default(null),
+  name: z.string(),
+  title: z.string().nullable(),
   search: z.string().optional(),
-  number: z.coerce.number().nullable().default(42),
-  switch: zBoolean(true),
-  users_ids: zNumberArray(),
-  string_array: zStringArray(),
+  number: z.coerce.number().nullable(),
+  switch: z.boolean(),
+  users_ids: z.coerce.number().array(),
+  string_array: z.string().array(),
+  enum_array: z.enum(enumValues).array(),
 })
 
 const data = reactive({
@@ -104,6 +114,7 @@ const data = reactive({
   switch: true,
   users_ids: [] as number[],
   string_array: [] as string[],
+  enum_array: [] as (typeof enumValues)[number][],
 })
 
 useContextStorage('query', data, {
@@ -121,6 +132,7 @@ const data = reactive({
   switch: true,
   users_ids: [] as number[],
   string_array: [] as string[],
+  enum_array: [] as (typeof enumValues)[number][],
 })
 
 useContextStorage('query', data, {
@@ -133,6 +145,7 @@ useContextStorage('query', data, {
     switch: transform.asBoolean(value.switch),
     users_ids: transform.asNumberArray(value.users_ids),
     string_array: transform.asArray(value.string_array),
+    enum_array: transform.asArray(value.enum_array),
   }),
 })`,
 )
@@ -174,6 +187,9 @@ useContextStorage('query', data, {
     </NFormItem>
     <NFormItem label="String array" feedback="This field contains array of strings">
       <NSelect v-model:value="data.string_array" multiple :options="stringOptions" class="w-full" />
+    </NFormItem>
+    <NFormItem label="Enum array" feedback="This field contains enum of strings">
+      <NSelect v-model:value="data.enum_array" multiple :options="enumOptions" class="w-full" />
     </NFormItem>
     <NFormItem>
       <NButton @click="data.number = Math.ceil(Math.random() * 1000)">Random number</NButton>

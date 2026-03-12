@@ -139,6 +139,214 @@ describe('applyTransform', () => {
     })
   })
 
+  describe('automatic array coercion for schema', () => {
+    it('should coerce a single string to array when schema expects .array()', () => {
+      const schema = z.object({
+        tags: z.string().array().default([]),
+      })
+
+      const result = applyTransform({
+        state: { tags: 'vue' },
+        initialData: { tags: [] as string[] },
+        schema,
+        mergeOnlyExistingKeysWithoutTransform: false,
+      })
+
+      expect(result.warnings).toEqual([])
+      expect(result.data).toEqual({ tags: ['vue'] })
+    })
+
+    it('should coerce a single string to number array when schema expects z.coerce.number().array()', () => {
+      const schema = z.object({
+        ids: z.coerce.number().array().default([]),
+      })
+
+      const result = applyTransform({
+        state: { ids: '42' },
+        initialData: { ids: [] as number[] },
+        schema,
+        mergeOnlyExistingKeysWithoutTransform: false,
+      })
+
+      expect(result.warnings).toEqual([])
+      expect(result.data).toEqual({ ids: [42] })
+    })
+
+    it('should not touch values that are already arrays', () => {
+      const schema = z.object({
+        tags: z.string().array().default([]),
+      })
+
+      const result = applyTransform({
+        state: { tags: ['a', 'b'] },
+        initialData: { tags: [] as string[] },
+        schema,
+        mergeOnlyExistingKeysWithoutTransform: false,
+      })
+
+      expect(result.warnings).toEqual([])
+      expect(result.data).toEqual({ tags: ['a', 'b'] })
+    })
+
+    it('should coerce arrays inside nested objects', () => {
+      const schema = z.object({
+        filters: z.object({
+          statuses: z.enum(['active', 'inactive']).array().default([]),
+        }),
+      })
+
+      const result = applyTransform({
+        state: { filters: { statuses: 'active' } },
+        initialData: { filters: { statuses: [] as string[] } },
+        schema,
+        mergeOnlyExistingKeysWithoutTransform: false,
+      })
+
+      expect(result.warnings).toEqual([])
+      expect(result.data).toEqual({ filters: { statuses: ['active'] } })
+    })
+
+    it('should handle multiple array fields at once', () => {
+      const schema = z.object({
+        tags: z.string().array().default([]),
+        ids: z.coerce.number().array().default([]),
+        name: z.string().default(''),
+      })
+
+      const result = applyTransform({
+        state: { tags: 'vue', ids: '1', name: 'test' },
+        initialData: { tags: [] as string[], ids: [] as number[], name: '' },
+        schema,
+        mergeOnlyExistingKeysWithoutTransform: false,
+      })
+
+      expect(result.warnings).toEqual([])
+      expect(result.data).toEqual({ tags: ['vue'], ids: [1], name: 'test' })
+    })
+
+    it('should not coerce null or undefined to array', () => {
+      const schema = z.object({
+        tags: z.string().array().nullable().default(null),
+      })
+
+      const result = applyTransform({
+        state: {},
+        initialData: { tags: null },
+        schema,
+        mergeOnlyExistingKeysWithoutTransform: false,
+      })
+
+      expect(result.warnings).toEqual([])
+      expect(result.data).toEqual({ tags: null })
+    })
+
+    it('should coerce inside deeply nested objects', () => {
+      const schema = z.object({
+        level1: z.object({
+          level2: z.object({
+            items: z.coerce.number().array().default([]),
+          }),
+        }),
+      })
+
+      const result = applyTransform({
+        state: { level1: { level2: { items: '5' } } },
+        initialData: { level1: { level2: { items: [] as number[] } } },
+        schema,
+        mergeOnlyExistingKeysWithoutTransform: false,
+      })
+
+      expect(result.warnings).toEqual([])
+      expect(result.data).toEqual({ level1: { level2: { items: [5] } } })
+    })
+  })
+
+  describe('automatic boolean coercion for schema', () => {
+    it('should coerce string "1" to true when schema expects z.boolean()', () => {
+      const schema = z.object({
+        active: z.boolean().default(false),
+      })
+
+      const result = applyTransform({
+        state: { active: '1' },
+        initialData: { active: false },
+        schema,
+        mergeOnlyExistingKeysWithoutTransform: false,
+      })
+
+      expect(result.warnings).toEqual([])
+      expect(result.data).toEqual({ active: true })
+    })
+
+    it('should coerce string "0" to false when schema expects z.boolean()', () => {
+      const schema = z.object({
+        active: z.boolean().default(true),
+      })
+
+      const result = applyTransform({
+        state: { active: '0' },
+        initialData: { active: true },
+        schema,
+        mergeOnlyExistingKeysWithoutTransform: false,
+      })
+
+      expect(result.warnings).toEqual([])
+      expect(result.data).toEqual({ active: false })
+    })
+
+    it('should not touch native booleans', () => {
+      const schema = z.object({
+        active: z.boolean().default(false),
+      })
+
+      const result = applyTransform({
+        state: { active: true },
+        initialData: { active: false },
+        schema,
+        mergeOnlyExistingKeysWithoutTransform: false,
+      })
+
+      expect(result.warnings).toEqual([])
+      expect(result.data).toEqual({ active: true })
+    })
+
+    it('should coerce booleans inside nested objects', () => {
+      const schema = z.object({
+        settings: z.object({
+          enabled: z.boolean().default(false),
+          visible: z.boolean().default(true),
+        }),
+      })
+
+      const result = applyTransform({
+        state: { settings: { enabled: '1', visible: '0' } },
+        initialData: { settings: { enabled: false, visible: true } },
+        schema,
+        mergeOnlyExistingKeysWithoutTransform: false,
+      })
+
+      expect(result.warnings).toEqual([])
+      expect(result.data).toEqual({ settings: { enabled: true, visible: false } })
+    })
+
+    it('should handle boolean and array coercion together', () => {
+      const schema = z.object({
+        active: z.boolean().default(false),
+        tags: z.string().array().default([]),
+      })
+
+      const result = applyTransform({
+        state: { active: '1', tags: 'vue' },
+        initialData: { active: false, tags: [] as string[] },
+        schema,
+        mergeOnlyExistingKeysWithoutTransform: false,
+      })
+
+      expect(result.warnings).toEqual([])
+      expect(result.data).toEqual({ active: true, tags: ['vue'] })
+    })
+  })
+
   describe('schema takes priority over transform', () => {
     it('should warn when both schema and transform are provided', () => {
       const schema = z.object({ name: z.string().default('') })

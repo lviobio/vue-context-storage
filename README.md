@@ -712,56 +712,46 @@ const DataSchema = z.object({
 })
 ```
 
-### `zBoolean(defaultValue?)`
+### Automatic Type Coercion
 
-Creates a Zod schema for booleans serialized as URL query parameters. Standard `z.coerce.boolean()` cannot be used because `Boolean('0')` is `true` in JavaScript. This helper accepts only `'1'`/`'0'` strings and native booleans — matching the serialization format used by the query handler. Any other string values (e.g. `'true'`, `'false'`) are rejected.
+When a `schema` is provided, the library automatically coerces URL query parameter values to match the expected Zod types before validation. This handles two common URL serialization quirks:
+
+#### Array Coercion
+
+A URL with multiple values (`?ids=1&ids=2`) produces an array `['1', '2']`, but a single value (`?ids=1`) produces just `'1'`. Without correction, `z.string().array()` would reject the single-value case with `"expected array, received string"`.
+
+The library introspects the Zod schema before validation and wraps non-array values into single-element arrays wherever the schema expects `.array()`. This works recursively for nested objects. **No special helpers are needed** — plain `.array()` schemas work out of the box:
 
 ```typescript
-import { z } from 'zod'
-import { zBoolean } from 'vue-context-storage/zod'
-
 const Schema = z.object({
-  active: zBoolean(), // defaults to false
-  enabled: zBoolean(true), // defaults to true
+  tags: z.string().array().default([]),
+  ids: z.coerce.number().array().default([]),
+  statuses: z.enum(['active', 'inactive']).array().default([]),
+  filters: z
+    .object({
+      categories: z.string().array().default([]),
+    })
+    .default({ categories: [] }),
 })
+
+// All of these work automatically:
+// ?tags=vue          → { tags: ['vue'], ... }
+// ?tags=vue&tags=ts  → { tags: ['vue', 'ts'], ... }
+// (no tags param)    → { tags: [], ... }
 ```
 
-### `zNumberArray()`
+#### Boolean Coercion
 
-Creates a Zod schema for arrays of numbers serialized as URL query parameters. Handles the common issue where a single query value (`?ids=1`) is deserialized as a string `'1'` instead of an array `['1']`, which would cause `z.coerce.number().array()` to fail with `"expected array, received string"`.
-
-This helper normalizes the input by accepting both a single value and an array, coercing each element to a number.
+The query handler serializes booleans as `'1'`/`'0'` strings in URL parameters (e.g. `?active=1`). Standard `z.coerce.boolean()` cannot be used because `Boolean('0')` is `true` in JavaScript. The library automatically converts `'1'` → `true` and `'0'` → `false` when the schema expects a boolean field. **No special helpers are needed** — plain `z.boolean()` works out of the box:
 
 ```typescript
-import { z } from 'zod'
-import { zNumberArray } from 'vue-context-storage/zod'
-
 const Schema = z.object({
-  users_ids: zNumberArray(),
+  active: z.boolean().default(false),
+  enabled: z.boolean().default(true),
 })
 
-// All of these work:
-Schema.parse({ users_ids: ['1', '2'] }) // → { users_ids: [1, 2] }
-Schema.parse({ users_ids: '1' }) // → { users_ids: [1] }
-Schema.parse({}) // → { users_ids: [] }
-```
-
-### `zStringArray()`
-
-Creates a Zod schema for arrays of strings serialized as URL query parameters. Same problem as `zNumberArray()` — a single query value (`?tags=vue`) is deserialized as a string `'vue'` instead of an array `['vue']`, which would cause `z.string().array()` to fail.
-
-```typescript
-import { z } from 'zod'
-import { zStringArray } from 'vue-context-storage/zod'
-
-const Schema = z.object({
-  tags: zStringArray(),
-})
-
-// All of these work:
-Schema.parse({ tags: ['vue', 'react'] }) // → { tags: ['vue', 'react'] }
-Schema.parse({ tags: 'vue' }) // → { tags: ['vue'] }
-Schema.parse({}) // → { tags: [] }
+// ?active=1  → { active: true, enabled: true }
+// ?active=0  → { active: false, enabled: true }
 ```
 
 ### `createSchemaObject(schema, options?)`
