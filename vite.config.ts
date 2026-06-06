@@ -9,8 +9,8 @@ export default defineConfig({
   plugins: [vue(), tailwindcss()],
   resolve: {
     alias: {
-      'vue-context-storage/zod': path.resolve(__dirname, 'src/zod.ts'),
-      'vue-context-storage': path.resolve(__dirname, 'src/index.ts'),
+      'vue-context-storage/zod': path.resolve(import.meta.dirname, 'src/zod.ts'),
+      'vue-context-storage': path.resolve(import.meta.dirname, 'src/index.ts'),
     },
   },
 })
