@@ -2,7 +2,7 @@
   "name": "vue-context-storage",
   "type": "module",
   "version": "0.1.41",
-  "description": "Vue 3 context storage system with URL query synchronization support",
+  "description": "Vue 3 reactive state management — sync state with the URL query, localStorage, and sessionStorage",
   "author": "",
   "license": "MIT",
   "homepage": "https://github.com/lviobio/vue-context-storage#readme",
