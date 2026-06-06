@@ -17,6 +17,11 @@ export default defineConfig({
         'src/**/*.d.ts',
         'src/**/*.test.ts',
         'src/**/*.spec.ts',
+        // Type-only and barrel re-export files: no executable runtime to cover.
+        'src/**/types.ts',
+        'src/index.ts',
+        'src/components.ts',
+        'src/handlers.ts',
         '**/node_modules/**',
         '**/dist/**',
         '**/.{idea,git,cache,output,temp}/**',

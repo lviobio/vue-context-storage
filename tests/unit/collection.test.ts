@@ -355,6 +355,27 @@ describe('createCollectionManager', () => {
 
       expect(callback).not.toHaveBeenCalled()
     })
+
+    it('should stop invoking a callback after its unsubscribe is called', () => {
+      const callback = vi.fn()
+      const unsubscribe = collection.onActiveChange(callback)
+
+      const item1 = collection.add({ key: 'test-1' })
+      const item2 = collection.add({ key: 'test-2' })
+      collection.setActive(item1)
+      expect(callback).toHaveBeenCalledTimes(1)
+
+      unsubscribe()
+      collection.setActive(item2)
+      expect(callback).toHaveBeenCalledTimes(1)
+    })
+
+    it('is safe to call unsubscribe more than once', () => {
+      const callback = vi.fn()
+      const unsubscribe = collection.onActiveChange(callback)
+      unsubscribe()
+      expect(() => unsubscribe()).not.toThrow()
+    })
   })
 
   describe('complex scenarios', () => {

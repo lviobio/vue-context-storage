@@ -565,6 +565,11 @@ describe('createEmptyObject', () => {
       expect(createEmptyObject(Schema)).toEqual({ value: null })
     })
 
+    it('should use undefined for a plain field whose base type is not specially handled', () => {
+      const Schema = z.object({ status: z.enum(['a', 'b']) })
+      expect(createEmptyObject(Schema)).toEqual({ status: undefined })
+    })
+
     it('should use default from nested z.object().default()', () => {
       const Schema = z.object({
         filters: z

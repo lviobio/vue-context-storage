@@ -29,7 +29,6 @@ export function createWebStorageHandlerInstance<T extends Record<string, unknown
   const registered: ContextStorageWebStorageRegisteredItem<any>[] = []
   const registeredDataObjects = new Set<object>()
   let hasAnyRegistered = false
-  const preventSyncToStorage = false
 
   // Storage listener
   if (config.options.listenToStorageEvents && typeof window !== 'undefined') {
@@ -79,10 +78,6 @@ export function createWebStorageHandlerInstance<T extends Record<string, unknown
 
   function syncRegisteredToStorage(): void {
     if (!enabled) {
-      return
-    }
-
-    if (preventSyncToStorage) {
       return
     }
 

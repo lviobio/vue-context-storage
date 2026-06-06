@@ -171,6 +171,11 @@ describe('asBoolean', () => {
     it('should return fallback for null', () => {
       expect(asBoolean(null)).toBe(false)
     })
+
+    it('should return fallback for non-string, non-nullish values', () => {
+      expect(asBoolean(5 as never)).toBe(false)
+      expect(asBoolean(true as never, { fallbackValue: true })).toBe(true)
+    })
   })
 
   describe('with fallbackValue', () => {

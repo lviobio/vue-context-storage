@@ -350,6 +350,17 @@ describe('buildQuery', () => {
 
       expect(result.warnings).toEqual([])
     })
+
+    it('should warn on key collision even when the item has no causer', () => {
+      const result = buildQuery(
+        createInput({
+          items: [createItem({ search: 'a' }), createItem({ search: 'b' })],
+        }),
+      )
+
+      expect(result.warnings.length).toBe(1)
+      expect(result.warnings[0]).toContain('Key search is already present')
+    })
   })
 
   describe('preserveUnusedKeys', () => {

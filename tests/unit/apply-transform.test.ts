@@ -725,3 +725,23 @@ describe('extractAdditionalDefaultDataFromSchema', () => {
     expect(extractAdditionalDefaultDataFromSchema(schema)).toEqual({ page: 1 })
   })
 })
+
+describe('syncReactive', () => {
+  it('removes keys that are absent from source', () => {
+    const target = { a: 1, b: 2 }
+    syncReactive(target, { a: 9 })
+    expect(target).toEqual({ a: 9 })
+    expect('b' in target).toBe(false)
+  })
+})
+
+describe('extractDefaultsFromSchema', () => {
+  it('collects field-level defaults of a nested object without an object-level default', () => {
+    const schema = z.object({
+      inner: z.object({
+        x: z.coerce.number().default(5),
+      }),
+    })
+    expect(extractDefaultsFromSchema(schema)).toEqual({ inner: { x: 5 } })
+  })
+})
