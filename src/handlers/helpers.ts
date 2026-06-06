@@ -75,6 +75,170 @@ function unwrapZodField(field: unknown): unknown {
 }
 
 /**
+ * Reads the Zod `.meta()` from a field, traversing the unwrap chain
+ * (`default` → `optional` → `nullable`) to find meta at any level.
+ *
+ * Checks the outermost wrapper first, then walks inward via `.unwrap()`.
+ * Returns the first non-undefined meta found, or `undefined`.
+ *
+ * Uses duck-typing only — never imports `zod` directly.
+ */
+function readZodFieldMeta(field: unknown): Record<string, unknown> | undefined {
+  let t = field
+  while (true) {
+    const m = typeof (t as any)?.meta === 'function' ? (t as any).meta() : undefined
+    if (m !== undefined) return m
+    const type = zodDefType(t)
+    if (type === 'default' || type === 'optional' || type === 'nullable') {
+      t = (t as any).unwrap()
+    } else {
+      break
+    }
+  }
+  return undefined
+}
+
+/**
+ * Walks a Zod object schema's `.shape` and collects `additionalDefaultData`
+ * values from field-level `.meta({ additionalDefaultData: ... })`.
+ *
+ * Supports nested `ZodObject` shapes — produces a nested result object.
+ *
+ * Returns `undefined` if no field has `additionalDefaultData` in its meta.
+ *
+ * @example
+ * ```ts
+ * const Schema = z.object({
+ *   page: z.coerce.number().default(1).meta({ additionalDefaultData: 1 }),
+ *   search: z.string().default(''),
+ * })
+ * extractAdditionalDefaultDataFromSchema(Schema)
+ * // → { page: 1 }
+ * ```
+ */
+export function extractAdditionalDefaultDataFromSchema(
+  schema: unknown,
+): Record<string, unknown> | undefined {
+  const shape = (schema as any)?.shape
+  if (!shape || typeof shape !== 'object') return undefined
+
+  let result: Record<string, unknown> | undefined
+
+  for (const key of Object.keys(shape)) {
+    const meta = readZodFieldMeta(shape[key])
+    if (meta && 'additionalDefaultData' in meta) {
+      if (!result) result = {}
+      result[key] = meta.additionalDefaultData
+    } else {
+      // Check for nested object schemas
+      const base = unwrapZodField(shape[key])
+      if (zodDefType(base) === 'object' && (base as any).shape) {
+        const nested = extractAdditionalDefaultDataFromSchema(base)
+        if (nested) {
+          if (!result) result = {}
+          result[key] = nested
+        }
+      }
+    }
+  }
+
+  return result
+}
+
+/**
+ * Reads the value of a Zod `.default()` from a field, traversing the
+ * `optional`/`nullable` wrappers to reach the `default` node underneath.
+ *
+ * Zod v4 stores the default value (not a thunk) at `_zod.def.defaultValue`.
+ *
+ * Returns `{ hasDefault: true, value }` when a default is found, otherwise
+ * `{ hasDefault: false }`.  Uses duck-typing only — never imports `zod`.
+ */
+function readZodFieldDefault(field: unknown): { hasDefault: boolean; value?: unknown } {
+  let t = field
+  while (true) {
+    const type = zodDefType(t)
+    if (type === 'default') {
+      return { hasDefault: true, value: (t as any)._zod.def.defaultValue }
+    }
+    if (type === 'optional' || type === 'nullable') {
+      t = (t as any).unwrap()
+    } else {
+      break
+    }
+  }
+  return { hasDefault: false }
+}
+
+/**
+ * Walks a Zod object schema's `.shape` and collects the values declared via
+ * field-level `.default(...)`.
+ *
+ * These values are treated as additional "default" baselines for the
+ * `onlyChanges` comparison in the query handler: a field whose current value
+ * equals its schema default is omitted from the URL, exactly like the initial
+ * snapshot and `additionalDefaultData`.
+ *
+ * Nested `ZodObject` shapes are processed recursively (per-field), so a nested
+ * object contributes a nested result of its leaf defaults.
+ *
+ * Returns `undefined` if no field declares a `.default()`.
+ *
+ * @example
+ * ```ts
+ * const Schema = z.object({
+ *   page: z.coerce.number().default(1),
+ *   search: z.string().default(''),
+ * })
+ * extractDefaultsFromSchema(Schema)
+ * // → { page: 1, search: '' }
+ * ```
+ */
+export function extractDefaultsFromSchema(schema: unknown): Record<string, unknown> | undefined {
+  const shape = (schema as any)?.shape
+  if (!shape || typeof shape !== 'object') return undefined
+
+  let result: Record<string, unknown> | undefined
+
+  for (const key of Object.keys(shape)) {
+    const base = unwrapZodField(shape[key])
+
+    // Nested object: combine the object-level `.default({...})` value with the
+    // granular per-field defaults collected by recursion. Field-level defaults
+    // take priority, while the object-level default fills in fields that have no
+    // field-level default of their own (the documented best practice declares
+    // the default only at the object level).
+    if (zodDefType(base) === 'object' && (base as any).shape) {
+      const { hasDefault, value: objectDefault } = readZodFieldDefault(shape[key])
+      const nested = extractDefaultsFromSchema(base)
+
+      let combined: unknown
+      if (hasDefault && nested) {
+        combined = merge({}, objectDefault, nested)
+      } else if (hasDefault) {
+        combined = objectDefault
+      } else {
+        combined = nested
+      }
+
+      if (combined !== undefined) {
+        if (!result) result = {}
+        result[key] = combined
+      }
+      continue
+    }
+
+    const { hasDefault, value } = readZodFieldDefault(shape[key])
+    if (hasDefault) {
+      if (!result) result = {}
+      result[key] = value
+    }
+  }
+
+  return result
+}
+
+/**
  * Recursively coerces deserialized data to match array fields in a Zod schema.
  *
  * URL query deserialization produces a single value (string/number) when only

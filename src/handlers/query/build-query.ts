@@ -7,8 +7,12 @@ export interface BuildQueryItem {
   data: Record<string, unknown>
   /** Serialized initial data snapshot */
   initialQueryData: LocationQuery
-  /** Serialized additional default data for extended onlyChanges comparison */
+  /** Serialized option-level additionalDefaultData */
   additionalDefaultQueryData?: LocationQuery
+  /** Serialized schema-meta additionalDefaultData (checked independently of option-level) */
+  schemaMetaDefaultQueryData?: LocationQuery
+  /** Serialized schema `.default()` values for extended onlyChanges comparison */
+  schemaDefaultQueryData?: LocationQuery
   key?: string
   onlyChanges?: boolean
   preserveEmptyState?: boolean
@@ -88,7 +92,10 @@ export function buildQuery(input: BuildQueryInput): BuildQueryResult {
         if (
           isEqual(patch[key], item.initialQueryData[key]) ||
           (item.additionalDefaultQueryData &&
-            isEqual(patch[key], item.additionalDefaultQueryData[key]))
+            isEqual(patch[key], item.additionalDefaultQueryData[key])) ||
+          (item.schemaMetaDefaultQueryData &&
+            isEqual(patch[key], item.schemaMetaDefaultQueryData[key])) ||
+          (item.schemaDefaultQueryData && isEqual(patch[key], item.schemaDefaultQueryData[key]))
         ) {
           delete patch[key]
         }

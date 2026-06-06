@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
 import {
   buildQuery,
   type BuildQueryInput,
   type BuildQueryItem,
 } from '../../src/handlers/query/build-query'
 import { serializeParams } from '../../src/handlers/query/helpers'
+import {
+  extractAdditionalDefaultDataFromSchema,
+  extractDefaultsFromSchema,
+} from '../../src/handlers/helpers'
 
 function createInput(overrides: Partial<BuildQueryInput> = {}): BuildQueryInput {
   return {
@@ -582,6 +587,451 @@ describe('buildQuery', () => {
       )
 
       expect(data).toEqual(original)
+    })
+  })
+
+  describe('additionalDefaultData from schema meta', () => {
+    /**
+     * Helper that replicates the default-baseline logic from query handler's register():
+     *   1. Option-level additionalDefaultData → additionalDefaultQueryData
+     *   2. Schema-meta additionalDefaultData → schemaMetaDefaultQueryData (independent)
+     *   3. Schema `.default()` values → schemaDefaultQueryData
+     *
+     * Each baseline is kept separate so that option and meta values for the same key
+     * are both checked in buildQuery even when they differ.
+     */
+    function createItemWithSchemaMeta(
+      data: Record<string, unknown>,
+      overrides: {
+        schema: unknown
+        initialData?: Record<string, unknown>
+        additionalDefaultData?: Record<string, unknown>
+        key?: string
+      },
+    ): BuildQueryItem {
+      const schemaAdditionalDefaults = extractAdditionalDefaultDataFromSchema(overrides.schema)
+      const schemaDefaults = extractDefaultsFromSchema(overrides.schema)
+
+      return {
+        data,
+        key: overrides.key,
+        initialQueryData: serializeParams(overrides.initialData ?? data, {
+          key: overrides.key,
+        }),
+        additionalDefaultQueryData: overrides.additionalDefaultData
+          ? serializeParams(overrides.additionalDefaultData, { key: overrides.key })
+          : undefined,
+        schemaMetaDefaultQueryData: schemaAdditionalDefaults
+          ? serializeParams(schemaAdditionalDefaults, { key: overrides.key })
+          : undefined,
+        schemaDefaultQueryData: schemaDefaults
+          ? serializeParams(schemaDefaults, { key: overrides.key })
+          : undefined,
+      }
+    }
+
+    it('should omit key matching additionalDefaultData from schema meta', () => {
+      const schema = z.object({
+        page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+        search: z.string().default(''),
+      })
+
+      const result = buildQuery(
+        createInput({
+          items: [
+            createItemWithSchemaMeta(
+              { page: 3, search: 'test' },
+              { schema, initialData: { page: undefined, search: '' } },
+            ),
+          ],
+          onlyChanges: true,
+        }),
+      )
+
+      // page=3 matches additionalDefaultData from meta → omitted
+      expect(result.newQuery).toEqual({ search: 'test' })
+    })
+
+    it('should keep key that differs from both initial and schema meta additionalDefaultData', () => {
+      const schema = z.object({
+        page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+        search: z.string().default(''),
+      })
+
+      const result = buildQuery(
+        createInput({
+          items: [
+            createItemWithSchemaMeta(
+              { page: 5, search: 'test' },
+              { schema, initialData: { page: undefined, search: '' } },
+            ),
+          ],
+          onlyChanges: true,
+        }),
+      )
+
+      // page=5 differs from both initial (undefined) and meta (3) → stays
+      expect(result.newQuery).toEqual({ page: '5', search: 'test' })
+    })
+
+    it('should merge schema meta with option-level additionalDefaultData', () => {
+      const schema = z.object({
+        page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+        search: z.string().default(''),
+      })
+
+      const result = buildQuery(
+        createInput({
+          items: [
+            createItemWithSchemaMeta(
+              { page: 3, search: 'hello' },
+              {
+                schema,
+                initialData: { page: undefined, search: '' },
+                additionalDefaultData: { search: 'hello' },
+              },
+            ),
+          ],
+          onlyChanges: true,
+        }),
+      )
+
+      // page=3 matches schema meta → omitted
+      // search='hello' matches option-level additionalDefaultData → omitted
+      expect(result.newQuery).toEqual({})
+    })
+
+    it('should let option-level additionalDefaultData override schema meta for the same key', () => {
+      const schema = z.object({
+        page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+        search: z.string().default(''),
+      })
+
+      const result = buildQuery(
+        createInput({
+          items: [
+            createItemWithSchemaMeta(
+              { page: 5, search: 'test' },
+              {
+                schema,
+                initialData: { page: undefined, search: '' },
+                additionalDefaultData: { page: 5 },
+              },
+            ),
+          ],
+          onlyChanges: true,
+        }),
+      )
+
+      // page=5 matches option-level override (not schema meta's 3) → omitted
+      expect(result.newQuery).toEqual({ search: 'test' })
+    })
+
+    it('should work with nested object schema meta', () => {
+      const schema = z.object({
+        filters: z
+          .object({
+            page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+            search: z.string().default(''),
+          })
+          .default({ page: 1, search: '' }),
+      })
+
+      const result = buildQuery(
+        createInput({
+          items: [
+            createItemWithSchemaMeta(
+              { filters: { page: 3, search: 'test' } },
+              {
+                schema,
+                key: 'f',
+                initialData: { filters: { page: undefined, search: '' } },
+              },
+            ),
+          ],
+          onlyChanges: true,
+        }),
+      )
+
+      // filters.page=3 matches schema meta → omitted
+      expect(result.newQuery).toEqual({ 'f[filters][search]': 'test' })
+    })
+
+    it('should work with multiple fields having schema meta', () => {
+      const schema = z.object({
+        page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+        perPage: z.coerce.number().default(10).meta({ additionalDefaultData: 25 }),
+        search: z.string().default(''),
+      })
+
+      const result = buildQuery(
+        createInput({
+          items: [
+            createItemWithSchemaMeta(
+              { page: 3, perPage: 25, search: 'test' },
+              { schema, initialData: { page: undefined, perPage: undefined, search: '' } },
+            ),
+          ],
+          onlyChanges: true,
+        }),
+      )
+
+      // Both page=3 and perPage=25 match their schema meta → omitted
+      expect(result.newQuery).toEqual({ search: 'test' })
+    })
+
+    it('should have no effect when schema has no meta additionalDefaultData', () => {
+      const schema = z.object({
+        page: z.coerce.number().default(1),
+        search: z.string().default(''),
+      })
+
+      const result = buildQuery(
+        createInput({
+          items: [
+            createItemWithSchemaMeta(
+              { page: 3, search: 'test' },
+              { schema, initialData: { page: undefined, search: '' } },
+            ),
+          ],
+          onlyChanges: true,
+        }),
+      )
+
+      // No meta → page=3 stays (doesn't match initial)
+      expect(result.newQuery).toEqual({ page: '3', search: 'test' })
+    })
+
+    it('should suppress both option-level and schema-meta values when they target the same key', () => {
+      // This is the regression case: previously a shallow merge dropped the meta value
+      // when option also declared the same key, so page=5 would appear in the URL.
+      const schema = z.object({
+        page: z.coerce.number().default(1).meta({ additionalDefaultData: 5 }),
+        search: z.string().default(''),
+      })
+
+      // page=3 from option → omitted
+      expect(
+        buildQuery(
+          createInput({
+            items: [
+              createItemWithSchemaMeta(
+                { page: 3, search: 'test' },
+                {
+                  schema,
+                  additionalDefaultData: { page: 3 },
+                  initialData: { page: undefined, search: '' },
+                },
+              ),
+            ],
+            onlyChanges: true,
+          }),
+        ).newQuery,
+      ).toEqual({ search: 'test' })
+
+      // page=5 from schema meta → omitted even though option overrides meta for same key
+      expect(
+        buildQuery(
+          createInput({
+            items: [
+              createItemWithSchemaMeta(
+                { page: 5, search: 'test' },
+                {
+                  schema,
+                  additionalDefaultData: { page: 3 },
+                  initialData: { page: undefined, search: '' },
+                },
+              ),
+            ],
+            onlyChanges: true,
+          }),
+        ).newQuery,
+      ).toEqual({ search: 'test' })
+
+      // page=1 from schema .default() → omitted
+      expect(
+        buildQuery(
+          createInput({
+            items: [
+              createItemWithSchemaMeta(
+                { page: 1, search: 'test' },
+                {
+                  schema,
+                  additionalDefaultData: { page: 3 },
+                  initialData: { page: undefined, search: '' },
+                },
+              ),
+            ],
+            onlyChanges: true,
+          }),
+        ).newQuery,
+      ).toEqual({ search: 'test' })
+
+      // page=2 matches none of the baselines → stays
+      expect(
+        buildQuery(
+          createInput({
+            items: [
+              createItemWithSchemaMeta(
+                { page: 2, search: 'test' },
+                {
+                  schema,
+                  additionalDefaultData: { page: 3 },
+                  initialData: { page: undefined, search: '' },
+                },
+              ),
+            ],
+            onlyChanges: true,
+          }),
+        ).newQuery,
+      ).toEqual({ page: '2', search: 'test' })
+    })
+  })
+
+  describe('default baseline from schema .default()', () => {
+    function createItemWithSchema(
+      data: Record<string, unknown>,
+      overrides: {
+        schema: unknown
+        initialData?: Record<string, unknown>
+        additionalDefaultData?: Record<string, unknown>
+        key?: string
+      },
+    ): BuildQueryItem {
+      const schemaAdditionalDefaults = extractAdditionalDefaultDataFromSchema(overrides.schema)
+      const schemaDefaults = extractDefaultsFromSchema(overrides.schema)
+
+      return {
+        data,
+        key: overrides.key,
+        initialQueryData: serializeParams(overrides.initialData ?? data, { key: overrides.key }),
+        additionalDefaultQueryData: overrides.additionalDefaultData
+          ? serializeParams(overrides.additionalDefaultData, { key: overrides.key })
+          : undefined,
+        schemaMetaDefaultQueryData: schemaAdditionalDefaults
+          ? serializeParams(schemaAdditionalDefaults, { key: overrides.key })
+          : undefined,
+        schemaDefaultQueryData: schemaDefaults
+          ? serializeParams(schemaDefaults, { key: overrides.key })
+          : undefined,
+      }
+    }
+
+    it('should omit a value matching the schema .default() (initial starts undefined)', () => {
+      const schema = z.object({
+        page: z.coerce.number().default(1),
+        search: z.string().default(''),
+      })
+
+      const result = buildQuery(
+        createInput({
+          items: [
+            createItemWithSchema(
+              { page: 1, search: 'test' },
+              { schema, initialData: { page: undefined, search: '' } },
+            ),
+          ],
+          onlyChanges: true,
+        }),
+      )
+
+      // page=1 matches schema .default(1) → omitted, even though initial was undefined
+      expect(result.newQuery).toEqual({ search: 'test' })
+    })
+
+    it('should omit both the schema default and the meta additionalDefaultData value', () => {
+      const schema = z.object({
+        page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+        search: z.string().default(''),
+      })
+
+      // page=1 (schema default) → omitted
+      expect(
+        buildQuery(
+          createInput({
+            items: [
+              createItemWithSchema(
+                { page: 1, search: 'test' },
+                { schema, initialData: { page: undefined, search: '' } },
+              ),
+            ],
+            onlyChanges: true,
+          }),
+        ).newQuery,
+      ).toEqual({ search: 'test' })
+
+      // page=3 (meta additionalDefaultData) → omitted
+      expect(
+        buildQuery(
+          createInput({
+            items: [
+              createItemWithSchema(
+                { page: 3, search: 'test' },
+                { schema, initialData: { page: undefined, search: '' } },
+              ),
+            ],
+            onlyChanges: true,
+          }),
+        ).newQuery,
+      ).toEqual({ search: 'test' })
+
+      // page=2 (neither) → stays
+      expect(
+        buildQuery(
+          createInput({
+            items: [
+              createItemWithSchema(
+                { page: 2, search: 'test' },
+                { schema, initialData: { page: undefined, search: '' } },
+              ),
+            ],
+            onlyChanges: true,
+          }),
+        ).newQuery,
+      ).toEqual({ page: '2', search: 'test' })
+    })
+
+    it('should omit nested object values matching their schema defaults', () => {
+      const schema = z.object({
+        filters: z
+          .object({
+            page: z.coerce.number().default(1),
+            search: z.string().default(''),
+          })
+          .default({ page: 1, search: '' }),
+      })
+
+      const result = buildQuery(
+        createInput({
+          items: [
+            createItemWithSchema(
+              { filters: { page: 1, search: 'hello' } },
+              { schema, key: 'f', initialData: { filters: { page: undefined, search: '' } } },
+            ),
+          ],
+          onlyChanges: true,
+        }),
+      )
+
+      // filters.page=1 matches nested schema default → omitted
+      expect(result.newQuery).toEqual({ 'f[filters][search]': 'hello' })
+    })
+
+    it('should keep a value that differs from the schema default', () => {
+      const schema = z.object({
+        page: z.coerce.number().default(1),
+      })
+
+      const result = buildQuery(
+        createInput({
+          items: [
+            createItemWithSchema({ page: 5 }, { schema, initialData: { page: undefined } }),
+          ],
+          onlyChanges: true,
+        }),
+      )
+
+      expect(result.newQuery).toEqual({ page: '5' })
     })
   })
 })

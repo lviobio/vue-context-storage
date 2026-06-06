@@ -172,6 +172,8 @@ export interface ContextStorageQueryRegisteredItem<T extends Record<string, unkn
   initialData: T
   initialQueryData: LocationQuery
   additionalDefaultQueryData: LocationQuery | undefined
+  schemaMetaDefaultQueryData: LocationQuery | undefined
+  schemaDefaultQueryData: LocationQuery | undefined
   options: RegisterQueryHandlerOptions<T>
   watchHandle: WatchHandle
 }

@@ -360,6 +360,55 @@ useContextStorage('query', data, {
 // page=2         → appears in query as ?filters[page]=2
 ```
 
+When using Zod schemas, you can also specify `additionalDefaultData` per-field via `.meta()` instead of (or in addition to) the option:
+
+```typescript
+const Schema = z.object({
+  page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+  search: z.string().default(''),
+})
+
+const data = reactive({ page: undefined as number | undefined, search: '' })
+
+useContextStorage('query', data, {
+  key: 'filters',
+  schema: Schema,
+})
+
+// page=1 → not in query (matches default from schema)
+// page=2 → appears in query as ?filters[page]=2
+// page=3 → not in query (matches additionalDefaultData from schema meta)
+```
+
+A field's schema `.default(...)` value is itself treated as a default baseline: a value equal to it is omitted from the URL, exactly like the initial snapshot and `additionalDefaultData`. So both the `.default()` value and any `.meta({ additionalDefaultData })` value are excluded, while every other value appears in the query.
+
+Each source of defaults is an **independent baseline** — the initial snapshot, the option-level `additionalDefaultData`, the schema `.meta({ additionalDefaultData })`, and the schema `.default()`. A value is omitted from the URL if it matches **any** of them, so they never overwrite each other (e.g. a field can have a `.default()` of `1`, a meta value of `5`, and an option value of `3`, and all three are excluded).
+
+Nested objects work the same way. Following the documented best practice of declaring `.default()` at the object level, a value matching the nested default is omitted too:
+
+```typescript
+const Schema = z.object({
+  filters: z
+    .object({
+      page: z.coerce.number(),
+      sort: z.string(),
+    })
+    .default({ page: 1, sort: 'asc' }),
+})
+
+const data = reactive({
+  filters: { page: undefined as number | undefined, sort: undefined as string | undefined },
+})
+
+useContextStorage('query', data, { key: 'q', schema: Schema })
+
+// filters = { page: 1, sort: 'asc' }  → not in query (matches the nested default)
+// filters = { page: 2, sort: 'asc' }  → ?q[filters][page]=2 (sort matches default, omitted)
+// filters = { page: 2, sort: 'desc' } → ?q[filters][page]=2&q[filters][sort]=desc
+```
+
+Field-level defaults inside a nested object take priority over the object-level default and fill in any fields the object-level default omits.
+
 ### Configure Query Handler
 
 Customize behavior by passing options to the factory:

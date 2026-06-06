@@ -2,7 +2,12 @@ import type { ContextStorageHandlerFactory } from '../../handlers'
 import { deserializeParams, serializeParams } from './helpers'
 import { contextStorageQueryHandler } from '../../symbols'
 import { cloneDeep, isEqual } from 'lodash'
-import { applyTransform, syncReactive } from '../helpers'
+import {
+  applyTransform,
+  extractAdditionalDefaultDataFromSchema,
+  extractDefaultsFromSchema,
+  syncReactive,
+} from '../helpers'
 import { buildQuery } from './build-query'
 import { computeSyncState } from './compute-sync-state'
 import { computed, type MaybeRefOrGetter, onBeforeUnmount, toValue, watch } from 'vue'
@@ -288,10 +293,32 @@ export function createQueryHandler(
 
       const initialData = cloneDeep(resolvedData) as T
       const initialQueryData = serializeParams(initialData, { key: registerOptions.key })
+
+      // Option-level additionalDefaultData: stored as its own baseline so that
+      // schema-meta values for the same key are not overwritten.
       const additionalDefaultQueryData = registerOptions.additionalDefaultData
         ? serializeParams(registerOptions.additionalDefaultData as Record<string, unknown>, {
             key: registerOptions.key,
           })
+        : undefined
+
+      // Schema-meta additionalDefaultData: kept independent from the option-level
+      // baseline so that both values are checked in buildQuery even when both
+      // target the same key (previously a shallow merge silently dropped one).
+      const schemaMetaDefaults = registerOptions.schema
+        ? extractAdditionalDefaultDataFromSchema(registerOptions.schema)
+        : undefined
+      const schemaMetaDefaultQueryData = schemaMetaDefaults
+        ? serializeParams(schemaMetaDefaults, { key: registerOptions.key })
+        : undefined
+
+      // Schema `.default()` values: another independent baseline so that a
+      // field whose current value equals its schema default is omitted from the URL.
+      const schemaDefaults = registerOptions.schema
+        ? extractDefaultsFromSchema(registerOptions.schema)
+        : undefined
+      const schemaDefaultQueryData = schemaDefaults
+        ? serializeParams(schemaDefaults, { key: registerOptions.key })
         : undefined
 
       const item: ContextStorageQueryRegisteredItem<T> = {
@@ -299,6 +326,8 @@ export function createQueryHandler(
         initialData,
         initialQueryData,
         additionalDefaultQueryData,
+        schemaMetaDefaultQueryData,
+        schemaDefaultQueryData,
         options: registerOptions,
         watchHandle,
       }
@@ -360,6 +389,8 @@ export function createQueryHandler(
           data: toValue(item.data) as Record<string, unknown>,
           initialQueryData: item.initialQueryData,
           additionalDefaultQueryData: item.additionalDefaultQueryData,
+          schemaMetaDefaultQueryData: item.schemaMetaDefaultQueryData,
+          schemaDefaultQueryData: item.schemaDefaultQueryData,
           key: item.options?.key,
           onlyChanges: item.options?.onlyChanges,
           preserveEmptyState: item.options?.preserveEmptyState,
