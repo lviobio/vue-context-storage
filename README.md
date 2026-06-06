@@ -147,12 +147,14 @@ useContextStorage('query', filters, {
 })
 
 // Option 2: Transform function
+import { transform } from 'vue-context-storage'
+
 useContextStorage('query', filters, {
   key: 'filters',
   transform: (deserialized, initial) => ({
-    page: asNumber(deserialized.page, { fallback: initial.page }),
-    search: asString(deserialized.search, { fallback: initial.search }),
-    status: asString(deserialized.status, { fallback: initial.status }),
+    page: transform.asNumber(deserialized.page, { fallback: initial.page }),
+    search: transform.asString(deserialized.search, { fallback: initial.search }),
+    status: transform.asString(deserialized.status, { fallback: initial.status }),
   }),
 })
 ```
