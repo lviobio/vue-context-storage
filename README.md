@@ -1,6 +1,6 @@
 # vue-context-storage
 
-Vue 3 context storage system with URL query, localStorage, and sessionStorage synchronization support.
+Vue 3 reactive state management — sync state with the URL query, localStorage, and sessionStorage through a single type-safe composable.
 
 [![npm downloads](https://img.shields.io/npm/dm/vue-context-storage.svg)](https://www.npmjs.com/package/vue-context-storage)
 [![TypeScript](https://badgen.net/badge/icon/TypeScript?icon=typescript&label)](https://www.typescriptlang.org/)
@@ -13,14 +13,26 @@ Vue 3 context storage system with URL query, localStorage, and sessionStorage sy
 [![codecov](https://codecov.io/gh/lviobio/vue-context-storage/branch/main/graph/badge.svg)](https://codecov.io/gh/lviobio/vue-context-storage)
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://lviobio.github.io/vue-context-storage/)
 
-A powerful state management solution for Vue 3 applications that provides:
+Key features:
 
-- **Context-based storage** using Vue's provide/inject API
-- **Automatic URL query synchronization** for preserving state across page reloads
-- **localStorage & sessionStorage handlers** for persistent and session-scoped state
-- **Multiple storage contexts** with activation management
-- **Type-safe** TypeScript support
+- **Automatic URL query sync** — painless type coercion (numbers, booleans, arrays) and nested objects
+- **localStorage & sessionStorage** for persistent and session-scoped state — same API as the query handler
+- **Context prefixing** to avoid key collisions when the same key is reused across instances
+- **Type-safe** with optional Zod schema validation
 - **Tree-shakeable** and lightweight
+
+```ts
+const filters = reactive({ search: '', page: 1 })
+
+// reactive state ⇄ URL query — kept in sync automatically, both directions
+useContextStorage('query', filters) // URL: /products?search=shoes&page=2
+useContextStorage('query', filters, { key: 'filters' }) // URL: /products?filters[search]=shoes&filters[page]=2
+// zod schema support with type coercion, 'page' will be converted to number
+useContextStorage('query', filters, { schema: z.object({ search: z.string(), page: z.number() }) }) // URL: /products?filters[search]=shoes&filters[page]=2
+// transform function support with type coercion, 'page' will be converted to number
+useContextStorage('query', filters, { transform: (value) => ({ search: value.search, page: Number(value.page) }) }) // URL: /products?filters[search]=shoes&filters[page]=2
+// And a lot of other features... (onlyChanges option; createEmptyObject helper for zod schemas; additional default values; passing 'key' via ContextStoragePrefix wrapper)
+```
 
 ## Live Demo
 
