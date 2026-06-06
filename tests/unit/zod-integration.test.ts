@@ -832,6 +832,62 @@ describe('createEmptyObject', () => {
     })
   })
 
+  describe('fallback to undefined for unhandled field types', () => {
+    // Fields whose base type is not natively handled (string, number, boolean,
+    // array, object, date) fall through to undefined.  The else-if that used
+    // to check `field instanceof ZodOptional || ZodNullable` at this point was
+    // dead code: the nullable/optional loop above always fires `continue` first.
+    // After removing that dead branch, these tests cover the sole `else` path.
+
+    it('should return undefined for z.literal()', () => {
+      const Schema = z.object({ status: z.literal('active') })
+      expect(createEmptyObject(Schema)).toEqual({ status: undefined })
+    })
+
+    it('should return undefined for z.union()', () => {
+      const Schema = z.object({ value: z.union([z.string(), z.number()]) })
+      expect(createEmptyObject(Schema)).toEqual({ value: undefined })
+    })
+
+    it('should return undefined for a .transform() (ZodEffects)', () => {
+      const Schema = z.object({ name: z.string().transform((v) => v.trim()) })
+      expect(createEmptyObject(Schema)).toEqual({ name: undefined })
+    })
+
+    it('should return empty string for a .refine() on z.string() — Zod v4 keeps the ZodString type', () => {
+      // In Zod v4, .refine() does not wrap into ZodEffects; the field stays
+      // instanceof ZodString, so createEmptyObject yields '' rather than undefined.
+      const Schema = z.object({ name: z.string().refine((v) => v.length > 0) })
+      expect(createEmptyObject(Schema)).toEqual({ name: '' })
+    })
+
+    it('should return undefined for z.tuple()', () => {
+      const Schema = z.object({ pair: z.tuple([z.string(), z.number()]) })
+      expect(createEmptyObject(Schema)).toEqual({ pair: undefined })
+    })
+
+    it('should return undefined for z.record()', () => {
+      const Schema = z.object({ map: z.record(z.string(), z.number()) })
+      expect(createEmptyObject(Schema)).toEqual({ map: undefined })
+    })
+
+    it('should return undefined for z.nativeEnum()', () => {
+      enum Direction {
+        Up = 'up',
+        Down = 'down',
+      }
+      const Schema = z.object({ dir: z.nativeEnum(Direction) })
+      expect(createEmptyObject(Schema)).toEqual({ dir: undefined })
+    })
+
+    it('should still respect useDefaults:false for surrounding wrappers', () => {
+      // Even with useDefaults:false, the else branch still produces undefined
+      // for unhandled base types.
+      const Schema = z.object({ status: z.literal('active') })
+      expect(createEmptyObject(Schema, { useDefaults: false })).toEqual({ status: undefined })
+    })
+  })
+
   describe('withSchema option', () => {
     it('should not attach schema by default', () => {
       const Schema = z.object({ name: z.string().default('') })

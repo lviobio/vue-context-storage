@@ -174,11 +174,8 @@ export function createEmptyObject<T extends ZodRawShape>(
       } as any)
     } else if (baseType instanceof z.ZodDate) {
       result[key] = null
-    } else if (field instanceof z.ZodOptional || field instanceof z.ZodNullable) {
-      // For nullable/optional fields, use undefined
-      result[key] = undefined
     } else {
-      // For all other types (including transform/refine), use undefined
+      // For all other types (literal, union, enum, transform, refine, tuple, record, …)
       result[key] = undefined
     }
   }
