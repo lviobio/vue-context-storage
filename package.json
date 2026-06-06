@@ -48,7 +48,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report",
-    "release": "bumpp && npm publish",
+    "release": "npm run check && npm run test && bumpp && npm publish",
     "prepublishOnly": "npm run check && npm run test && npm run build"
   },
   "peerDependencies": {
