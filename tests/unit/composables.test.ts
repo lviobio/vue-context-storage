@@ -20,22 +20,26 @@ const sessionHandlers = [createSessionStorageHandler()]
 describe('useContextStorage', () => {
   it('throws for an unknown handler type', () => {
     const Comp = defineComponent({
+      render: () => null,
       setup() {
         useContextStorage('nope' as never, reactive({ a: 1 }), {} as never)
-        return () => h('div')
       },
     })
     expect(() => mount(Comp)).toThrow(/Unknown handler type/)
   })
 
   it('throws when the handler is not provided', () => {
+    const warnHandler = vi.fn()
     const Comp = defineComponent({
+      render: () => null,
       setup() {
         useContextStorage('sessionStorage', reactive({ a: 1 }), { key: 'k' })
-        return () => h('div')
       },
     })
-    expect(() => mount(Comp)).toThrow(/Handler not provided/)
+    expect(() =>
+      mount(Comp, { global: { config: { warnHandler } } }),
+    ).toThrow(/Handler not provided/)
+    expect(warnHandler.mock.calls[0]?.[0]).toContain('context-storage-session-storage-handler')
   })
 
   it('returns a working handle when the handler is provided', () => {
@@ -84,13 +88,17 @@ describe('useContextStorageItemProvider', () => {
 
 describe('useContextStorageProvider', () => {
   it('throws when no collection is provided', () => {
+    const warnHandler = vi.fn()
     const Comp = defineComponent({
+      render: () => null,
       setup() {
         useContextStorageProvider('main')
-        return () => h('div')
       },
     })
-    expect(() => mount(Comp)).toThrow(/collection not found/)
+    expect(() =>
+      mount(Comp, { global: { config: { warnHandler } } }),
+    ).toThrow(/collection not found/)
+    expect(warnHandler.mock.calls[0]?.[0]).toContain('context-storage-collection')
   })
 
   it('adds an item on mount and removes it on unmount', () => {
