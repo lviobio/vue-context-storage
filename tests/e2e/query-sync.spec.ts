@@ -1,9 +1,8 @@
 import { test, expect } from '@playwright/test'
 
-// The "Different types" demo binds a reactive form to the URL query via the
-// query handler. These tests drive the real playground in a browser and assert
-// on the actual address bar — the core promise of the library.
-const PAGE = '/app/query/different-types'
+// Drives the dedicated e2e playground (vite.e2e.config.ts, served at :5174 under
+// `/e2e/`). Absolute URL used so it ignores the demo-playground `baseURL`.
+const PAGE = '/e2e/query-sync'
 
 test.describe('query synchronization', () => {
   test('typing into a field is reflected in the URL query', async ({ page }) => {

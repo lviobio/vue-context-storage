@@ -1,8 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
 /**
- * E2E tests run against two playgrounds in a real browser:
- *  - the demo playground (`npm run play`) at http://localhost:5173 under `/app/`,
+ * E2E tests run in a real browser:
  *  - a dedicated e2e playground (`npm run play:e2e`) at http://localhost:5174
  *    under `/e2e/`, holding minimal fixtures decoupled from the demo UI.
  *
@@ -20,7 +19,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:5174',
     trace: 'on-first-retry',
   },
   projects: [
@@ -30,12 +29,6 @@ export default defineConfig({
     },
   ],
   webServer: [
-    {
-      command: 'npm run play -- --port 5173 --strictPort',
-      url: 'http://localhost:5173/app/',
-      reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
-    },
     {
       command: 'npm run play:e2e -- --port 5174 --strictPort',
       url: 'http://localhost:5174/e2e/',

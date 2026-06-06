@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 // Drives the dedicated e2e playground (vite.e2e.config.ts, served at :5174 under
 // `/e2e/`). Absolute URL is used on purpose so it ignores the demo-playground
 // `baseURL` configured in playwright.config.ts.
-const PAGE = 'http://localhost:5174/e2e/schema-default'
+const PAGE = '/e2e/schema-default'
 
 // The fixture binds `{ page, search }` to the URL via a Zod schema where `page` has
 // three independent default baselines:

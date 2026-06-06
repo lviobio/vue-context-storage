@@ -15,6 +15,11 @@ const routes = [
     name: 'nested-default',
     component: () => import('./views/NestedDefault.vue'),
   },
+  {
+    path: '/query-sync',
+    name: 'query-sync',
+    component: () => import('./views/QuerySync.vue'),
+  },
 ]
 
 export const router = createRouter({

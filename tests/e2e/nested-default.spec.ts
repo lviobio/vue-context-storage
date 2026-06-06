@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 // Drives the dedicated e2e playground (vite.e2e.config.ts, served at :5174 under `/e2e/`).
-const PAGE = 'http://localhost:5174/e2e/nested-default'
+const PAGE = '/e2e/nested-default'
 
 // `filters` is a nested object whose default is declared only at the object level
 // (`.default({ page: 1, sort: 'asc' })`), with no field-level defaults inside.

@@ -209,4 +209,261 @@ describe('createQueryHandler', () => {
       expect(handler.getInjectionKey()).toBe(contextStorageQueryHandler)
     })
   })
+
+  describe('setEnabled edge cases', () => {
+    it('does nothing when called before any registration (hasAnyRegistered = false)', async () => {
+      const { handler, router } = await setup()
+      const replace = vi.spyOn(router, 'replace')
+      handler.setEnabled(true, true)
+      await flushPromises()
+      expect(replace).not.toHaveBeenCalled()
+    })
+
+    it('forces syncRegisteredToQuery when initial=false regardless of state change', async () => {
+      const { handler, router } = await setup()
+      const data = reactive({ q: 'hello' })
+      handler.register(data, {})
+      handler.setEnabled(true, true)
+      await flushPromises()
+      // Change data without flushing so the watcher microtask hasn't run yet
+      data.q = 'world'
+      const replace = vi.spyOn(router, 'replace')
+      // initial=false forces syncRegisteredToQuery via the !initial branch
+      handler.setEnabled(true, false)
+      await flushPromises()
+      expect(replace).toHaveBeenCalled()
+      expect(router.currentRoute.value.query.q).toBe('world')
+    })
+
+    it('does not call syncRegisteredToQuery on second setEnabled(true, true) when already enabled', async () => {
+      const { handler, router } = await setup()
+      const data = reactive({ q: 'hello' })
+      handler.register(data, {})
+      handler.setEnabled(true, true)
+      await flushPromises()
+      const replace = vi.spyOn(router, 'replace')
+      handler.setEnabled(true, true)
+      await flushPromises()
+      expect(replace).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('syncRegisteredToQuery edge cases', () => {
+    it('skips URL update when the query is already equal', async () => {
+      const { handler, router } = await setup()
+      const data = reactive({ q: 'hello' })
+      handler.register(data, {})
+      handler.setEnabled(true, true)
+      await flushPromises()
+      const replace = vi.spyOn(router, 'replace')
+      handler.setEnabled(true, false)
+      await flushPromises()
+      expect(replace).not.toHaveBeenCalled()
+    })
+
+    it('catches and logs errors thrown by the router', async () => {
+      const { handler, router } = await setup()
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      vi.spyOn(router, 'replace').mockRejectedValue(new Error('navigation failed'))
+      const data = reactive({ q: '' })
+      handler.register(data, {})
+      handler.setEnabled(true, true)
+      data.q = 'boom'
+      await flushPromises()
+      expect(errSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Got error while routing'),
+        expect.any(Error),
+      )
+    })
+  })
+
+  describe('scheduleSyncToQuery edge cases', () => {
+    it('deduplicates rapid data changes into a single URL update', async () => {
+      const { handler, router } = await setup()
+      const data = reactive({ q: '', page: '1' })
+      handler.register(data, {})
+      handler.setEnabled(true, true)
+      await flushPromises()
+      const replace = vi.spyOn(router, 'replace')
+      data.q = 'test'
+      data.page = '2'
+      await flushPromises()
+      expect(replace).toHaveBeenCalledTimes(1)
+    })
+
+    it('skips scheduled sync when the item is stopped before the microtask runs', async () => {
+      const { handler, router } = await setup()
+      const data = reactive({ q: '' })
+      const handle = handler.register(data, {})
+      handler.setEnabled(true, true)
+      await flushPromises()
+      const replace = vi.spyOn(router, 'replace')
+      data.q = 'will-be-cancelled'
+      // Let Vue's scheduler flush so the watcher fires and scheduleSyncToQuery
+      // queues its queueMicrotask — but before that microtask runs:
+      await Promise.resolve()
+      // stop() increments registeredVersion so the pending queueMicrotask
+      // sees a stale version and skips the sync
+      handle.stop()
+      await flushPromises()
+      expect(replace).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('afterEachRoute edge cases', () => {
+    it('does not update reactive data after navigation when handler is disabled', async () => {
+      const { handler, router } = await setup()
+      const data = reactive({ q: '' })
+      handler.register(data, {})
+      await router.push({ path: '/', query: { q: 'from-url' } })
+      await flushPromises()
+      expect(data.q).toBe('')
+    })
+
+    it('skips syncRegisteredToQuery when called while afterEachRoute flag is active', async () => {
+      const { handler, router } = await setup()
+      const data = reactive({ q: '' })
+      handler.register(data, {})
+      handler.setEnabled(true, true)
+      await flushPromises()
+
+      // Register a second afterEach that fires AFTER the handler's own afterEach.
+      // At that point the flag is set but the clearing microtask hasn't run yet,
+      // so calling setEnabled(true, false) drives syncRegisteredToQuery into the
+      // preventSyncRegisteredToQueryByAfterEachRoute early-return branch.
+      router.afterEach(() => {
+        handler.setEnabled(true, false)
+      })
+
+      await router.push({ path: '/', query: { q: 'nav' } })
+      await flushPromises()
+
+      // Navigation still succeeds — only the redundant sync was skipped.
+      expect(data.q).toBe('nav')
+    })
+  })
+
+  describe('component lifecycle', () => {
+    it('stops the afterEach listener when the component unmounts', async () => {
+      const { handler, router, unmount } = await setup()
+      const data = reactive({ q: '' })
+      handler.register(data, {})
+      handler.setEnabled(true, true)
+      await flushPromises()
+      unmount()
+      // After unmount the afterEach listener is removed; navigating should not update data.
+      await router.push({ path: '/', query: { q: 'post-unmount' } })
+      await flushPromises()
+      expect(data.q).toBe('')
+    })
+  })
+
+  describe('syncInitialStateToRegisteredItem edge cases', () => {
+    it('does nothing when URL has no keys for a keyed item (result.type === none)', async () => {
+      const { handler } = await setup(undefined, { unrelated: 'value' })
+      const data = reactive({ page: 1, search: '' })
+      handler.register(data, {
+        key: 'filters',
+        schema: z.object({
+          page: z.coerce.number().default(1),
+          search: z.string().default(''),
+        }),
+      })
+      handler.setEnabled(true, true)
+      await flushPromises()
+      expect(data.page).toBe(1)
+      expect(data.search).toBe('')
+    })
+
+    it('resets data to initialData when URL is empty (result.type === reset)', async () => {
+      const { handler, router } = await setup()
+      const data = reactive({ q: 'initial' })
+      handler.register(data, {})
+      handler.setEnabled(true, true)
+      await flushPromises()
+      data.q = 'changed'
+      await flushPromises()
+      await router.push({ path: '/', query: {} })
+      await flushPromises()
+      expect(data.q).toBe('initial')
+    })
+
+    it('skips syncReactive when transformed data matches current state', async () => {
+      const { handler, router } = await setup(undefined, { q: 'hello' })
+      const data = reactive({ q: 'hello' })
+      handler.register(data, {})
+      handler.setEnabled(true, true)
+      await flushPromises()
+      const originalQ = data.q
+      await router.push({ path: '/', query: { q: 'hello' } })
+      await flushPromises()
+      expect(data.q).toBe(originalQ)
+    })
+
+    it('preserves non-URL keys from itemState when URL only carries a subset of keys', async () => {
+      // URL has only 'q'; item also has 'extra'. The sync should keep extra intact.
+      const { handler, router } = await setup(undefined, { q: 'hello' })
+      const data = reactive({ q: '', extra: 'preserved' })
+      handler.register(data, {
+        transform: (deserialized) => ({
+          q: String(deserialized.q ?? ''),
+          extra: 'preserved',
+        }),
+      })
+      handler.setEnabled(true, true)
+      await flushPromises()
+      await router.push({ path: '/', query: { q: 'world' } })
+      await flushPromises()
+      expect(data.q).toBe('world')
+      expect(data.extra).toBe('preserved')
+    })
+  })
+
+  describe('register edge cases', () => {
+    it('uses setTimeout for syncCallback during active router navigation (HMR path)', async () => {
+      const { handler, router } = await setup()
+      vi.spyOn(router, 'replace').mockReturnValue(new Promise(() => {}))
+      const data1 = reactive({ q: '' })
+      handler.register(data1, {})
+      handler.setEnabled(true, true)
+      data1.q = 'trigger'
+      await flushPromises()
+      const setTimeoutSpy = vi.spyOn(global, 'setTimeout')
+      const data2 = reactive({ x: '' })
+      handler.register(data2, {})
+      expect(setTimeoutSpy).toHaveBeenCalled()
+    })
+
+    it('applies additionalDefaultData baseline when provided', async () => {
+      const { handler, router } = await setup()
+      const data = reactive({ q: 'extra' })
+      handler.register(data, { additionalDefaultData: { q: 'extra' } })
+      handler.setEnabled(true, true)
+      await flushPromises()
+      expect(router.currentRoute.value.query.q).toBeUndefined()
+    })
+
+    it('serializes schema meta additionalDefaultData into a separate baseline', async () => {
+      const { handler, router } = await setup()
+      const schema = z.object({
+        page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+      })
+      const data = reactive({ page: 3 })
+      handler.register(data, { schema })
+      handler.setEnabled(true, true)
+      await flushPromises()
+      // page=3 matches schema meta additionalDefaultData → treated as default → omitted from URL
+      expect(router.currentRoute.value.query.page).toBeUndefined()
+    })
+
+    it('stop() is idempotent and does not throw when called twice', async () => {
+      const { handler } = await setup()
+      const data = reactive({ q: '' })
+      const handle = handler.register(data, {})
+      handler.setEnabled(true, true)
+      await flushPromises()
+      handle.stop()
+      expect(() => handle.stop()).not.toThrow()
+    })
+  })
 })
