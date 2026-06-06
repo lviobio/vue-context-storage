@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { asNumber, asString, asBoolean, asArray, asNumberArray, asObjectArray } from '../src'
-import type { QueryValue } from '../src'
+import { asNumber, asString, asBoolean, asArray, asNumberArray, asObjectArray } from '../../src'
+import type { QueryValue } from '../../src'
 
 describe('asNumber', () => {
   describe('basic usage', () => {

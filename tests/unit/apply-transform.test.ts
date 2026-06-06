@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { z } from 'zod'
-import { applyTransform, syncReactive } from '../src/handlers/helpers'
-import { computeSyncState } from '../src/handlers/query/compute-sync-state'
+import { applyTransform, syncReactive } from '../../src/handlers/helpers'
+import { computeSyncState } from '../../src/handlers/query/compute-sync-state'
 import { cloneDeep } from 'lodash'
 
 describe('applyTransform', () => {

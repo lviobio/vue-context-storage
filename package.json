@@ -41,6 +41,11 @@
     "build:playground": "vite build",
     "preview:playground": "vite preview --outDir playground/dist",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
     "release": "bumpp && npm publish",
     "prepublishOnly": "npm run check && npm run test && npm run build"
   },
@@ -55,6 +60,7 @@
     }
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.1.18",
     "@types/lodash": "^4.17.21",
     "@types/node": "^25.0.3",

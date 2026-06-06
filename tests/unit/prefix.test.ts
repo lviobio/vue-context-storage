@@ -5,7 +5,7 @@ import {
   setByPrefix,
   resolvePrefixSegments,
   type ContextStoragePrefixSegment,
-} from '../src/prefix'
+} from '../../src/prefix'
 
 describe('parsePrefixParts', () => {
   it('should return empty array for empty string', () => {

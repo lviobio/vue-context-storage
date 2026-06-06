@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { serializeParams, deserializeParams } from '../src/handlers/query/helpers'
-import { asObjectArray, asNumber, asString } from '../src/handlers/query/transform-helpers'
+import { serializeParams, deserializeParams } from '../../src/handlers/query/helpers'
+import { asObjectArray, asNumber, asString } from '../../src/handlers/query/transform-helpers'
 
 describe('serializeParams', () => {
   describe('basic serialization', () => {

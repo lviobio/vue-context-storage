@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createCollectionManager, createItem, type CollectionManager } from '../src/collection'
-import type { ContextStorageHandler, ContextStorageHandlerFactory } from '../src'
+import { createCollectionManager, createItem, type CollectionManager } from '../../src/collection'
+import type { ContextStorageHandler, ContextStorageHandlerFactory } from '../../src'
 
 // Mock handler for testing
 interface MockHandler extends ContextStorageHandler<any, any> {

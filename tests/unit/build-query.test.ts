@@ -3,8 +3,8 @@ import {
   buildQuery,
   type BuildQueryInput,
   type BuildQueryItem,
-} from '../src/handlers/query/build-query'
-import { serializeParams } from '../src/handlers/query/helpers'
+} from '../../src/handlers/query/build-query'
+import { serializeParams } from '../../src/handlers/query/helpers'
 
 function createInput(overrides: Partial<BuildQueryInput> = {}): BuildQueryInput {
   return {

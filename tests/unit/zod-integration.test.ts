@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { z } from 'zod'
-import { zObjectArray, createEmptyObject, SCHEMA_SYMBOL } from '../src/zod'
-import { serializeParams, deserializeParams } from '../src/handlers/query/helpers'
+import { zObjectArray, createEmptyObject, SCHEMA_SYMBOL } from '../../src/zod'
+import { serializeParams, deserializeParams } from '../../src/handlers/query/helpers'
 
 describe('zObjectArray', () => {
   const ItemSchema = z.object({

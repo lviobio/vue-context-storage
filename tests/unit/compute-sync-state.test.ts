@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   computeSyncState,
   type ComputeSyncStateInput,
-} from '../src/handlers/query/compute-sync-state'
+} from '../../src/handlers/query/compute-sync-state'
 
 function createInput<T extends Record<string, unknown>>(
   overrides: Partial<ComputeSyncStateInput<T>> & {
