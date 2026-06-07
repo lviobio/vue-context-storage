@@ -4,17 +4,22 @@ import type { Component } from 'vue'
 /**
  * Creates a test router with minimal configuration
  */
-export function createTestRouter(routes: Array<{ path: string; component?: Component }> = []): Router {
-  const defaultRoutes = routes.length > 0 ? routes : [
-    {
-      path: '/',
-      component: { template: '<div>Home</div>' },
-    },
-    {
-      path: '/test',
-      component: { template: '<div>Test</div>' },
-    },
-  ]
+export function createTestRouter(
+  routes: Array<{ path: string; component?: Component }> = [],
+): Router {
+  const defaultRoutes =
+    routes.length > 0
+      ? routes
+      : [
+          {
+            path: '/',
+            component: { template: '<div>Home</div>' },
+          },
+          {
+            path: '/test',
+            component: { template: '<div>Test</div>' },
+          },
+        ]
 
   return createRouter({
     history: createMemoryHistory(),
@@ -35,14 +40,14 @@ export async function setupRouter(router: Router, path: string = '/') {
  * Creates a simple delay promise for testing async behavior
  */
 export function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**
  * Waits for next tick
  */
 export function nextTick(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0))
+  return new Promise((resolve) => setTimeout(resolve, 0))
 }
 
 /**
@@ -69,7 +74,7 @@ export function createTestFilters() {
  */
 export async function waitFor(
   condition: () => boolean,
-  options: { timeout?: number; interval?: number } = {}
+  options: { timeout?: number; interval?: number } = {},
 ): Promise<void> {
   const { timeout = 1000, interval = 50 } = options
   const startTime = Date.now()
@@ -85,7 +90,10 @@ export async function waitFor(
 /**
  * Helper to create nested query parameters
  */
-export function createNestedQuery(prefix: string, data: Record<string, any>): Record<string, string> {
+export function createNestedQuery(
+  prefix: string,
+  data: Record<string, any>,
+): Record<string, string> {
   const result: Record<string, string> = {}
 
   Object.entries(data).forEach(([key, value]) => {

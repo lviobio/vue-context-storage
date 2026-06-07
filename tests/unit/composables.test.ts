@@ -36,9 +36,9 @@ describe('useContextStorage', () => {
         useContextStorage('sessionStorage', reactive({ a: 1 }), { key: 'k' })
       },
     })
-    expect(() =>
-      mount(Comp, { global: { config: { warnHandler } } }),
-    ).toThrow(/Handler not provided/)
+    expect(() => mount(Comp, { global: { config: { warnHandler } } })).toThrow(
+      /Handler not provided/,
+    )
     expect(warnHandler.mock.calls[0]?.[0]).toContain('context-storage-session-storage-handler')
   })
 
@@ -95,9 +95,9 @@ describe('useContextStorageProvider', () => {
         useContextStorageProvider('main')
       },
     })
-    expect(() =>
-      mount(Comp, { global: { config: { warnHandler } } }),
-    ).toThrow(/collection not found/)
+    expect(() => mount(Comp, { global: { config: { warnHandler } } })).toThrow(
+      /collection not found/,
+    )
     expect(warnHandler.mock.calls[0]?.[0]).toContain('context-storage-collection')
   })
 

@@ -5,6 +5,7 @@ const routes = [
   { to: '/schema-default', label: 'Schema Default' },
   { to: '/nested-default', label: 'Nested Default' },
   { to: '/query-sync', label: 'Query Sync' },
+  { to: '/repeater-form', label: 'Repeater Form' },
 ]
 </script>
 
@@ -42,7 +43,10 @@ const routes = [
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
   font-size: 14px;
   background: #f7f7f8;
   color: #1a1a1a;
@@ -116,7 +120,9 @@ input:focus {
   color: #a1a1aa;
   text-decoration: none;
   font-size: 13px;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .nav-link:hover {

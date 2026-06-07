@@ -20,6 +20,11 @@ const routes = [
     name: 'query-sync',
     component: () => import('./views/QuerySync.vue'),
   },
+  {
+    path: '/repeater-form',
+    name: 'repeater-form',
+    component: () => import('./views/RepeaterForm.vue'),
+  },
 ]
 
 export const router = createRouter({

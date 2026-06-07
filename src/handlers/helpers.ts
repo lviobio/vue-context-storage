@@ -245,13 +245,22 @@ export function extractDefaultsFromSchema(schema: unknown): Record<string, unkno
  * one query parameter is present (`?ids=1` → `'1'`), but an array when
  * multiple values are present (`?ids=1&ids=2` → `['1', '2']`).
  *
+ * Arrays of objects are serialized as indexed keys
+ * (`items[0][product]=Apple`), which deserialize into indexed records
+ * (`{ '0': { product: 'Apple' } }`) rather than arrays.
+ *
  * Without this pre-processing step, `z.string().array()` (or any `.array()`)
- * would reject the single-value case with "expected array, received string".
+ * would reject the single-value case with "expected array, received string",
+ * and `z.array(z.object(...))` would reject the indexed-record case with
+ * "expected array, received object".
  *
  * The function walks the schema shape (duck-typed via `_zod.def.type` and
- * `.shape`) and wraps non-array values into single-element arrays wherever
- * the schema expects an array.  Nested `ZodObject` shapes are processed
- * recursively.
+ * `.shape`) and, wherever the schema expects an array:
+ *  - wraps non-array scalar values into single-element arrays;
+ *  - converts indexed records into arrays sorted by numeric key;
+ *  - recursively coerces array elements when the element schema is an object.
+ *
+ * Nested `ZodObject` shapes are processed recursively.
  *
  * This is a no-op for schemas that are not `ZodObject`-like (no `.shape`).
  */
@@ -279,8 +288,31 @@ function coerceDataForSchema(
       }
     } else if (baseType === 'array') {
       const value = result[key]
-      if (value !== undefined && value !== null && !Array.isArray(value)) {
-        result[key] = [value]
+      if (value !== undefined && value !== null) {
+        let arr: unknown[]
+        if (Array.isArray(value)) {
+          arr = value
+        } else if (typeof value === 'object') {
+          // Indexed record from URL deserialization → array sorted by numeric key
+          arr = Object.entries(value)
+            .sort(([a], [b]) => Number(a) - Number(b))
+            .map(([, v]) => v)
+        } else {
+          arr = [value]
+        }
+
+        // Recursively coerce object elements (booleans, nested arrays inside items)
+        const element = (base as any).element ?? (base as any)._zod?.def?.element
+        const elementBase = unwrapZodField(element)
+        if (zodDefType(elementBase) === 'object' && (elementBase as any).shape) {
+          arr = arr.map((v) =>
+            v && typeof v === 'object' && !Array.isArray(v)
+              ? coerceDataForSchema(v as Record<string, unknown>, elementBase)
+              : v,
+          )
+        }
+
+        result[key] = arr
       }
     } else if (baseType === 'object' && (base as any).shape) {
       const nested = result[key]

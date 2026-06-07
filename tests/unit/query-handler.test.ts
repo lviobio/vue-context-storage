@@ -53,9 +53,7 @@ describe('createQueryHandler', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const { handler } = await setup()
       handler.register(reactive({ page: 1, active: true, ids: [1, 2] }), {})
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining('non-string values'),
-      )
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('non-string values'))
       const msg = warn.mock.calls[0][0] as string
       expect(msg).toContain('"page" (number)')
       expect(msg).toContain('"active" (boolean)')

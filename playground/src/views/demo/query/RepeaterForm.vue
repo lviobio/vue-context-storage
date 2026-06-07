@@ -12,7 +12,6 @@ import {
 } from 'naive-ui'
 import { z } from 'zod'
 import { transform, useContextStorage } from 'vue-context-storage'
-import { zObjectArray } from 'vue-context-storage/zod'
 
 const { onlyChanges, transformMethod } = defineProps<{
   onlyChanges: boolean
@@ -42,7 +41,7 @@ const ItemSchema = z.object({
 const DataSchema = z.object({
   title: z.string().default(''),
   price: z.coerce.number().nullable().default(0),
-  items: zObjectArray(ItemSchema),
+  items: z.array(ItemSchema),
 })
 
 // --- Manual approach (transform helpers) ---
@@ -79,7 +78,6 @@ const exampleCode = computed(() =>
     ? `import { reactive } from 'vue'
 import { z } from 'zod'
 import { useContextStorage } from 'vue-context-storage'
-import { zObjectArray } from 'vue-context-storage/zod'
 
 const ItemSchema = z.object({
   product: z.string().default(''),
@@ -89,7 +87,7 @@ const ItemSchema = z.object({
 const DataSchema = z.object({
   title: z.string().default(''),
   price: z.coerce.number().nullable().default(0),
-  items: zObjectArray(ItemSchema),
+  items: z.array(ItemSchema),
 })
 
 const data = reactive({

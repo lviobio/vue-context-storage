@@ -7,7 +7,9 @@ Comprehensive test suite for vue-context-storage package.
 ### Unit Tests
 
 #### `transform-helpers.test.ts` (54 tests)
+
 Tests for query parameter transform helpers:
+
 - `asNumber()` - number conversion with nullable/missable options
 - `asString()` - string conversion with allowed values
 - `asBoolean()` - boolean parsing from strings
@@ -15,7 +17,9 @@ Tests for query parameter transform helpers:
 - `asNumberArray()` - number array conversion
 
 #### `serialization-helpers.test.ts` (32 tests)
+
 Tests for URL query parameter serialization:
+
 - `serializeParams()` - object to query string conversion
 - `deserializeParams()` - query string to object conversion
 - Nested object handling
@@ -23,7 +27,9 @@ Tests for URL query parameter serialization:
 - Roundtrip integrity
 
 #### `zod-integration.test.ts` (22 tests)
+
 Tests for Zod schema validation integration:
+
 - Basic schema validation
 - Nested objects with defaults
 - Array schemas
@@ -32,7 +38,9 @@ Tests for Zod schema validation integration:
 - Error handling
 
 #### `collection.test.ts` (24 tests)
+
 Tests for createCollectionManager factory:
+
 - Initialization and ready state
 - Adding/removing items
 - Finding items by key
@@ -44,7 +52,9 @@ Tests for createCollectionManager factory:
 ### Test Utilities
 
 #### `utils/test-helpers.ts`
+
 Helper functions for testing:
+
 - `createTestRouter()` - Creates mock Vue Router
 - `setupRouter()` - Navigates and waits for router ready
 - `delay()` - Promise-based delay

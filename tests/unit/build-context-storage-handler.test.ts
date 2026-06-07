@@ -1,10 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { computed, defineComponent, h, type InjectionKey } from 'vue'
 import { mount } from '@vue/test-utils'
-import {
-  buildContextStorageHandler,
-  registerKnownHandlerKey,
-} from '../../src/handlers/helpers'
+import { buildContextStorageHandler, registerKnownHandlerKey } from '../../src/handlers/helpers'
 import type { ContextStorageHandler, RegisterBaseOptions } from '../../src/handlers'
 import { contextStoragePrefixSegmentsInjectKey } from '../../src/prefix'
 import type { ContextStoragePrefixSegment } from '../../src/prefix'
@@ -15,10 +12,7 @@ type Options = RegisterBaseOptions<Record<string, unknown>> & { key?: string }
  * Builds a stub handler that records the options it was registered with,
  * plus a fresh injection key registered with the given prefix strategy.
  */
-function makeStubHandler(
-  handlerType: string,
-  prefixMergeStrategy: 'prepend' | 'append',
-) {
+function makeStubHandler(handlerType: string, prefixMergeStrategy: 'prepend' | 'append') {
   const key = Symbol(handlerType) as InjectionKey<ContextStorageHandler<unknown, Options>>
   registerKnownHandlerKey(key, handlerType, 'key', prefixMergeStrategy)
   const received: { options?: Options } = {}

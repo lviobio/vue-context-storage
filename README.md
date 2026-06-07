@@ -30,7 +30,9 @@ useContextStorage('query', filters, { key: 'filters' }) // URL: /products?filter
 // zod schema support with type coercion, 'page' will be converted to number
 useContextStorage('query', filters, { schema: z.object({ search: z.string(), page: z.number() }) }) // URL: /products?filters[search]=shoes&filters[page]=2
 // transform function support with type coercion, 'page' will be converted to number
-useContextStorage('query', filters, { transform: (value) => ({ search: value.search, page: Number(value.page) }) }) // URL: /products?filters[search]=shoes&filters[page]=2
+useContextStorage('query', filters, {
+  transform: (value) => ({ search: value.search, page: Number(value.page) }),
+}) // URL: /products?filters[search]=shoes&filters[page]=2
 // And a lot of other features... (onlyChanges option; createEmptyObject helper for zod schemas; additional default values; passing 'key' via ContextStoragePrefix wrapper)
 ```
 
@@ -294,7 +296,7 @@ The query handler supports arrays of objects. They are serialized as indexed que
 ?items[0][product]=Apple&items[0][quantity]=5&items[1][product]=Banana&items[1][quantity]=10
 ```
 
-After deserialization, URL parameters produce indexed objects (`{ '0': {...}, '1': {...} }`) rather than arrays. Use `transform.asObjectArray` or the Zod helper `zObjectArray` to convert them back.
+After deserialization, URL parameters produce indexed objects (`{ '0': {...}, '1': {...} }`) rather than arrays. With a Zod schema, plain `z.array(...)` works out of the box — the library converts indexed objects back to sorted arrays automatically. With the manual approach, use `transform.asObjectArray`.
 
 **With transform helpers:**
 
@@ -324,7 +326,6 @@ useContextStorage('query', data, {
 
 ```typescript
 import { z } from 'zod'
-import { zObjectArray } from 'vue-context-storage/zod'
 
 const ItemSchema = z.object({
   product: z.string().default(''),
@@ -333,13 +334,13 @@ const ItemSchema = z.object({
 
 const DataSchema = z.object({
   title: z.string().default(''),
-  items: zObjectArray(ItemSchema),
+  items: z.array(ItemSchema),
 })
 
 useContextStorage('query', data, { schema: DataSchema })
 ```
 
-See [Zod Helpers](#zod-helpers-vue-context-storagezod) for more details.
+See [Automatic Type Coercion](#automatic-type-coercion) for details on how indexed objects are converted.
 
 ### Preserve Empty State
 
@@ -756,25 +757,6 @@ The library provides a separate entry point with Zod-specific helpers. Since `zo
 npm install zod
 ```
 
-### `zObjectArray(itemSchema)`
-
-Creates a Zod schema for arrays of objects serialized as indexed query parameters. Wraps `z.record()` + `.transform()` to convert indexed objects back to sorted arrays.
-
-```typescript
-import { z } from 'zod'
-import { zObjectArray } from 'vue-context-storage/zod'
-
-const ItemSchema = z.object({
-  product: z.string().default(''),
-  quantity: z.coerce.number().default(0),
-})
-
-const DataSchema = z.object({
-  title: z.string().default(''),
-  items: zObjectArray(ItemSchema),
-})
-```
-
 ### Automatic Type Coercion
 
 When a `schema` is provided, the library automatically coerces URL query parameter values to match the expected Zod types before validation. This handles two common URL serialization quirks:
@@ -801,6 +783,22 @@ const Schema = z.object({
 // ?tags=vue          → { tags: ['vue'], ... }
 // ?tags=vue&tags=ts  → { tags: ['vue', 'ts'], ... }
 // (no tags param)    → { tags: [], ... }
+```
+
+Arrays of objects are also handled automatically. They deserialize from indexed query parameters (`?items[0][product]=Apple`) into indexed objects (`{ '0': { product: 'Apple' } }`), and the library converts them back to arrays sorted by numeric key wherever the schema expects `.array()` — coercion is applied recursively inside array elements as well:
+
+```typescript
+const ItemSchema = z.object({
+  product: z.string().default(''),
+  quantity: z.coerce.number().default(0),
+})
+
+const Schema = z.object({
+  items: z.array(ItemSchema),
+})
+
+// ?items[0][product]=Apple&items[0][quantity]=5
+// → { items: [{ product: 'Apple', quantity: 5 }] }
 ```
 
 #### Boolean Coercion

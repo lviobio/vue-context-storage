@@ -1035,9 +1035,7 @@ describe('buildQuery', () => {
 
       const result = buildQuery(
         createInput({
-          items: [
-            createItemWithSchema({ page: 5 }, { schema, initialData: { page: undefined } }),
-          ],
+          items: [createItemWithSchema({ page: 5 }, { schema, initialData: { page: undefined } })],
           onlyChanges: true,
         }),
       )

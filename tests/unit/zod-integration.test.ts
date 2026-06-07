@@ -1,93 +1,100 @@
 import { describe, it, expect } from 'vitest'
 import { z } from 'zod'
-import { zObjectArray, createEmptyObject, SCHEMA_SYMBOL } from '../../src/zod'
+import { createEmptyObject, SCHEMA_SYMBOL } from '../../src/zod'
+import { applyTransform } from '../../src/handlers/helpers'
 import { serializeParams, deserializeParams } from '../../src/handlers/query/helpers'
 
-describe('zObjectArray', () => {
+// Arrays of objects serialize as indexed keys (`items[0][product]=Apple`) and
+// deserialize back as indexed records (`{ '0': {...} }`). `applyTransform`
+// coerces those records into real arrays wherever the schema expects
+// `z.array(...)`, so plain array schemas work without a dedicated helper.
+describe('z.array of objects (applyTransform coercion)', () => {
   const ItemSchema = z.object({
     product: z.string().default(''),
     quantity: z.coerce.number().default(0),
   })
 
-  describe('basic usage', () => {
-    it('should convert indexed object to sorted array', () => {
-      const Schema = z.object({
-        items: zObjectArray(ItemSchema),
-      })
+  const Schema = z.object({
+    items: z.array(ItemSchema),
+  })
 
-      const result = Schema.safeParse({
-        items: {
-          '0': { product: 'Apple', quantity: '5' },
-          '1': { product: 'Banana', quantity: '10' },
+  const initialData = { items: [] as { product: string; quantity: number }[] }
+
+  describe('indexed record input', () => {
+    it('should convert indexed record to sorted array', () => {
+      const { data, warnings } = applyTransform({
+        state: {
+          items: {
+            '0': { product: 'Apple', quantity: '5' },
+            '1': { product: 'Banana', quantity: '10' },
+          },
         },
+        initialData,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
       })
 
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.items).toEqual([
-          { product: 'Apple', quantity: 5 },
-          { product: 'Banana', quantity: 10 },
-        ])
-      }
+      expect(warnings).toEqual([])
+      expect(data.items).toEqual([
+        { product: 'Apple', quantity: 5 },
+        { product: 'Banana', quantity: 10 },
+      ])
     })
 
     it('should sort entries by numeric key', () => {
-      const Schema = z.object({
-        items: zObjectArray(ItemSchema),
-      })
-
-      const result = Schema.safeParse({
-        items: {
-          '2': { product: 'C', quantity: '3' },
-          '0': { product: 'A', quantity: '1' },
-          '1': { product: 'B', quantity: '2' },
+      const { data, warnings } = applyTransform({
+        state: {
+          items: {
+            '2': { product: 'C', quantity: '3' },
+            '0': { product: 'A', quantity: '1' },
+            '1': { product: 'B', quantity: '2' },
+          },
         },
+        // Empty initialData so lodash merge doesn't pre-convert the record:
+        // the sorting must come from the schema coercion itself.
+        initialData: {},
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
       })
 
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.items).toEqual([
-          { product: 'A', quantity: 1 },
-          { product: 'B', quantity: 2 },
-          { product: 'C', quantity: 3 },
-        ])
-      }
+      expect(warnings).toEqual([])
+      expect(data.items).toEqual([
+        { product: 'A', quantity: 1 },
+        { product: 'B', quantity: 2 },
+        { product: 'C', quantity: 3 },
+      ])
     })
 
-    it('should default to empty array when items is undefined', () => {
-      const Schema = z.object({
-        items: zObjectArray(ItemSchema),
+    it('should fall back to initialData items when state has no items', () => {
+      const { data, warnings } = applyTransform({
+        state: {},
+        initialData,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
       })
 
-      const result = Schema.safeParse({})
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.items).toEqual([])
-      }
+      expect(warnings).toEqual([])
+      expect(data.items).toEqual([])
     })
 
     it('should apply item schema defaults', () => {
-      const Schema = z.object({
-        items: zObjectArray(ItemSchema),
+      const { data, warnings } = applyTransform({
+        state: { items: { '0': {} } },
+        initialData,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
       })
 
-      const result = Schema.safeParse({
-        items: { '0': {} },
-      })
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.items).toEqual([{ product: '', quantity: 0 }])
-      }
+      expect(warnings).toEqual([])
+      expect(data.items).toEqual([{ product: '', quantity: 0 }])
     })
   })
 
   describe('roundtrip with serialization', () => {
-    it('should roundtrip through serialize → deserialize → zObjectArray', () => {
-      const Schema = z.object({
+    it('should roundtrip through serialize → deserialize → applyTransform', () => {
+      const FullSchema = z.object({
         title: z.string().default(''),
-        items: zObjectArray(ItemSchema),
+        items: z.array(ItemSchema),
       })
 
       const original = {
@@ -100,30 +107,128 @@ describe('zObjectArray', () => {
 
       const serialized = serializeParams(original)
       const deserialized = deserializeParams(serialized)
-      const result = Schema.safeParse(deserialized)
+      const { data, warnings } = applyTransform({
+        state: deserialized,
+        initialData: { title: '', items: [] },
+        schema: FullSchema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
 
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data).toEqual(original)
-      }
+      expect(warnings).toEqual([])
+      expect(data).toEqual(original)
     })
 
     it('should handle empty items in roundtrip', () => {
-      const Schema = z.object({
+      const FullSchema = z.object({
         title: z.string().default(''),
-        items: zObjectArray(ItemSchema),
+        items: z.array(ItemSchema),
       })
 
       const original = { title: 'Empty', items: [] as { product: string; quantity: number }[] }
 
       const serialized = serializeParams(original)
       const deserialized = deserializeParams(serialized)
-      const result = Schema.safeParse(deserialized)
+      const { data, warnings } = applyTransform({
+        state: deserialized,
+        initialData: { title: '', items: [] },
+        schema: FullSchema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
 
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data).toEqual(original)
-      }
+      expect(warnings).toEqual([])
+      expect(data).toEqual(original)
+    })
+  })
+
+  describe('plain array input', () => {
+    // `applyTransform` deep-merges deserialized state into `initialData` before
+    // parsing. When `initialData` holds an array (`items: []`), lodash `merge`
+    // converts the deserialized indexed record into a real array before the
+    // schema coercion runs, so plain arrays must pass through untouched.
+    it('should accept a plain array of items', () => {
+      const { data, warnings } = applyTransform({
+        state: {
+          items: [
+            { product: 'Apple', quantity: '5' },
+            { product: 'Banana', quantity: '10' },
+          ],
+        },
+        initialData,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data.items).toEqual([
+        { product: 'Apple', quantity: 5 },
+        { product: 'Banana', quantity: 10 },
+      ])
+    })
+
+    it('should accept an empty array', () => {
+      const { data, warnings } = applyTransform({
+        state: { items: [] },
+        initialData,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data.items).toEqual([])
+    })
+  })
+
+  describe('coercion inside array elements', () => {
+    it('should coerce boolean-like strings in item fields', () => {
+      const FlagSchema = z.object({
+        items: z.array(
+          z.object({
+            name: z.string().default(''),
+            active: z.boolean().default(false),
+          }),
+        ),
+      })
+
+      const { data, warnings } = applyTransform({
+        state: {
+          items: {
+            '0': { name: 'A', active: '1' },
+            '1': { name: 'B', active: '0' },
+          },
+        },
+        initialData: { items: [] },
+        schema: FlagSchema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data.items).toEqual([
+        { name: 'A', active: true },
+        { name: 'B', active: false },
+      ])
+    })
+
+    it('should coerce single values to arrays inside item fields', () => {
+      const TagsSchema = z.object({
+        items: z.array(
+          z.object({
+            name: z.string().default(''),
+            tags: z.string().array().default([]),
+          }),
+        ),
+      })
+
+      const { data, warnings } = applyTransform({
+        state: {
+          items: { '0': { name: 'A', tags: 'red' } },
+        },
+        initialData: { items: [] },
+        schema: TagsSchema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data.items).toEqual([{ name: 'A', tags: ['red'] }])
     })
   })
 })
