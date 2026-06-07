@@ -47,6 +47,12 @@ export function createWebStorageHandlerInstance<T extends Record<string, unknown
       return
     }
 
+    // Ignore events from the other storage area (e.g. a localStorage change
+    // must not trigger the sessionStorage handler when keys collide)
+    if (event.storageArea && event.storageArea !== config.storage) {
+      return
+    }
+
     // Find registered items that match the changed key
     registered.forEach((item) => {
       if (event.key === item.options.key) {

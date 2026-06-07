@@ -11,7 +11,7 @@ export function createSessionStorageHandler(
       storage: sessionStorage,
       injectionKey: contextStorageSessionStorageHandler,
       handlerName: 'sessionStorage',
-      options: { listenToStorageEvents: false, ...customOptions },
+      options: { listenToStorageEvents: true, ...customOptions },
     })
 
   return factory

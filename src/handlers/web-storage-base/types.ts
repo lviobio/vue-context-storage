@@ -3,10 +3,12 @@ import type { RegisterBaseOptions } from '../../handlers'
 
 export interface WebStorageHandlerBaseOptions {
   /**
-   * Default: true for localStorage, false for sessionStorage
+   * Default: true
    *
-   * If enabled - storage events will be listened to for cross-tab synchronization.
-   * Only works with localStorage (sessionStorage is per-tab).
+   * If enabled - storage events will be listened to so external changes are synced
+   * back into the reactive data. For localStorage this covers other tabs; for
+   * sessionStorage it covers other contexts of the same session (iframes,
+   * `window.open` windows) and manual edits via DevTools.
    */
   listenToStorageEvents?: boolean
 }

@@ -25,6 +25,11 @@ const routes = [
     name: 'repeater-form',
     component: () => import('./views/RepeaterForm.vue'),
   },
+  {
+    path: '/session-storage-sync',
+    name: 'session-storage-sync',
+    component: () => import('./views/SessionStorageSync.vue'),
+  },
 ]
 
 export const router = createRouter({

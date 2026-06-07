@@ -6,6 +6,7 @@ const routes = [
   { to: '/nested-default', label: 'Nested Default' },
   { to: '/query-sync', label: 'Query Sync' },
   { to: '/repeater-form', label: 'Repeater Form' },
+  { to: '/session-storage-sync', label: 'Session Storage Sync' },
 ]
 </script>
 
