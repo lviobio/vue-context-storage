@@ -32,10 +32,10 @@ const DataSchema = z.object({
   name: z.string(),
   title: z.string().nullable(),
   search: z.string().optional(),
-  number: z.coerce.number().nullable(),
+  number: z.number().nullable(),
   switch: z.boolean(),
-  users_ids: z.coerce.number().array(),
-  string_array: z.coerce.string().array(),
+  users_ids: z.number().array(),
+  string_array: z.string().array(),
   enum_array: z.enum(enumValues).array(),
 })
 
@@ -99,9 +99,9 @@ const DataSchema = z.object({
   name: z.string(),
   title: z.string().nullable(),
   search: z.string().optional(),
-  number: z.coerce.number().nullable(),
+  number: z.number().nullable(),
   switch: z.boolean(),
-  users_ids: z.coerce.number().array(),
+  users_ids: z.number().array(),
   string_array: z.string().array(),
   enum_array: z.enum(enumValues).array(),
 })

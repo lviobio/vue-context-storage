@@ -759,7 +759,7 @@ npm install zod
 
 ### Automatic Type Coercion
 
-When a `schema` is provided, the library automatically coerces URL query parameter values to match the expected Zod types before validation. This handles two common URL serialization quirks:
+When a `schema` is provided, the library automatically coerces URL query parameter values to match the expected Zod types before validation. This handles the common URL serialization quirks below.
 
 #### Array Coercion
 
@@ -814,6 +814,26 @@ const Schema = z.object({
 // ?active=1  → { active: true, enabled: true }
 // ?active=0  → { active: false, enabled: true }
 ```
+
+#### Number Coercion
+
+URL query parameters are always strings (`?page=5` → `'5'`), so plain `z.number()` would reject them with `"expected number, received string"`. The library automatically converts numeric strings to numbers wherever the schema expects a number — including inside nested objects and `z.array(z.number())`. **`z.coerce` is not required** — plain `z.number()` works out of the box:
+
+```typescript
+const Schema = z.object({
+  page: z.number().default(1),
+  score: z.number().nullable(),
+  ids: z.array(z.number()).default([]),
+})
+
+// ?page=5            → { page: 5, ... }
+// ?score=42          → { score: 42, ... }
+// ?ids=1&ids=2       → { ids: [1, 2], ... }
+```
+
+Coercion is conservative: a non-numeric string (`?page=abc`) or an empty value is **not** forced to a number (`Number('')` would be `0`). Instead the schema validation fails and the field falls back to its initial data, so missing/garbage input never silently becomes `0`. `null` is preserved for `.nullable()` fields.
+
+> `z.coerce.number()` still works and remains useful when you want Zod's own coercion semantics (e.g. coercing booleans or accepting empty strings as `0`).
 
 ### `createEmptyZodObject(schema, options?)`
 

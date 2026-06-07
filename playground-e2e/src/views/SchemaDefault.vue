@@ -13,7 +13,7 @@ import { useContextStorage } from 'vue-context-storage'
  *  page=2 and page=4 must appear in the URL.
  */
 const Schema = z.object({
-  page: z.coerce.number().default(1).meta({ additionalDefaultData: 5 }),
+  page: z.number().default(1).meta({ additionalDefaultData: 5 }),
   search: z.string().default(''),
 })
 

@@ -17,7 +17,7 @@ import { useContextStorage } from 'vue-context-storage'
 const Schema = z.object({
   filters: z
     .object({
-      page: z.coerce.number(),
+      page: z.number(),
       sort: z.string(),
     })
     .default({ page: 1, sort: 'asc' }),

@@ -17,12 +17,12 @@ interface Item {
 
 const ItemSchema = z.object({
   product: z.string().default(''),
-  quantity: z.coerce.number().default(0),
+  quantity: z.number().default(0),
 })
 
 const DataSchema = z.object({
   title: z.string().default(''),
-  price: z.coerce.number().nullable().default(0),
+  price: z.number().nullable().default(0),
   items: z.array(ItemSchema),
 })
 

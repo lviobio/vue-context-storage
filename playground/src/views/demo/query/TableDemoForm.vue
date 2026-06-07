@@ -26,12 +26,12 @@ const PAGE_SIZE = 3
 // --- Schema approach (Zod) ---
 
 const DataSchema = z.object({
-  page: z.coerce.number(),
+  page: z.number(),
   filters: z.object({
     title: z.string(),
     created_at: z.object({
-      from: z.coerce.number().nullable(),
-      to: z.coerce.number().nullable(),
+      from: z.number().nullable(),
+      to: z.number().nullable(),
     }),
   }),
 })
@@ -131,12 +131,12 @@ import { z } from 'zod'
 import { useContextStorage } from 'vue-context-storage'
 
 const DataSchema = z.object({
-  page: z.coerce.number(),
+  page: z.number(),
   filters: z.object({
     title: z.string(),
     created_at: z.object({
-      from: z.coerce.number().nullable(),
-      to: z.coerce.number().nullable(),
+      from: z.number().nullable(),
+      to: z.number().nullable(),
     }),
   }),
 })

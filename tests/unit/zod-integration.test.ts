@@ -233,6 +233,213 @@ describe('z.array of objects (applyTransform coercion)', () => {
   })
 })
 
+// URL query / web-storage deserialization yields strings for every value
+// (`?page=5` → `'5'`). `applyTransform` already coerces `'1'`/`'0'` to booleans
+// so plain `z.boolean()` works without `.coerce`; by symmetry it coerces numeric
+// strings to numbers so plain `z.number()` works without `.coerce.number()`.
+// These are regression tests for that auto-coercion.
+describe('z.number auto-coercion (applyTransform, no z.coerce)', () => {
+  describe('top-level number fields', () => {
+    it('should coerce a numeric string for plain z.number()', () => {
+      const Schema = z.object({ page: z.number() })
+
+      const { data, warnings } = applyTransform({
+        state: { page: '5' },
+        initialData: { page: 1 },
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ page: 5 })
+    })
+
+    it('should coerce a numeric string for z.number().nullable() (the reported bug)', () => {
+      const Schema = z.object({ value: z.number().nullable() })
+
+      const { data, warnings } = applyTransform({
+        state: { value: '42' },
+        initialData: { value: null },
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ value: 42 })
+    })
+
+    it('should leave null untouched for z.number().nullable()', () => {
+      const Schema = z.object({ value: z.number().nullable() })
+
+      const { data, warnings } = applyTransform({
+        state: { value: null },
+        initialData: { value: 0 },
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ value: null })
+    })
+
+    it('should coerce a floating-point numeric string', () => {
+      const Schema = z.object({ ratio: z.number() })
+
+      const { data, warnings } = applyTransform({
+        state: { ratio: '3.14' },
+        initialData: { ratio: 0 },
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ ratio: 3.14 })
+    })
+
+    it('should respect number constraints after coercion', () => {
+      const Schema = z.object({ page: z.number().int().positive() })
+
+      const { data, warnings } = applyTransform({
+        state: { page: '7' },
+        initialData: { page: 1 },
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ page: 7 })
+    })
+
+    it('should fall back to initialData for a non-numeric string', () => {
+      const Schema = z.object({ page: z.number() })
+
+      const { data, warnings } = applyTransform({
+        state: { page: 'abc' },
+        initialData: { page: 1 },
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings.length).toBeGreaterThan(0)
+      expect(data).toEqual({ page: 1 })
+    })
+
+    it('should not coerce an empty string to 0 (falls back instead)', () => {
+      // `Number('')` is 0 — coercing it would silently turn a missing value into
+      // a valid 0. The conservative coercion leaves '' alone so the schema fails
+      // and we fall back to initialData.
+      const Schema = z.object({ page: z.number() })
+
+      const { data, warnings } = applyTransform({
+        state: { page: '' },
+        initialData: { page: 1 },
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings.length).toBeGreaterThan(0)
+      expect(data).toEqual({ page: 1 })
+    })
+  })
+
+  describe('number arrays', () => {
+    it('should coerce a multi-value array for z.array(z.number())', () => {
+      const Schema = z.object({ ids: z.array(z.number()) })
+
+      const { data, warnings } = applyTransform({
+        state: { ids: ['1', '2', '3'] },
+        initialData: { ids: [] as number[] },
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ ids: [1, 2, 3] })
+    })
+
+    it('should coerce a single value to a number array for z.array(z.number())', () => {
+      const Schema = z.object({ ids: z.array(z.number()) })
+
+      const { data, warnings } = applyTransform({
+        state: { ids: '5' },
+        initialData: { ids: [] as number[] },
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ ids: [5] })
+    })
+  })
+
+  describe('nested numbers', () => {
+    it('should coerce numbers in nested objects', () => {
+      const Schema = z.object({
+        range: z
+          .object({
+            min: z.number(),
+            max: z.number(),
+          })
+          .default({ min: 0, max: 0 }),
+      })
+
+      const { data, warnings } = applyTransform({
+        state: { range: { min: '10', max: '99' } },
+        initialData: { range: { min: 0, max: 0 } },
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ range: { min: 10, max: 99 } })
+    })
+
+    it('should coerce numbers inside arrays of objects', () => {
+      const Schema = z.object({
+        items: z.array(
+          z.object({
+            name: z.string().default(''),
+            quantity: z.number().default(0),
+          }),
+        ),
+      })
+
+      const { data, warnings } = applyTransform({
+        state: { items: { '0': { name: 'A', quantity: '5' } } },
+        initialData: { items: [] },
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ items: [{ name: 'A', quantity: 5 }] })
+    })
+  })
+
+  describe('roundtrip with serialization', () => {
+    it('should roundtrip plain z.number() through serialize → deserialize → applyTransform', () => {
+      const Schema = z.object({
+        page: z.number(),
+        score: z.number().nullable(),
+      })
+
+      const original = { page: 3, score: 99 }
+
+      const serialized = serializeParams(original)
+      const deserialized = deserializeParams(serialized)
+      const { data, warnings } = applyTransform({
+        state: deserialized,
+        initialData: { page: 1, score: null },
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual(original)
+    })
+  })
+})
+
 describe('Zod Schema Integration', () => {
   describe('basic schemas', () => {
     it('should validate simple object schema', () => {

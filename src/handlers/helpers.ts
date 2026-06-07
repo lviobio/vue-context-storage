@@ -258,12 +258,50 @@ export function extractDefaultsFromSchema(schema: unknown): Record<string, unkno
  * `.shape`) and, wherever the schema expects an array:
  *  - wraps non-array scalar values into single-element arrays;
  *  - converts indexed records into arrays sorted by numeric key;
- *  - recursively coerces array elements when the element schema is an object.
+ *  - recursively coerces array elements when the element schema is an object,
+ *    or coerces scalar elements when it is a number/boolean.
+ *
+ * It also coerces scalar fields via {@link coerceScalar}: numeric strings →
+ * numbers and `'1'`/`'0'` → booleans, so plain `z.number()` / `z.boolean()`
+ * work without `z.coerce`.
  *
  * Nested `ZodObject` shapes are processed recursively.
  *
  * This is a no-op for schemas that are not `ZodObject`-like (no `.shape`).
  */
+/**
+ * Coerces a single deserialized value to match a scalar Zod base type.
+ *
+ * URL query / web-storage deserialization yields strings for every value
+ * (`?page=5` → `'5'`), so plain `z.number()` / `z.boolean()` (without
+ * `z.coerce`) would reject them. This converts the common cases up front:
+ *  - boolean: the serializer's `'1'`/`'0'` → `true`/`false`;
+ *  - number: a non-empty numeric string → its number.
+ *
+ * Coercion is conservative: anything that does not cleanly convert (empty
+ * string, non-numeric string, `null`, already-typed values) is returned
+ * untouched so the schema decides — failing to its `initialData` fallback or
+ * accepting `null` for `.nullable()` — rather than being silently mangled
+ * (e.g. `Number('')` → `0`).
+ */
+function coerceScalar(value: unknown, baseType: string | undefined): unknown {
+  if (baseType === 'boolean') {
+    if (value === '1') return true
+    if (value === '0') return false
+    return value
+  }
+
+  if (baseType === 'number') {
+    if (typeof value === 'string' && value.trim() !== '') {
+      const n = Number(value)
+      if (!Number.isNaN(n)) return n
+    }
+    return value
+  }
+
+  return value
+}
+
 function coerceDataForSchema(
   data: Record<string, unknown>,
   schema: unknown,
@@ -279,13 +317,8 @@ function coerceDataForSchema(
     const base = unwrapZodField(shape[key])
     const baseType = zodDefType(base)
 
-    if (baseType === 'boolean') {
-      const value = result[key]
-      if (value === '1') {
-        result[key] = true
-      } else if (value === '0') {
-        result[key] = false
-      }
+    if (baseType === 'boolean' || baseType === 'number') {
+      result[key] = coerceScalar(result[key], baseType)
     } else if (baseType === 'array') {
       const value = result[key]
       if (value !== undefined && value !== null) {
@@ -301,15 +334,20 @@ function coerceDataForSchema(
           arr = [value]
         }
 
-        // Recursively coerce object elements (booleans, nested arrays inside items)
+        // Coerce array elements: recurse into object elements (booleans, nested
+        // arrays inside items), or coerce scalar elements (`z.array(z.number())`,
+        // `z.array(z.boolean())`) so string values from the URL convert.
         const element = (base as any).element ?? (base as any)._zod?.def?.element
         const elementBase = unwrapZodField(element)
-        if (zodDefType(elementBase) === 'object' && (elementBase as any).shape) {
+        const elementType = zodDefType(elementBase)
+        if (elementType === 'object' && (elementBase as any).shape) {
           arr = arr.map((v) =>
             v && typeof v === 'object' && !Array.isArray(v)
               ? coerceDataForSchema(v as Record<string, unknown>, elementBase)
               : v,
           )
+        } else if (elementType === 'number' || elementType === 'boolean') {
+          arr = arr.map((v) => coerceScalar(v, elementType))
         }
 
         result[key] = arr
