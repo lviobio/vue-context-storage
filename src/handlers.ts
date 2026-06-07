@@ -24,7 +24,7 @@ export interface RegisterBaseOptions<T> {
    *
    * const FiltersSchema = z.object({
    *   search: z.string().default(''),
-   *   page: z.coerce.number().int().positive().default(1),
+   *   page: z.number().int().positive().default(1),
    *   status: z.enum(['active', 'inactive']).default('active'),
    * })
    *

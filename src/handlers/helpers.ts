@@ -109,7 +109,7 @@ function readZodFieldMeta(field: unknown): Record<string, unknown> | undefined {
  * @example
  * ```ts
  * const Schema = z.object({
- *   page: z.coerce.number().default(1).meta({ additionalDefaultData: 1 }),
+ *   page: z.number().default(1).meta({ additionalDefaultData: 1 }),
  *   search: z.string().default(''),
  * })
  * extractAdditionalDefaultDataFromSchema(Schema)
@@ -187,7 +187,7 @@ function readZodFieldDefault(field: unknown): { hasDefault: boolean; value?: unk
  * @example
  * ```ts
  * const Schema = z.object({
- *   page: z.coerce.number().default(1),
+ *   page: z.number().default(1),
  *   search: z.string().default(''),
  * })
  * extractDefaultsFromSchema(Schema)
@@ -263,7 +263,7 @@ export function extractDefaultsFromSchema(schema: unknown): Record<string, unkno
  *
  * It also coerces scalar fields via {@link coerceScalar}: numeric strings →
  * numbers and `'1'`/`'0'` → booleans, so plain `z.number()` / `z.boolean()`
- * work without `z.coerce`.
+ * work without `z`.
  *
  * Nested `ZodObject` shapes are processed recursively.
  *
@@ -274,7 +274,7 @@ export function extractDefaultsFromSchema(schema: unknown): Record<string, unkno
  *
  * URL query / web-storage deserialization yields strings for every value
  * (`?page=5` → `'5'`), so plain `z.number()` / `z.boolean()` (without
- * `z.coerce`) would reject them. This converts the common cases up front:
+ * `z`) would reject them. This converts the common cases up front:
  *  - boolean: the serializer's `'1'`/`'0'` → `true`/`false`;
  *  - number: a non-empty numeric string → its number.
  *

@@ -13,7 +13,7 @@ describe('applyTransform', () => {
   describe('schema with partial state', () => {
     it('should succeed when nested object is missing from state but present in initialData', () => {
       const schema = z.object({
-        page: z.coerce.number(),
+        page: z.number(),
         filters: z.object({
           title: z.string(),
         }),
@@ -32,12 +32,12 @@ describe('applyTransform', () => {
 
     it('should succeed with deeply nested objects missing from state', () => {
       const schema = z.object({
-        page: z.coerce.number(),
+        page: z.number(),
         filters: z.object({
           title: z.string(),
           created_at: z.object({
-            from: z.coerce.number().nullable(),
-            to: z.coerce.number().nullable(),
+            from: z.number().nullable(),
+            to: z.number().nullable(),
           }),
         }),
       })
@@ -61,7 +61,7 @@ describe('applyTransform', () => {
 
     it('should use state values over initialData when both present', () => {
       const schema = z.object({
-        page: z.coerce.number(),
+        page: z.number(),
         filters: z.object({
           title: z.string(),
         }),
@@ -83,8 +83,8 @@ describe('applyTransform', () => {
         filters: z.object({
           title: z.string(),
           created_at: z.object({
-            from: z.coerce.number().nullable(),
-            to: z.coerce.number().nullable(),
+            from: z.number().nullable(),
+            to: z.number().nullable(),
           }),
         }),
       })
@@ -106,7 +106,7 @@ describe('applyTransform', () => {
 
     it('should still work with schemas that have .default() on nested objects', () => {
       const schema = z.object({
-        page: z.coerce.number().default(1),
+        page: z.number().default(1),
         filters: z
           .object({
             title: z.string().default(''),
@@ -127,7 +127,7 @@ describe('applyTransform', () => {
 
     it('should fall back to initialData when schema fails even after merge', () => {
       const schema = z.object({
-        page: z.coerce.number().int().positive(),
+        page: z.number().int().positive(),
         status: z.enum(['active', 'inactive']),
       })
 
@@ -161,9 +161,9 @@ describe('applyTransform', () => {
       expect(result.data).toEqual({ tags: ['vue'] })
     })
 
-    it('should coerce a single string to number array when schema expects z.coerce.number().array()', () => {
+    it('should coerce a single string to number array when schema expects z.number().array()', () => {
       const schema = z.object({
-        ids: z.coerce.number().array().default([]),
+        ids: z.number().array().default([]),
       })
 
       const result = applyTransform({
@@ -214,7 +214,7 @@ describe('applyTransform', () => {
     it('should handle multiple array fields at once', () => {
       const schema = z.object({
         tags: z.string().array().default([]),
-        ids: z.coerce.number().array().default([]),
+        ids: z.number().array().default([]),
         name: z.string().default(''),
       })
 
@@ -249,7 +249,7 @@ describe('applyTransform', () => {
       const schema = z.object({
         level1: z.object({
           level2: z.object({
-            items: z.coerce.number().array().default([]),
+            items: z.number().array().default([]),
           }),
         }),
       })
@@ -504,7 +504,7 @@ describe('syncReactive + initialData reference safety', () => {
 describe('extractDefaultsFromSchema', () => {
   it('should extract default values from fields', () => {
     const schema = z.object({
-      page: z.coerce.number().default(1),
+      page: z.number().default(1),
       search: z.string().default(''),
     })
 
@@ -513,7 +513,7 @@ describe('extractDefaultsFromSchema', () => {
 
   it('should only include fields that declare a default', () => {
     const schema = z.object({
-      page: z.coerce.number().default(1),
+      page: z.number().default(1),
       search: z.string(),
     })
 
@@ -522,7 +522,7 @@ describe('extractDefaultsFromSchema', () => {
 
   it('should return undefined when no field declares a default', () => {
     const schema = z.object({
-      page: z.coerce.number(),
+      page: z.number(),
       search: z.string(),
     })
 
@@ -531,7 +531,7 @@ describe('extractDefaultsFromSchema', () => {
 
   it('should read the default through an .optional() wrapper', () => {
     const schema = z.object({
-      page: z.coerce.number().default(1).optional(),
+      page: z.number().default(1).optional(),
     })
 
     expect(extractDefaultsFromSchema(schema)).toEqual({ page: 1 })
@@ -539,7 +539,7 @@ describe('extractDefaultsFromSchema', () => {
 
   it('should read the default through a .nullable() wrapper', () => {
     const schema = z.object({
-      page: z.coerce.number().default(1).nullable(),
+      page: z.number().default(1).nullable(),
     })
 
     expect(extractDefaultsFromSchema(schema)).toEqual({ page: 1 })
@@ -558,7 +558,7 @@ describe('extractDefaultsFromSchema', () => {
     const schema = z.object({
       filters: z
         .object({
-          page: z.coerce.number().default(1),
+          page: z.number().default(1),
           search: z.string().default(''),
         })
         .default({ page: 1, search: '' }),
@@ -573,7 +573,7 @@ describe('extractDefaultsFromSchema', () => {
     const schema = z.object({
       filters: z
         .object({
-          page: z.coerce.number(),
+          page: z.number(),
           sort: z.string(),
         })
         .default({ page: 1, sort: 'asc' }),
@@ -588,7 +588,7 @@ describe('extractDefaultsFromSchema', () => {
     const schema = z.object({
       filters: z
         .object({
-          page: z.coerce.number().default(5), // field-level wins
+          page: z.number().default(5), // field-level wins
           sort: z.string(), // no field-level → filled from object-level
         })
         .default({ page: 1, sort: 'asc' }),
@@ -612,7 +612,7 @@ describe('extractDefaultsFromSchema', () => {
 describe('extractAdditionalDefaultDataFromSchema', () => {
   it('should extract additionalDefaultData from field meta', () => {
     const schema = z.object({
-      page: z.coerce.number().default(1).meta({ additionalDefaultData: 1 }),
+      page: z.number().default(1).meta({ additionalDefaultData: 1 }),
       search: z.string().default(''),
     })
 
@@ -621,8 +621,8 @@ describe('extractAdditionalDefaultDataFromSchema', () => {
 
   it('should extract from multiple fields', () => {
     const schema = z.object({
-      page: z.coerce.number().default(1).meta({ additionalDefaultData: 1 }),
-      perPage: z.coerce.number().default(10).meta({ additionalDefaultData: 10 }),
+      page: z.number().default(1).meta({ additionalDefaultData: 1 }),
+      perPage: z.number().default(10).meta({ additionalDefaultData: 10 }),
       search: z.string().default(''),
     })
 
@@ -631,7 +631,7 @@ describe('extractAdditionalDefaultDataFromSchema', () => {
 
   it('should return undefined when no fields have additionalDefaultData', () => {
     const schema = z.object({
-      page: z.coerce.number().default(1),
+      page: z.number().default(1),
       search: z.string().default(''),
     })
 
@@ -640,7 +640,7 @@ describe('extractAdditionalDefaultDataFromSchema', () => {
 
   it('should find meta on inner schema when meta is set before .default()', () => {
     const schema = z.object({
-      page: z.coerce.number().meta({ additionalDefaultData: 1 }).default(1),
+      page: z.number().meta({ additionalDefaultData: 1 }).default(1),
     })
 
     expect(extractAdditionalDefaultDataFromSchema(schema)).toEqual({ page: 1 })
@@ -648,7 +648,7 @@ describe('extractAdditionalDefaultDataFromSchema', () => {
 
   it('should find meta through .optional() wrapper', () => {
     const schema = z.object({
-      page: z.coerce.number().meta({ additionalDefaultData: 1 }).optional(),
+      page: z.number().meta({ additionalDefaultData: 1 }).optional(),
     })
 
     expect(extractAdditionalDefaultDataFromSchema(schema)).toEqual({ page: 1 })
@@ -656,7 +656,7 @@ describe('extractAdditionalDefaultDataFromSchema', () => {
 
   it('should find meta through .nullable() wrapper', () => {
     const schema = z.object({
-      page: z.coerce.number().meta({ additionalDefaultData: 1 }).nullable(),
+      page: z.number().meta({ additionalDefaultData: 1 }).nullable(),
     })
 
     expect(extractAdditionalDefaultDataFromSchema(schema)).toEqual({ page: 1 })
@@ -664,7 +664,7 @@ describe('extractAdditionalDefaultDataFromSchema', () => {
 
   it('should find meta through chained wrappers (.default().optional())', () => {
     const schema = z.object({
-      page: z.coerce.number().meta({ additionalDefaultData: 1 }).default(1).optional(),
+      page: z.number().meta({ additionalDefaultData: 1 }).default(1).optional(),
     })
 
     expect(extractAdditionalDefaultDataFromSchema(schema)).toEqual({ page: 1 })
@@ -674,7 +674,7 @@ describe('extractAdditionalDefaultDataFromSchema', () => {
     const schema = z.object({
       filters: z
         .object({
-          page: z.coerce.number().default(1).meta({ additionalDefaultData: 1 }),
+          page: z.number().default(1).meta({ additionalDefaultData: 1 }),
           search: z.string().default(''),
         })
         .default({ page: 1, search: '' }),
@@ -715,7 +715,7 @@ describe('extractAdditionalDefaultDataFromSchema', () => {
   it('should prefer outermost meta when meta is set at multiple levels', () => {
     // meta on the .default() wrapper (outermost) should win over meta on the inner type
     const schema = z.object({
-      page: z.coerce
+      page: z
         .number()
         .meta({ additionalDefaultData: 99 })
         .default(1)
@@ -739,7 +739,7 @@ describe('extractDefaultsFromSchema', () => {
   it('collects field-level defaults of a nested object without an object-level default', () => {
     const schema = z.object({
       inner: z.object({
-        x: z.coerce.number().default(5),
+        x: z.number().default(5),
       }),
     })
     expect(extractDefaultsFromSchema(schema)).toEqual({ inner: { x: 5 } })

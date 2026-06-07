@@ -154,7 +154,7 @@ useContextStorage('sessionStorage', filters, {
 useContextStorage('query', filters, {
   key: 'filters',
   schema: z.object({
-    page: z.coerce.number().default(1),
+    page: z.number().default(1),
     search: z.string().default(''),
     status: z.string().default('active'),
   }),
@@ -267,7 +267,7 @@ import { useContextStorage } from 'vue-context-storage'
 // Define schema with automatic coercion
 const FiltersSchema = z.object({
   search: z.string().default(''),
-  page: z.coerce.number().int().positive().default(1),
+  page: z.number().int().positive().default(1),
   status: z.enum(['active', 'inactive']).default('active'),
 })
 
@@ -329,7 +329,7 @@ import { z } from 'zod'
 
 const ItemSchema = z.object({
   product: z.string().default(''),
-  quantity: z.coerce.number().default(0),
+  quantity: z.number().default(0),
 })
 
 const DataSchema = z.object({
@@ -379,7 +379,7 @@ When using Zod schemas, you can also specify `additionalDefaultData` per-field v
 
 ```typescript
 const Schema = z.object({
-  page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+  page: z.number().default(1).meta({ additionalDefaultData: 3 }),
   search: z.string().default(''),
 })
 
@@ -405,7 +405,7 @@ Nested objects work the same way. Following the documented best practice of decl
 const Schema = z.object({
   filters: z
     .object({
-      page: z.coerce.number(),
+      page: z.number(),
       sort: z.string(),
     })
     .default({ page: 1, sort: 'asc' }),
@@ -770,7 +770,7 @@ The library introspects the Zod schema before validation and wraps non-array val
 ```typescript
 const Schema = z.object({
   tags: z.string().array().default([]),
-  ids: z.coerce.number().array().default([]),
+  ids: z.number().array().default([]),
   statuses: z.enum(['active', 'inactive']).array().default([]),
   filters: z
     .object({
@@ -790,7 +790,7 @@ Arrays of objects are also handled automatically. They deserialize from indexed 
 ```typescript
 const ItemSchema = z.object({
   product: z.string().default(''),
-  quantity: z.coerce.number().default(0),
+  quantity: z.number().default(0),
 })
 
 const Schema = z.object({
@@ -803,7 +803,7 @@ const Schema = z.object({
 
 #### Boolean Coercion
 
-The query handler serializes booleans as `'1'`/`'0'` strings in URL parameters (e.g. `?active=1`). Standard `z.coerce.boolean()` cannot be used because `Boolean('0')` is `true` in JavaScript. The library automatically converts `'1'` → `true` and `'0'` → `false` when the schema expects a boolean field. **No special helpers are needed** — plain `z.boolean()` works out of the box:
+The query handler serializes booleans as `'1'`/`'0'` strings in URL parameters (e.g. `?active=1`). Standard `z.boolean()` cannot be used because `Boolean('0')` is `true` in JavaScript. The library automatically converts `'1'` → `true` and `'0'` → `false` when the schema expects a boolean field. **No special helpers are needed** — plain `z.boolean()` works out of the box:
 
 ```typescript
 const Schema = z.object({
@@ -817,7 +817,7 @@ const Schema = z.object({
 
 #### Number Coercion
 
-URL query parameters are always strings (`?page=5` → `'5'`), so plain `z.number()` would reject them with `"expected number, received string"`. The library automatically converts numeric strings to numbers wherever the schema expects a number — including inside nested objects and `z.array(z.number())`. **`z.coerce` is not required** — plain `z.number()` works out of the box:
+URL query parameters are always strings (`?page=5` → `'5'`), so plain `z.number()` would reject them with `"expected number, received string"`. The library automatically converts numeric strings to numbers wherever the schema expects a number — including inside nested objects and `z.array(z.number())`. **`z` is not required** — plain `z.number()` works out of the box:
 
 ```typescript
 const Schema = z.object({
@@ -833,7 +833,7 @@ const Schema = z.object({
 
 Coercion is conservative: a non-numeric string (`?page=abc`) or an empty value is **not** forced to a number (`Number('')` would be `0`). Instead the schema validation fails and the field falls back to its initial data, so missing/garbage input never silently becomes `0`. `null` is preserved for `.nullable()` fields.
 
-> `z.coerce.number()` still works and remains useful when you want Zod's own coercion semantics (e.g. coercing booleans or accepting empty strings as `0`).
+> `z.number()` still works and remains useful when you want Zod's own coercion semantics (e.g. coercing booleans or accepting empty strings as `0`).
 
 ### `createEmptyZodObject(schema, options?)`
 
@@ -845,7 +845,7 @@ import { createEmptyZodObject } from 'vue-context-storage'
 
 const FiltersSchema = z.object({
   search: z.string().default(''),
-  page: z.coerce.number().default(1),
+  page: z.number().default(1),
   active: z.boolean().default(false),
   score: z.number().nullable(),
 })
@@ -896,7 +896,7 @@ When using Zod schemas, TypeScript will automatically infer types:
 ```typescript
 const FiltersSchema = z.object({
   search: z.string().default(''),
-  page: z.coerce.number().default(1),
+  page: z.number().default(1),
 })
 
 type Filters = z.infer<typeof FiltersSchema>

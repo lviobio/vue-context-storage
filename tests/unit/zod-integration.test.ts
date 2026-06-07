@@ -11,7 +11,7 @@ import { serializeParams, deserializeParams } from '../../src/handlers/query/hel
 describe('z.array of objects (applyTransform coercion)', () => {
   const ItemSchema = z.object({
     product: z.string().default(''),
-    quantity: z.coerce.number().default(0),
+    quantity: z.number().default(0),
   })
 
   const Schema = z.object({
@@ -235,10 +235,10 @@ describe('z.array of objects (applyTransform coercion)', () => {
 
 // URL query / web-storage deserialization yields strings for every value
 // (`?page=5` → `'5'`). `applyTransform` already coerces `'1'`/`'0'` to booleans
-// so plain `z.boolean()` works without `.coerce`; by symmetry it coerces numeric
-// strings to numbers so plain `z.number()` works without `.coerce.number()`.
+// so plain `z.boolean()` works without ``; by symmetry it coerces numeric
+// strings to numbers so plain `z.number()` works without `.number()`.
 // These are regression tests for that auto-coercion.
-describe('z.number auto-coercion (applyTransform, no z.coerce)', () => {
+describe('z.number auto-coercion (applyTransform, no z)', () => {
   describe('top-level number fields', () => {
     it('should coerce a numeric string for plain z.number()', () => {
       const Schema = z.object({ page: z.number() })
@@ -440,381 +440,112 @@ describe('z.number auto-coercion (applyTransform, no z.coerce)', () => {
   })
 })
 
-describe('Zod Schema Integration', () => {
-  describe('basic schemas', () => {
-    it('should validate simple object schema', () => {
-      const Schema = z.object({
-        search: z.string().default(''),
-        page: z.coerce.number().default(1),
-      })
-
-      const result = Schema.safeParse({ search: 'test', page: '2' })
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data).toEqual({ search: 'test', page: 2 })
-      }
-    })
-
-    it('should use default values for missing fields', () => {
-      const Schema = z.object({
-        search: z.string().default(''),
-        page: z.coerce.number().default(1),
-      })
-
-      const result = Schema.safeParse({})
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data).toEqual({ search: '', page: 1 })
-      }
-    })
-
-    it('should coerce string numbers to numbers', () => {
-      const Schema = z.object({
-        page: z.coerce.number(),
-        limit: z.coerce.number(),
-      })
-
-      const result = Schema.safeParse({ page: '5', limit: '10' })
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data).toEqual({ page: 5, limit: 10 })
-      }
-    })
-
-    it('should validate enums', () => {
-      const Schema = z.object({
-        status: z.enum(['active', 'inactive']).default('active'),
-      })
-
-      const result1 = Schema.safeParse({ status: 'active' })
-      expect(result1.success).toBe(true)
-
-      const result2 = Schema.safeParse({ status: 'invalid' })
-      expect(result2.success).toBe(false)
-    })
-  })
-
-  describe('nested object schemas', () => {
-    it('should validate nested objects with defaults', () => {
-      const Schema = z.object({
-        user: z
-          .object({
-            name: z.string().default(''),
-            age: z.coerce.number().default(0),
-          })
-          .default({ name: '', age: 0 }),
-      })
-
-      const result = Schema.safeParse({})
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data).toEqual({
-          user: { name: '', age: 0 },
+// These tests route deserialized data through `applyTransform` — the library's
+// entry point that runs `coerceDataForSchema` and then `schema.safeParse`,
+// falling back to `initialData` (with a warning) on failure. The previous suite
+// here called `schema.safeParse(...)` directly with string inputs, which only
+// re-verified Zod's own behavior rather than this library's coercion/fallback.
+describe('Zod schema integration (applyTransform)', () => {
+  it('should coerce a complex filter schema from URL-style strings', () => {
+    const FiltersSchema = z.object({
+      search: z.string().default(''),
+      page: z.number().int().positive().default(1),
+      perPage: z.number().int().positive().default(25),
+      status: z.enum(['active', 'inactive', 'pending']).default('active'),
+      tags: z.array(z.string()).default([]),
+      dateRange: z
+        .object({
+          from: z.string().default(''),
+          to: z.string().default(''),
         })
-      }
+        .default({ from: '', to: '' }),
     })
 
-    it('should validate deeply nested objects', () => {
-      const Schema = z.object({
-        filters: z
-          .object({
-            date: z
-              .object({
-                from: z.string().default(''),
-                to: z.string().default(''),
-              })
-              .default({ from: '', to: '' }),
-          })
-          .default({ date: { from: '', to: '' } }),
-      })
+    const initialData = {
+      search: '',
+      page: 1,
+      perPage: 25,
+      status: 'active',
+      tags: [] as string[],
+      dateRange: { from: '', to: '' },
+    }
 
-      const result = Schema.safeParse({})
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.filters.date).toEqual({ from: '', to: '' })
-      }
+    const { data, warnings } = applyTransform({
+      // As deserialized from `?search=test&page=2&status=inactive&tags=vue&tags=typescript`
+      state: { search: 'test', page: '2', status: 'inactive', tags: ['vue', 'typescript'] },
+      initialData,
+      schema: FiltersSchema,
+      mergeOnlyExistingKeysWithoutTransform: true,
     })
 
-    it('should fail without object-level defaults', () => {
-      const Schema = z.object({
-        user: z.object({
-          name: z.string().default(''),
-          age: z.coerce.number().default(0),
-        }),
-        // Missing .default() at object level
-      })
-
-      const result = Schema.safeParse({})
-
-      expect(result.success).toBe(false)
-    })
-
-    it('should validate partial nested objects', () => {
-      const Schema = z.object({
-        user: z
-          .object({
-            name: z.string().default('John'),
-            age: z.coerce.number().default(30),
-          })
-          .default({ name: 'John', age: 30 }),
-      })
-
-      const result = Schema.safeParse({ user: { name: 'Jane' } })
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.user).toEqual({ name: 'Jane', age: 30 })
-      }
+    expect(warnings).toEqual([])
+    expect(data).toEqual({
+      search: 'test',
+      page: 2,
+      perPage: 25,
+      status: 'inactive',
+      tags: ['vue', 'typescript'],
+      dateRange: { from: '', to: '' },
     })
   })
 
-  describe('array schemas', () => {
-    it('should validate string arrays', () => {
-      const Schema = z.object({
-        tags: z.array(z.string()).default([]),
-      })
-
-      const result = Schema.safeParse({ tags: ['a', 'b', 'c'] })
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.tags).toEqual(['a', 'b', 'c'])
-      }
-    })
-
-    it('should validate number arrays with coercion', () => {
-      const Schema = z.object({
-        ids: z.array(z.coerce.number()).default([]),
-      })
-
-      const result = Schema.safeParse({ ids: ['1', '2', '3'] })
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.ids).toEqual([1, 2, 3])
-      }
-    })
-
-    it('should use default empty array', () => {
-      const Schema = z.object({
-        tags: z.array(z.string()).default([]),
-      })
-
-      const result = Schema.safeParse({})
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.tags).toEqual([])
-      }
-    })
-  })
-
-  describe('boolean schemas', () => {
-    it('should coerce string booleans', () => {
-      const Schema = z.object({
-        active: z.coerce.boolean(),
-      })
-
-      const result1 = Schema.safeParse({ active: true })
-      const result2 = Schema.safeParse({ active: false })
-
-      expect(result1.success).toBe(true)
-      expect(result2.success).toBe(true)
-
-      if (result1.success) expect(result1.data.active).toBe(true)
-      if (result2.success) expect(result2.data.active).toBe(false)
-    })
-
-    it('should handle boolean defaults', () => {
-      const Schema = z.object({
-        active: z.coerce.boolean().default(false),
-      })
-
-      const result = Schema.safeParse({})
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data.active).toBe(false)
-      }
-    })
-  })
-
-  describe('validation and constraints', () => {
-    it('should validate min/max for numbers', () => {
-      const Schema = z.object({
-        page: z.coerce.number().int().positive().min(1).max(100).default(1),
-      })
-
-      const result1 = Schema.safeParse({ page: '50' })
-      const result2 = Schema.safeParse({ page: '0' })
-      const result3 = Schema.safeParse({ page: '101' })
-
-      expect(result1.success).toBe(true)
-      expect(result2.success).toBe(false)
-      expect(result3.success).toBe(false)
-    })
-
-    it('should validate string patterns', () => {
-      const Schema = z.object({
-        email: z.string().email().default(''),
-      })
-
-      const result1 = Schema.safeParse({ email: 'test@example.com' })
-      const result2 = Schema.safeParse({ email: 'invalid' })
-
-      expect(result1.success).toBe(true)
-      expect(result2.success).toBe(false)
-    })
-
-    it('should validate string length', () => {
-      const Schema = z.object({
-        name: z.string().min(3).max(10).default(''),
-      })
-
-      const result1 = Schema.safeParse({ name: 'John' })
-      const result2 = Schema.safeParse({ name: 'Jo' })
-      const result3 = Schema.safeParse({ name: 'VeryLongName' })
-
-      expect(result1.success).toBe(true)
-      expect(result2.success).toBe(false)
-      expect(result3.success).toBe(false)
-    })
-  })
-
-  describe('optional and nullable', () => {
-    it('should handle optional fields', () => {
-      const Schema = z.object({
-        search: z.string().optional(),
-        page: z.coerce.number().default(1),
-      })
-
-      const result = Schema.safeParse({ page: '2' })
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data).toEqual({ page: 2 })
-      }
-    })
-
-    it('should handle nullable fields', () => {
-      const Schema = z.object({
-        search: z.string().nullable().default(null),
-      })
-
-      const result1 = Schema.safeParse({ search: null })
-      const result2 = Schema.safeParse({})
-
-      expect(result1.success).toBe(true)
-      expect(result2.success).toBe(true)
-
-      if (result1.success) expect(result1.data.search).toBe(null)
-      if (result2.success) expect(result2.data.search).toBe(null)
-    })
-  })
-
-  describe('complex real-world schemas', () => {
-    it('should validate complex filter schema', () => {
-      const FiltersSchema = z.object({
-        search: z.string().default(''),
-        page: z.coerce.number().int().positive().default(1),
-        perPage: z.coerce.number().int().positive().default(25),
-        status: z.enum(['active', 'inactive', 'pending']).default('active'),
-        tags: z.array(z.string()).default([]),
-        dateRange: z
-          .object({
-            from: z.string().default(''),
-            to: z.string().default(''),
-          })
-          .default({ from: '', to: '' }),
-      })
-
-      const result = FiltersSchema.safeParse({
-        search: 'test',
-        page: '2',
-        status: 'inactive',
-        tags: ['vue', 'typescript'],
-      })
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data).toEqual({
-          search: 'test',
-          page: 2,
-          perPage: 25,
-          status: 'inactive',
-          tags: ['vue', 'typescript'],
-          dateRange: { from: '', to: '' },
+  it('should coerce nested numbers and booleans in a table-state schema', () => {
+    const TableStateSchema = z.object({
+      page: z.number().int().positive().default(1),
+      sort: z
+        .object({
+          by: z.string().default('id'),
+          order: z.enum(['asc', 'desc']).default('asc'),
         })
-      }
+        .default({ by: 'id', order: 'asc' }),
+      filters: z
+        .object({
+          search: z.string().default(''),
+          active: z.boolean().default(true),
+        })
+        .default({ search: '', active: true }),
     })
 
-    it('should validate table state schema', () => {
-      const TableStateSchema = z.object({
-        page: z.coerce.number().int().positive().default(1),
-        sort: z
-          .object({
-            by: z.string().default('id'),
-            order: z.enum(['asc', 'desc']).default('asc'),
-          })
-          .default({ by: 'id', order: 'asc' }),
-        filters: z
-          .object({
-            search: z.string().default(''),
-            active: z.coerce.boolean().default(true),
-          })
-          .default({ search: '', active: true }),
-      })
-
-      const result = TableStateSchema.safeParse({
+    const { data, warnings } = applyTransform({
+      // `active: '0'` is the serialized boolean form produced for the URL.
+      state: {
         page: '3',
         sort: { by: 'name', order: 'desc' },
-      })
+        filters: { search: 'q', active: '0' },
+      },
+      initialData: {
+        page: 1,
+        sort: { by: 'id', order: 'asc' },
+        filters: { search: '', active: true },
+      },
+      schema: TableStateSchema,
+      mergeOnlyExistingKeysWithoutTransform: true,
+    })
 
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.data).toEqual({
-          page: 3,
-          sort: { by: 'name', order: 'desc' },
-          filters: { search: '', active: true },
-        })
-      }
+    expect(warnings).toEqual([])
+    expect(data).toEqual({
+      page: 3,
+      sort: { by: 'name', order: 'desc' },
+      filters: { search: 'q', active: false },
     })
   })
 
-  describe('error handling', () => {
-    it('should provide detailed error information', () => {
-      const Schema = z.object({
-        page: z.coerce.number().int().positive(),
-      })
-
-      const result = Schema.safeParse({ page: '-5' })
-
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error).toBeDefined()
-        expect(result.error.issues).toBeDefined()
-        expect(result.error.issues.length).toBeGreaterThan(0)
-      }
+  it('should fall back to initialData and warn when a value violates a constraint', () => {
+    const Schema = z.object({
+      page: z.number().int().positive().default(1),
     })
 
-    it('should handle multiple validation errors', () => {
-      const Schema = z.object({
-        email: z.string().email(),
-        age: z.coerce.number().int().positive().min(18),
-      })
-
-      const result = Schema.safeParse({ email: 'invalid', age: '10' })
-
-      expect(result.success).toBe(false)
-      if (!result.success) {
-        expect(result.error.issues.length).toBeGreaterThanOrEqual(1)
-      }
+    const { data, warnings } = applyTransform({
+      // '-5' coerces to the number -5, which then fails `.positive()`.
+      state: { page: '-5' },
+      initialData: { page: 1 },
+      schema: Schema,
+      mergeOnlyExistingKeysWithoutTransform: true,
     })
+
+    expect(data).toEqual({ page: 1 })
+    expect(warnings.length).toBeGreaterThan(0)
+    expect(warnings[0].message).toContain('schema parse failed')
   })
 })
 
@@ -830,8 +561,8 @@ describe('createEmptyZodObject', () => {
       expect(createEmptyZodObject(Schema)).toEqual({ count: 0 })
     })
 
-    it('should create 0 for z.coerce.number()', () => {
-      const Schema = z.object({ page: z.coerce.number() })
+    it('should create 0 for z.number()', () => {
+      const Schema = z.object({ page: z.number() })
       expect(createEmptyZodObject(Schema)).toEqual({ page: 0 })
     })
 
@@ -858,7 +589,7 @@ describe('createEmptyZodObject', () => {
     })
 
     it('should use default value from z.number().default()', () => {
-      const Schema = z.object({ page: z.coerce.number().default(1) })
+      const Schema = z.object({ page: z.number().default(1) })
       expect(createEmptyZodObject(Schema)).toEqual({ page: 1 })
     })
 
@@ -873,7 +604,7 @@ describe('createEmptyZodObject', () => {
     })
 
     it('should use default null from z.number().nullable().default(null)', () => {
-      const Schema = z.object({ value: z.coerce.number().nullable().default(null) })
+      const Schema = z.object({ value: z.number().nullable().default(null) })
       expect(createEmptyZodObject(Schema)).toEqual({ value: null })
     })
 
@@ -887,7 +618,7 @@ describe('createEmptyZodObject', () => {
         filters: z
           .object({
             search: z.string().default(''),
-            page: z.coerce.number().default(1),
+            page: z.number().default(1),
           })
           .default({ search: '', page: 1 }),
       })
@@ -904,7 +635,7 @@ describe('createEmptyZodObject', () => {
     })
 
     it('should ignore defaults and use type-based values for number', () => {
-      const Schema = z.object({ page: z.coerce.number().default(5) })
+      const Schema = z.object({ page: z.number().default(5) })
       expect(createEmptyZodObject(Schema, { useDefaults: false })).toEqual({ page: 0 })
     })
 
@@ -1031,7 +762,7 @@ describe('createEmptyZodObject', () => {
     it('should handle mixed field types', () => {
       const Schema = z.object({
         name: z.string().default(''),
-        page: z.coerce.number().default(1),
+        page: z.number().default(1),
         active: z.boolean().default(false),
         tags: z.array(z.string()).default([]),
         score: z.number().nullable(),
@@ -1047,14 +778,14 @@ describe('createEmptyZodObject', () => {
 
     it('should handle table filters schema', () => {
       const Schema = z.object({
-        page: z.coerce.number().default(1),
+        page: z.number().default(1),
         filters: z
           .object({
             title: z.string().default(''),
             created_at: z
               .object({
-                from: z.coerce.number().nullable().default(null),
-                to: z.coerce.number().nullable().default(null),
+                from: z.number().nullable().default(null),
+                to: z.number().nullable().default(null),
               })
               .default({ from: null, to: null }),
           })
@@ -1072,7 +803,7 @@ describe('createEmptyZodObject', () => {
     it('should handle schema without any defaults (useDefaults: false)', () => {
       const Schema = z.object({
         search: z.string().default('query'),
-        page: z.coerce.number().default(5),
+        page: z.number().default(5),
         active: z.boolean().default(true),
       })
       expect(createEmptyZodObject(Schema, { useDefaults: false })).toEqual({
@@ -1120,7 +851,7 @@ describe('createEmptyZodObject', () => {
     it('should return result that passes schema validation', () => {
       const Schema = z.object({
         name: z.string().default(''),
-        page: z.coerce.number().default(1),
+        page: z.number().default(1),
         active: z.boolean().default(false),
         filters: z
           .object({
@@ -1220,7 +951,7 @@ describe('createEmptyZodObject', () => {
     })
 
     it('should attach schema as markRaw (non-reactive)', () => {
-      const Schema = z.object({ page: z.coerce.number().default(1) })
+      const Schema = z.object({ page: z.number().default(1) })
       const obj = createEmptyZodObject(Schema, { withSchema: true })
       // markRaw adds __v_skip flag
       expect((obj[SCHEMA_SYMBOL] as any).__v_skip).toBe(true)
@@ -1229,7 +960,7 @@ describe('createEmptyZodObject', () => {
     it('should still produce correct values with withSchema', () => {
       const Schema = z.object({
         name: z.string().default('hello'),
-        count: z.coerce.number().default(5),
+        count: z.number().default(5),
       })
       const obj = createEmptyZodObject(Schema, { withSchema: true })
       expect(obj.name).toBe('hello')
@@ -1283,7 +1014,7 @@ describe('createEmptyZodObject', () => {
 
     it('should produce result that passes schema validation with withSchema', () => {
       const Schema = z.object({
-        page: z.coerce.number().default(1),
+        page: z.number().default(1),
         filters: z
           .object({
             search: z.string().default(''),

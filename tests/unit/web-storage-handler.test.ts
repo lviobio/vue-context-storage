@@ -130,7 +130,7 @@ describe('createWebStorageHandlerInstance', () => {
       const data = reactive({ count: 0 })
       handler.register(data, {
         key: 'k',
-        schema: z.object({ count: z.coerce.number().default(0) }),
+        schema: z.object({ count: z.number().default(0) }),
       })
       handler.setEnabled(true, true)
       expect(data.count).toBe(7)

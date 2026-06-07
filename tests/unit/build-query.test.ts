@@ -643,7 +643,7 @@ describe('buildQuery', () => {
 
     it('should omit key matching additionalDefaultData from schema meta', () => {
       const schema = z.object({
-        page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+        page: z.number().default(1).meta({ additionalDefaultData: 3 }),
         search: z.string().default(''),
       })
 
@@ -665,7 +665,7 @@ describe('buildQuery', () => {
 
     it('should keep key that differs from both initial and schema meta additionalDefaultData', () => {
       const schema = z.object({
-        page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+        page: z.number().default(1).meta({ additionalDefaultData: 3 }),
         search: z.string().default(''),
       })
 
@@ -687,7 +687,7 @@ describe('buildQuery', () => {
 
     it('should merge schema meta with option-level additionalDefaultData', () => {
       const schema = z.object({
-        page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+        page: z.number().default(1).meta({ additionalDefaultData: 3 }),
         search: z.string().default(''),
       })
 
@@ -714,7 +714,7 @@ describe('buildQuery', () => {
 
     it('should let option-level additionalDefaultData override schema meta for the same key', () => {
       const schema = z.object({
-        page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+        page: z.number().default(1).meta({ additionalDefaultData: 3 }),
         search: z.string().default(''),
       })
 
@@ -742,7 +742,7 @@ describe('buildQuery', () => {
       const schema = z.object({
         filters: z
           .object({
-            page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+            page: z.number().default(1).meta({ additionalDefaultData: 3 }),
             search: z.string().default(''),
           })
           .default({ page: 1, search: '' }),
@@ -770,8 +770,8 @@ describe('buildQuery', () => {
 
     it('should work with multiple fields having schema meta', () => {
       const schema = z.object({
-        page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
-        perPage: z.coerce.number().default(10).meta({ additionalDefaultData: 25 }),
+        page: z.number().default(1).meta({ additionalDefaultData: 3 }),
+        perPage: z.number().default(10).meta({ additionalDefaultData: 25 }),
         search: z.string().default(''),
       })
 
@@ -793,7 +793,7 @@ describe('buildQuery', () => {
 
     it('should have no effect when schema has no meta additionalDefaultData', () => {
       const schema = z.object({
-        page: z.coerce.number().default(1),
+        page: z.number().default(1),
         search: z.string().default(''),
       })
 
@@ -817,7 +817,7 @@ describe('buildQuery', () => {
       // This is the regression case: previously a shallow merge dropped the meta value
       // when option also declared the same key, so page=5 would appear in the URL.
       const schema = z.object({
-        page: z.coerce.number().default(1).meta({ additionalDefaultData: 5 }),
+        page: z.number().default(1).meta({ additionalDefaultData: 5 }),
         search: z.string().default(''),
       })
 
@@ -930,7 +930,7 @@ describe('buildQuery', () => {
 
     it('should omit a value matching the schema .default() (initial starts undefined)', () => {
       const schema = z.object({
-        page: z.coerce.number().default(1),
+        page: z.number().default(1),
         search: z.string().default(''),
       })
 
@@ -952,7 +952,7 @@ describe('buildQuery', () => {
 
     it('should omit both the schema default and the meta additionalDefaultData value', () => {
       const schema = z.object({
-        page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+        page: z.number().default(1).meta({ additionalDefaultData: 3 }),
         search: z.string().default(''),
       })
 
@@ -1006,7 +1006,7 @@ describe('buildQuery', () => {
       const schema = z.object({
         filters: z
           .object({
-            page: z.coerce.number().default(1),
+            page: z.number().default(1),
             search: z.string().default(''),
           })
           .default({ page: 1, search: '' }),
@@ -1030,7 +1030,7 @@ describe('buildQuery', () => {
 
     it('should keep a value that differs from the schema default', () => {
       const schema = z.object({
-        page: z.coerce.number().default(1),
+        page: z.number().default(1),
       })
 
       const result = buildQuery(

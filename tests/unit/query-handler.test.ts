@@ -64,7 +64,7 @@ describe('createQueryHandler', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const { handler } = await setup()
       handler.register(reactive({ page: 1 }), {
-        schema: z.object({ page: z.coerce.number().default(1) }),
+        schema: z.object({ page: z.number().default(1) }),
       })
       expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('non-string values'))
     })
@@ -123,7 +123,7 @@ describe('createQueryHandler', () => {
       const data = reactive({ page: 1 })
       handler.register(data, {
         key: 'f',
-        schema: z.object({ page: z.coerce.number().default(1) }),
+        schema: z.object({ page: z.number().default(1) }),
       })
       handler.setEnabled(true, true)
       data.page = 4
@@ -158,7 +158,7 @@ describe('createQueryHandler', () => {
       const data = reactive({ page: 1 })
       handler.register(data, {
         key: 'f',
-        schema: z.object({ page: z.coerce.number().default(1) }),
+        schema: z.object({ page: z.number().default(1) }),
       })
       handler.setEnabled(true, true)
       await flushPromises()
@@ -363,7 +363,7 @@ describe('createQueryHandler', () => {
       handler.register(data, {
         key: 'filters',
         schema: z.object({
-          page: z.coerce.number().default(1),
+          page: z.number().default(1),
           search: z.string().default(''),
         }),
       })
@@ -444,7 +444,7 @@ describe('createQueryHandler', () => {
     it('serializes schema meta additionalDefaultData into a separate baseline', async () => {
       const { handler, router } = await setup()
       const schema = z.object({
-        page: z.coerce.number().default(1).meta({ additionalDefaultData: 3 }),
+        page: z.number().default(1).meta({ additionalDefaultData: 3 }),
       })
       const data = reactive({ page: 3 })
       handler.register(data, { schema })
