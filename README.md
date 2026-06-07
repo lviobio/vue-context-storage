@@ -33,7 +33,7 @@ useContextStorage('query', filters, { schema: z.object({ search: z.string(), pag
 useContextStorage('query', filters, {
   transform: (value) => ({ search: value.search, page: Number(value.page) }),
 }) // URL: /products?filters[search]=shoes&filters[page]=2
-// And a lot of other features... (onlyChanges option; createEmptyObject helper for zod schemas; additional default values; passing 'key' via ContextStoragePrefix wrapper)
+// And a lot of other features... (onlyChanges option; createEmptyZodObject helper for zod schemas; additional default values; passing 'key' via ContextStoragePrefix wrapper)
 ```
 
 ## Live Demo
@@ -749,9 +749,9 @@ transform.asNumber(value, {
 })
 ```
 
-## Zod Helpers (`vue-context-storage/zod`)
+## Zod Helpers
 
-The library provides a separate entry point with Zod-specific helpers. Since `zod` is an optional peer dependency, these helpers are isolated in `vue-context-storage/zod` to avoid importing Zod in the main bundle.
+Zod-specific helpers are exported from the main entry point. `zod` remains an optional peer dependency — the helpers are implemented via duck-typed schema introspection, so the main bundle never imports Zod at runtime.
 
 ```bash
 npm install zod
@@ -815,13 +815,13 @@ const Schema = z.object({
 // ?active=0  → { active: false, enabled: true }
 ```
 
-### `createSchemaObject(schema, options?)`
+### `createEmptyZodObject(schema, options?)`
 
 Creates a plain object with empty/default values based on a Zod schema. Useful for initializing reactive data from a schema definition.
 
 ```typescript
 import { z } from 'zod'
-import { createSchemaObject } from 'vue-context-storage/zod'
+import { createEmptyZodObject } from 'vue-context-storage'
 
 const FiltersSchema = z.object({
   search: z.string().default(''),
@@ -830,7 +830,7 @@ const FiltersSchema = z.object({
   score: z.number().nullable(),
 })
 
-const filters = reactive(createSchemaObject(FiltersSchema))
+const filters = reactive(createEmptyZodObject(FiltersSchema))
 // Result: { search: '', page: 1, active: false, score: null }
 ```
 
@@ -840,24 +840,24 @@ const filters = reactive(createSchemaObject(FiltersSchema))
 - `withSchema` (default: `false`) — When `true`, attaches the schema to the result object via `SCHEMA_SYMBOL` (wrapped with `markRaw`). Nested objects also receive their respective schemas.
 
 ```typescript
-import { createSchemaObject, SCHEMA_SYMBOL } from 'vue-context-storage/zod'
+import { createEmptyZodObject, SCHEMA_SYMBOL } from 'vue-context-storage'
 
-const data = createSchemaObject(FiltersSchema, { withSchema: true })
+const data = createEmptyZodObject(FiltersSchema, { withSchema: true })
 data[SCHEMA_SYMBOL] // → FiltersSchema
 ```
 
 **Type-based defaults** (when `useDefaults: false` or no `.default()` is set):
 
-| Zod type      | Default value                                |
-| ------------- | -------------------------------------------- |
-| `z.string()`  | `''`                                         |
-| `z.number()`  | `0` (respects `.min()` / `.positive()`)      |
-| `z.boolean()` | `false`                                      |
-| `z.array()`   | `[]`                                         |
-| `z.object()`  | Recursively created via `createSchemaObject` |
-| `z.date()`    | `null`                                       |
-| `.nullable()` | `null`                                       |
-| `.optional()` | `undefined`                                  |
+| Zod type      | Default value                                  |
+| ------------- | ---------------------------------------------- |
+| `z.string()`  | `''`                                           |
+| `z.number()`  | `0` (respects `.min()` / `.positive()`)        |
+| `z.boolean()` | `false`                                        |
+| `z.array()`   | `[]`                                           |
+| `z.object()`  | Recursively created via `createEmptyZodObject` |
+| `z.date()`    | `null`                                         |
+| `.nullable()` | `null`                                         |
+| `.optional()` | `undefined`                                    |
 
 ## TypeScript Support
 

@@ -35,6 +35,9 @@ export { createSessionStorageHandler } from './handlers/session-storage'
 export { defineContextStorageHandler, resolveHandlerInjectionKey } from './registry'
 export type { ContextStorageHandlerMap } from './registry'
 
+// Zod helpers
+export { createEmptyZodObject, SCHEMA_SYMBOL, type MaybeWithSchema } from './zod'
+
 // Query transform helpers
 export {
   asArray,

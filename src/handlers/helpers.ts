@@ -53,7 +53,7 @@ export interface ApplyTransformResult {
  * if the value is not a recognisable Zod type.  Works purely via duck-typing
  * so the library never needs to import `zod` directly.
  */
-function zodDefType(field: unknown): string | undefined {
+export function zodDefType(field: unknown): string | undefined {
   return (field as any)?._zod?.def?.type
 }
 

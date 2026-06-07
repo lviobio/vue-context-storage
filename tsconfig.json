@@ -17,8 +17,7 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "vue-context-storage": ["./src/index.ts"],
-      "vue-context-storage/zod": ["./src/zod.ts"]
+      "vue-context-storage": ["./src/index.ts"]
     }
   },
   "include": ["src", "playground", "**/*.d.ts"]

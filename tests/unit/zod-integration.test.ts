@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { z } from 'zod'
-import { createEmptyObject, SCHEMA_SYMBOL } from '../../src/zod'
+import { createEmptyZodObject, SCHEMA_SYMBOL } from '../../src'
 import { applyTransform } from '../../src/handlers/helpers'
 import { serializeParams, deserializeParams } from '../../src/handlers/query/helpers'
 
@@ -611,68 +611,68 @@ describe('Zod Schema Integration', () => {
   })
 })
 
-describe('createEmptyObject', () => {
+describe('createEmptyZodObject', () => {
   describe('basic types', () => {
     it('should create empty string for z.string()', () => {
       const Schema = z.object({ name: z.string() })
-      expect(createEmptyObject(Schema)).toEqual({ name: '' })
+      expect(createEmptyZodObject(Schema)).toEqual({ name: '' })
     })
 
     it('should create 0 for z.number()', () => {
       const Schema = z.object({ count: z.number() })
-      expect(createEmptyObject(Schema)).toEqual({ count: 0 })
+      expect(createEmptyZodObject(Schema)).toEqual({ count: 0 })
     })
 
     it('should create 0 for z.coerce.number()', () => {
       const Schema = z.object({ page: z.coerce.number() })
-      expect(createEmptyObject(Schema)).toEqual({ page: 0 })
+      expect(createEmptyZodObject(Schema)).toEqual({ page: 0 })
     })
 
     it('should create false for z.boolean()', () => {
       const Schema = z.object({ active: z.boolean() })
-      expect(createEmptyObject(Schema)).toEqual({ active: false })
+      expect(createEmptyZodObject(Schema)).toEqual({ active: false })
     })
 
     it('should create empty array for z.array()', () => {
       const Schema = z.object({ tags: z.array(z.string()) })
-      expect(createEmptyObject(Schema)).toEqual({ tags: [] })
+      expect(createEmptyZodObject(Schema)).toEqual({ tags: [] })
     })
 
     it('should create null for z.date()', () => {
       const Schema = z.object({ createdAt: z.date() })
-      expect(createEmptyObject(Schema)).toEqual({ createdAt: null })
+      expect(createEmptyZodObject(Schema)).toEqual({ createdAt: null })
     })
   })
 
   describe('with explicit defaults (useDefaults: true)', () => {
     it('should use default value from z.string().default()', () => {
       const Schema = z.object({ name: z.string().default('hello') })
-      expect(createEmptyObject(Schema)).toEqual({ name: 'hello' })
+      expect(createEmptyZodObject(Schema)).toEqual({ name: 'hello' })
     })
 
     it('should use default value from z.number().default()', () => {
       const Schema = z.object({ page: z.coerce.number().default(1) })
-      expect(createEmptyObject(Schema)).toEqual({ page: 1 })
+      expect(createEmptyZodObject(Schema)).toEqual({ page: 1 })
     })
 
     it('should use default value from z.boolean().default()', () => {
       const Schema = z.object({ active: z.boolean().default(true) })
-      expect(createEmptyObject(Schema)).toEqual({ active: true })
+      expect(createEmptyZodObject(Schema)).toEqual({ active: true })
     })
 
     it('should use default value from z.array().default()', () => {
       const Schema = z.object({ tags: z.array(z.string()).default(['a', 'b']) })
-      expect(createEmptyObject(Schema)).toEqual({ tags: ['a', 'b'] })
+      expect(createEmptyZodObject(Schema)).toEqual({ tags: ['a', 'b'] })
     })
 
     it('should use default null from z.number().nullable().default(null)', () => {
       const Schema = z.object({ value: z.coerce.number().nullable().default(null) })
-      expect(createEmptyObject(Schema)).toEqual({ value: null })
+      expect(createEmptyZodObject(Schema)).toEqual({ value: null })
     })
 
     it('should use undefined for a plain field whose base type is not specially handled', () => {
       const Schema = z.object({ status: z.enum(['a', 'b']) })
-      expect(createEmptyObject(Schema)).toEqual({ status: undefined })
+      expect(createEmptyZodObject(Schema)).toEqual({ status: undefined })
     })
 
     it('should use default from nested z.object().default()', () => {
@@ -684,7 +684,7 @@ describe('createEmptyObject', () => {
           })
           .default({ search: '', page: 1 }),
       })
-      expect(createEmptyObject(Schema)).toEqual({
+      expect(createEmptyZodObject(Schema)).toEqual({
         filters: { search: '', page: 1 },
       })
     })
@@ -693,89 +693,89 @@ describe('createEmptyObject', () => {
   describe('with useDefaults: false', () => {
     it('should ignore defaults and use type-based values for string', () => {
       const Schema = z.object({ name: z.string().default('hello') })
-      expect(createEmptyObject(Schema, { useDefaults: false })).toEqual({ name: '' })
+      expect(createEmptyZodObject(Schema, { useDefaults: false })).toEqual({ name: '' })
     })
 
     it('should ignore defaults and use type-based values for number', () => {
       const Schema = z.object({ page: z.coerce.number().default(5) })
-      expect(createEmptyObject(Schema, { useDefaults: false })).toEqual({ page: 0 })
+      expect(createEmptyZodObject(Schema, { useDefaults: false })).toEqual({ page: 0 })
     })
 
     it('should ignore defaults and use type-based values for boolean', () => {
       const Schema = z.object({ active: z.boolean().default(true) })
-      expect(createEmptyObject(Schema, { useDefaults: false })).toEqual({ active: false })
+      expect(createEmptyZodObject(Schema, { useDefaults: false })).toEqual({ active: false })
     })
 
     it('should ignore defaults and use empty array for array', () => {
       const Schema = z.object({ tags: z.array(z.string()).default(['a']) })
-      expect(createEmptyObject(Schema, { useDefaults: false })).toEqual({ tags: [] })
+      expect(createEmptyZodObject(Schema, { useDefaults: false })).toEqual({ tags: [] })
     })
 
     it('should still use null for nullable fields', () => {
       const Schema = z.object({ value: z.number().nullable().default(null) })
-      expect(createEmptyObject(Schema, { useDefaults: false })).toEqual({ value: null })
+      expect(createEmptyZodObject(Schema, { useDefaults: false })).toEqual({ value: null })
     })
 
     it('should still use undefined for optional fields', () => {
       const Schema = z.object({ search: z.string().optional() })
-      expect(createEmptyObject(Schema, { useDefaults: false })).toEqual({ search: undefined })
+      expect(createEmptyZodObject(Schema, { useDefaults: false })).toEqual({ search: undefined })
     })
   })
 
   describe('nullable fields', () => {
     it('should create null for z.string().nullable()', () => {
       const Schema = z.object({ name: z.string().nullable() })
-      expect(createEmptyObject(Schema)).toEqual({ name: null })
+      expect(createEmptyZodObject(Schema)).toEqual({ name: null })
     })
 
     it('should create null for z.number().nullable()', () => {
       const Schema = z.object({ count: z.number().nullable() })
-      expect(createEmptyObject(Schema)).toEqual({ count: null })
+      expect(createEmptyZodObject(Schema)).toEqual({ count: null })
     })
 
     it('should create null for z.boolean().nullable()', () => {
       const Schema = z.object({ active: z.boolean().nullable() })
-      expect(createEmptyObject(Schema)).toEqual({ active: null })
+      expect(createEmptyZodObject(Schema)).toEqual({ active: null })
     })
   })
 
   describe('optional fields', () => {
     it('should create undefined for z.string().optional()', () => {
       const Schema = z.object({ name: z.string().optional() })
-      expect(createEmptyObject(Schema)).toEqual({ name: undefined })
+      expect(createEmptyZodObject(Schema)).toEqual({ name: undefined })
     })
 
     it('should create undefined for z.number().optional()', () => {
       const Schema = z.object({ count: z.number().optional() })
-      expect(createEmptyObject(Schema)).toEqual({ count: undefined })
+      expect(createEmptyZodObject(Schema)).toEqual({ count: undefined })
     })
   })
 
   describe('number constraints', () => {
     it('should use minValue for z.number().min()', () => {
       const Schema = z.object({ page: z.number().min(5) })
-      expect(createEmptyObject(Schema)).toEqual({ page: 5 })
+      expect(createEmptyZodObject(Schema)).toEqual({ page: 5 })
     })
 
     it('should use minValue + 1 for z.number().positive() (exclusive)', () => {
       const Schema = z.object({ count: z.number().positive() })
       // positive() sets minValue=0 but 0 is exclusive, so result is 1
-      expect(createEmptyObject(Schema)).toEqual({ count: 1 })
+      expect(createEmptyZodObject(Schema)).toEqual({ count: 1 })
     })
 
     it('should use 0 for z.number() without constraints', () => {
       const Schema = z.object({ value: z.number() })
-      expect(createEmptyObject(Schema)).toEqual({ value: 0 })
+      expect(createEmptyZodObject(Schema)).toEqual({ value: 0 })
     })
 
     it('should prefer default over minValue when useDefaults is true', () => {
       const Schema = z.object({ page: z.number().min(1).default(10) })
-      expect(createEmptyObject(Schema)).toEqual({ page: 10 })
+      expect(createEmptyZodObject(Schema)).toEqual({ page: 10 })
     })
 
     it('should use minValue when useDefaults is false even if default exists', () => {
       const Schema = z.object({ page: z.number().min(5).default(10) })
-      expect(createEmptyObject(Schema, { useDefaults: false })).toEqual({ page: 5 })
+      expect(createEmptyZodObject(Schema, { useDefaults: false })).toEqual({ page: 5 })
     })
   })
 
@@ -787,7 +787,7 @@ describe('createEmptyObject', () => {
           age: z.number(),
         }),
       })
-      expect(createEmptyObject(Schema)).toEqual({
+      expect(createEmptyZodObject(Schema)).toEqual({
         user: { name: '', age: 0 },
       })
     })
@@ -800,7 +800,7 @@ describe('createEmptyObject', () => {
           }),
         }),
       })
-      expect(createEmptyObject(Schema)).toEqual({
+      expect(createEmptyZodObject(Schema)).toEqual({
         level1: { level2: { value: '' } },
       })
     })
@@ -811,10 +811,10 @@ describe('createEmptyObject', () => {
           name: z.string().default('inner'),
         }),
       })
-      expect(createEmptyObject(Schema, { useDefaults: true })).toEqual({
+      expect(createEmptyZodObject(Schema, { useDefaults: true })).toEqual({
         nested: { name: 'inner' },
       })
-      expect(createEmptyObject(Schema, { useDefaults: false })).toEqual({
+      expect(createEmptyZodObject(Schema, { useDefaults: false })).toEqual({
         nested: { name: '' },
       })
     })
@@ -829,7 +829,7 @@ describe('createEmptyObject', () => {
         tags: z.array(z.string()).default([]),
         score: z.number().nullable(),
       })
-      expect(createEmptyObject(Schema)).toEqual({
+      expect(createEmptyZodObject(Schema)).toEqual({
         name: '',
         page: 1,
         active: false,
@@ -853,7 +853,7 @@ describe('createEmptyObject', () => {
           })
           .default({ title: '', created_at: { from: null, to: null } }),
       })
-      expect(createEmptyObject(Schema)).toEqual({
+      expect(createEmptyZodObject(Schema)).toEqual({
         page: 1,
         filters: {
           title: '',
@@ -868,7 +868,7 @@ describe('createEmptyObject', () => {
         page: z.coerce.number().default(5),
         active: z.boolean().default(true),
       })
-      expect(createEmptyObject(Schema, { useDefaults: false })).toEqual({
+      expect(createEmptyZodObject(Schema, { useDefaults: false })).toEqual({
         search: '',
         page: 0,
         active: false,
@@ -879,35 +879,35 @@ describe('createEmptyObject', () => {
   describe('edge cases', () => {
     it('should handle empty schema', () => {
       const Schema = z.object({})
-      expect(createEmptyObject(Schema)).toEqual({})
+      expect(createEmptyZodObject(Schema)).toEqual({})
     })
 
     it('should handle enum fields as undefined', () => {
       const Schema = z.object({
         status: z.enum(['active', 'inactive']),
       })
-      expect(createEmptyObject(Schema)).toEqual({ status: undefined })
+      expect(createEmptyZodObject(Schema)).toEqual({ status: undefined })
     })
 
     it('should handle enum with default', () => {
       const Schema = z.object({
         status: z.enum(['active', 'inactive']).default('active'),
       })
-      expect(createEmptyObject(Schema)).toEqual({ status: 'active' })
+      expect(createEmptyZodObject(Schema)).toEqual({ status: 'active' })
     })
 
     it('should handle optional with default', () => {
       const Schema = z.object({
         name: z.string().optional().default('fallback'),
       })
-      expect(createEmptyObject(Schema)).toEqual({ name: 'fallback' })
+      expect(createEmptyZodObject(Schema)).toEqual({ name: 'fallback' })
     })
 
     it('should handle nullable with default', () => {
       const Schema = z.object({
         name: z.string().nullable().default(null),
       })
-      expect(createEmptyObject(Schema)).toEqual({ name: null })
+      expect(createEmptyZodObject(Schema)).toEqual({ name: null })
     })
 
     it('should return result that passes schema validation', () => {
@@ -921,7 +921,7 @@ describe('createEmptyObject', () => {
           })
           .default({ search: '' }),
       })
-      const obj = createEmptyObject(Schema)
+      const obj = createEmptyZodObject(Schema)
       const result = Schema.safeParse(obj)
       expect(result.success).toBe(true)
     })
@@ -930,7 +930,7 @@ describe('createEmptyObject', () => {
       const Schema = z.object({
         count: z.number().positive(),
       })
-      const obj = createEmptyObject(Schema)
+      const obj = createEmptyZodObject(Schema)
       expect(obj.count).toBe(1)
       const result = Schema.safeParse(obj)
       expect(result.success).toBe(true)
@@ -946,34 +946,34 @@ describe('createEmptyObject', () => {
 
     it('should return undefined for z.literal()', () => {
       const Schema = z.object({ status: z.literal('active') })
-      expect(createEmptyObject(Schema)).toEqual({ status: undefined })
+      expect(createEmptyZodObject(Schema)).toEqual({ status: undefined })
     })
 
     it('should return undefined for z.union()', () => {
       const Schema = z.object({ value: z.union([z.string(), z.number()]) })
-      expect(createEmptyObject(Schema)).toEqual({ value: undefined })
+      expect(createEmptyZodObject(Schema)).toEqual({ value: undefined })
     })
 
     it('should return undefined for a .transform() (ZodEffects)', () => {
       const Schema = z.object({ name: z.string().transform((v) => v.trim()) })
-      expect(createEmptyObject(Schema)).toEqual({ name: undefined })
+      expect(createEmptyZodObject(Schema)).toEqual({ name: undefined })
     })
 
     it('should return empty string for a .refine() on z.string() — Zod v4 keeps the ZodString type', () => {
       // In Zod v4, .refine() does not wrap into ZodEffects; the field stays
-      // instanceof ZodString, so createEmptyObject yields '' rather than undefined.
+      // instanceof ZodString, so createEmptyZodObject yields '' rather than undefined.
       const Schema = z.object({ name: z.string().refine((v) => v.length > 0) })
-      expect(createEmptyObject(Schema)).toEqual({ name: '' })
+      expect(createEmptyZodObject(Schema)).toEqual({ name: '' })
     })
 
     it('should return undefined for z.tuple()', () => {
       const Schema = z.object({ pair: z.tuple([z.string(), z.number()]) })
-      expect(createEmptyObject(Schema)).toEqual({ pair: undefined })
+      expect(createEmptyZodObject(Schema)).toEqual({ pair: undefined })
     })
 
     it('should return undefined for z.record()', () => {
       const Schema = z.object({ map: z.record(z.string(), z.number()) })
-      expect(createEmptyObject(Schema)).toEqual({ map: undefined })
+      expect(createEmptyZodObject(Schema)).toEqual({ map: undefined })
     })
 
     it('should return undefined for z.nativeEnum()', () => {
@@ -982,39 +982,39 @@ describe('createEmptyObject', () => {
         Down = 'down',
       }
       const Schema = z.object({ dir: z.nativeEnum(Direction) })
-      expect(createEmptyObject(Schema)).toEqual({ dir: undefined })
+      expect(createEmptyZodObject(Schema)).toEqual({ dir: undefined })
     })
 
     it('should still respect useDefaults:false for surrounding wrappers', () => {
       // Even with useDefaults:false, the else branch still produces undefined
       // for unhandled base types.
       const Schema = z.object({ status: z.literal('active') })
-      expect(createEmptyObject(Schema, { useDefaults: false })).toEqual({ status: undefined })
+      expect(createEmptyZodObject(Schema, { useDefaults: false })).toEqual({ status: undefined })
     })
   })
 
   describe('withSchema option', () => {
     it('should not attach schema by default', () => {
       const Schema = z.object({ name: z.string().default('') })
-      const obj = createEmptyObject(Schema)
+      const obj = createEmptyZodObject(Schema)
       expect(SCHEMA_SYMBOL in obj).toBe(false)
     })
 
     it('should not attach schema when withSchema is false', () => {
       const Schema = z.object({ name: z.string().default('') })
-      const obj = createEmptyObject(Schema, { withSchema: false })
+      const obj = createEmptyZodObject(Schema, { withSchema: false })
       expect(SCHEMA_SYMBOL in obj).toBe(false)
     })
 
     it('should attach schema when withSchema is true', () => {
       const Schema = z.object({ name: z.string().default('') })
-      const obj = createEmptyObject(Schema, { withSchema: true })
+      const obj = createEmptyZodObject(Schema, { withSchema: true })
       expect(obj[SCHEMA_SYMBOL]).toBe(Schema)
     })
 
     it('should attach schema as markRaw (non-reactive)', () => {
       const Schema = z.object({ page: z.coerce.number().default(1) })
-      const obj = createEmptyObject(Schema, { withSchema: true })
+      const obj = createEmptyZodObject(Schema, { withSchema: true })
       // markRaw adds __v_skip flag
       expect((obj[SCHEMA_SYMBOL] as any).__v_skip).toBe(true)
     })
@@ -1024,7 +1024,7 @@ describe('createEmptyObject', () => {
         name: z.string().default('hello'),
         count: z.coerce.number().default(5),
       })
-      const obj = createEmptyObject(Schema, { withSchema: true })
+      const obj = createEmptyZodObject(Schema, { withSchema: true })
       expect(obj.name).toBe('hello')
       expect(obj.count).toBe(5)
       expect(obj[SCHEMA_SYMBOL]).toBe(Schema)
@@ -1035,7 +1035,7 @@ describe('createEmptyObject', () => {
         name: z.string().default('hello'),
         count: z.number(),
       })
-      const obj = createEmptyObject(Schema, { useDefaults: false, withSchema: true })
+      const obj = createEmptyZodObject(Schema, { useDefaults: false, withSchema: true })
       expect(obj.name).toBe('')
       expect(obj.count).toBe(0)
       expect(obj[SCHEMA_SYMBOL]).toBe(Schema)
@@ -1048,7 +1048,7 @@ describe('createEmptyObject', () => {
       const Schema = z.object({
         nested: NestedSchema,
       })
-      const obj = createEmptyObject(Schema, { withSchema: true })
+      const obj = createEmptyZodObject(Schema, { withSchema: true })
       expect(obj[SCHEMA_SYMBOL]).toBe(Schema)
       expect(obj.nested[SCHEMA_SYMBOL as unknown as 'value']).toBe(NestedSchema)
     })
@@ -1057,7 +1057,7 @@ describe('createEmptyObject', () => {
       const Level2Schema = z.object({ val: z.string() })
       const Level1Schema = z.object({ level2: Level2Schema })
       const Schema = z.object({ level1: Level1Schema })
-      const obj = createEmptyObject(Schema, { withSchema: true })
+      const obj = createEmptyZodObject(Schema, { withSchema: true })
       expect(obj[SCHEMA_SYMBOL]).toBe(Schema)
       expect(obj.level1[SCHEMA_SYMBOL as unknown as 'level2']).toBe(Level1Schema)
       expect(obj.level1.level2[SCHEMA_SYMBOL as unknown as 'val']).toBe(Level2Schema)
@@ -1069,7 +1069,7 @@ describe('createEmptyObject', () => {
           value: z.string(),
         }),
       })
-      const obj = createEmptyObject(Schema)
+      const obj = createEmptyZodObject(Schema)
       expect(SCHEMA_SYMBOL in obj).toBe(false)
       expect(SCHEMA_SYMBOL in obj.nested).toBe(false)
     })
@@ -1083,7 +1083,7 @@ describe('createEmptyObject', () => {
           })
           .default({ search: '' }),
       })
-      const obj = createEmptyObject(Schema, { withSchema: true })
+      const obj = createEmptyZodObject(Schema, { withSchema: true })
       const result = Schema.safeParse(obj)
       expect(result.success).toBe(true)
       expect(obj[SCHEMA_SYMBOL]).toBe(Schema)

@@ -1,5 +1,6 @@
 import { markRaw } from 'vue'
-import { z, type ZodObject, type ZodRawShape } from 'zod'
+import type { z, ZodObject, ZodRawShape } from 'zod'
+import { zodDefType } from './handlers/helpers'
 
 export const SCHEMA_SYMBOL: unique symbol = Symbol('schema')
 
@@ -17,16 +18,19 @@ export type MaybeWithSchema<T extends ZodRawShape> = z.infer<ZodObject<T>> & {
  *
  * When `withSchema` is `true`, attaches the schema to the result via `SCHEMA_SYMBOL`
  * (wrapped with `markRaw` to prevent Vue reactivity on the schema instance).
+ *
+ * Implemented via duck-typed introspection (`_zod.def.type`) — `zod` is only
+ * imported as types, so the main bundle never depends on it at runtime.
  */
-export function createEmptyObject<T extends ZodRawShape>(
+export function createEmptyZodObject<T extends ZodRawShape>(
   schema: ZodObject<T>,
   options: { useDefaults?: boolean; withSchema: true },
 ): MaybeWithSchema<T>
-export function createEmptyObject<T extends ZodRawShape>(
+export function createEmptyZodObject<T extends ZodRawShape>(
   schema: ZodObject<T>,
   options?: { useDefaults?: boolean; withSchema?: false },
 ): z.infer<ZodObject<T>>
-export function createEmptyObject<T extends ZodRawShape>(
+export function createEmptyZodObject<T extends ZodRawShape>(
   schema: ZodObject<T>,
   options?: {
     useDefaults?: boolean
@@ -39,50 +43,31 @@ export function createEmptyObject<T extends ZodRawShape>(
   const { useDefaults = true } = options || {}
 
   for (const key in shape) {
-    const field = shape[key] as unknown as z.ZodType<any>
+    const field = shape[key] as unknown
 
-    if (useDefaults) {
-      // Check for a default value via ZodDefault.
-      // Use parse(undefined) to retrieve the default value through the public API
-      let hasDefault = false
-      let currentType: z.ZodType<any> = field
-
-      while (
-        currentType instanceof z.ZodOptional ||
-        currentType instanceof z.ZodNullable ||
-        currentType instanceof z.ZodDefault
-      ) {
-        if (currentType instanceof z.ZodDefault) {
-          hasDefault = true
-          break
-        }
-        currentType = currentType.unwrap() as z.ZodType<any>
-      }
-
-      if (hasDefault) {
-        // Use parse to retrieve the default value
-        result[key] = field.parse(undefined)
-        continue
-      }
-    }
-
-    // Check if the field is nullable/optional
-    // Important: also unwrap ZodDefault to reach the inner type
+    // Collect wrapper flags (default/nullable/optional) along the unwrap chain
+    let hasDefault = false
     let isNullable = false
     let isOptional = false
-    let checkType: z.ZodType<any> = field
-    while (
-      checkType instanceof z.ZodOptional ||
-      checkType instanceof z.ZodNullable ||
-      checkType instanceof z.ZodDefault
-    ) {
-      if (checkType instanceof z.ZodNullable) {
+    let base = field
+    while (true) {
+      const type = zodDefType(base)
+      if (type === 'default') {
+        hasDefault = true
+      } else if (type === 'nullable') {
         isNullable = true
-      }
-      if (checkType instanceof z.ZodOptional) {
+      } else if (type === 'optional') {
         isOptional = true
+      } else {
+        break
       }
-      checkType = checkType.unwrap() as z.ZodType<any>
+      base = (base as any).unwrap()
+    }
+
+    if (useDefaults && hasDefault) {
+      // Use parse(undefined) to retrieve the default value through the public API
+      result[key] = (field as any).parse(undefined)
+      continue
     }
 
     // If the field is nullable, use null as the default
@@ -97,41 +82,35 @@ export function createEmptyObject<T extends ZodRawShape>(
       continue
     }
 
-    // Get the base type by unwrapping optional/nullable/default wrappers
-    let baseType: z.ZodType<any> = field
-    while (
-      baseType instanceof z.ZodOptional ||
-      baseType instanceof z.ZodNullable ||
-      baseType instanceof z.ZodDefault
-    ) {
-      baseType = baseType.unwrap() as z.ZodType<any>
-    }
-
     // Determine the default value based on the base type
-    if (baseType instanceof z.ZodString) {
+    const baseType = zodDefType(base)
+
+    if (baseType === 'string') {
       result[key] = ''
-    } else if (baseType instanceof z.ZodNumber) {
+    } else if (baseType === 'number') {
       // Учитываем positive() и min() constraints, чтобы дефолт проходил валидацию
       // Используем публичный minValue геттер и safeParse для проверки
+      const minValue = (base as any).minValue
       let defaultValue =
-        baseType.minValue !== null && baseType.minValue !== undefined && isFinite(baseType.minValue)
-          ? baseType.minValue
-          : 0
-      if (!baseType.safeParse(defaultValue).success) {
+        minValue !== null && minValue !== undefined && isFinite(minValue) ? minValue : 0
+      if (!(base as any).safeParse(defaultValue).success) {
         // minValue doesn't pass validation (exclusive min, e.g. positive())
         defaultValue += 1
       }
       result[key] = defaultValue
-    } else if (baseType instanceof z.ZodBoolean) {
+    } else if (baseType === 'boolean') {
       result[key] = false
-    } else if (baseType instanceof z.ZodArray) {
+    } else if (baseType === 'array') {
       result[key] = []
-    } else if (baseType instanceof z.ZodObject) {
-      result[key] = createEmptyObject(baseType, {
-        useDefaults: options?.useDefaults,
-        withSchema: options?.withSchema,
-      } as any)
-    } else if (baseType instanceof z.ZodDate) {
+    } else if (baseType === 'object' && (base as any).shape) {
+      result[key] = createEmptyZodObject(
+        base as any,
+        {
+          useDefaults: options?.useDefaults,
+          withSchema: options?.withSchema,
+        } as any,
+      )
+    } else if (baseType === 'date') {
       result[key] = null
     } else {
       // For all other types (literal, union, enum, transform, refine, tuple, record, …)

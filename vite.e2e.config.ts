@@ -15,7 +15,6 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      'vue-context-storage/zod': path.resolve(import.meta.dirname, 'src/zod.ts'),
       'vue-context-storage': path.resolve(import.meta.dirname, 'src/index.ts'),
     },
   },
