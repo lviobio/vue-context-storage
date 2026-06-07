@@ -52,7 +52,7 @@ describe('z.array of objects (applyTransform coercion)', () => {
         },
         // Empty initialData so lodash merge doesn't pre-convert the record:
         // the sorting must come from the schema coercion itself.
-        initialData: {},
+        initialData: {} as z.infer<typeof Schema>,
         schema: Schema,
         mergeOnlyExistingKeysWithoutTransform: true,
       })
@@ -213,7 +213,7 @@ describe('z.array of objects (applyTransform coercion)', () => {
         items: z.array(
           z.object({
             name: z.string().default(''),
-            tags: z.string().array().default([]),
+            tags: z.string().array(),
           }),
         ),
       })
@@ -440,6 +440,241 @@ describe('z.number auto-coercion (applyTransform, no z)', () => {
   })
 })
 
+// Focused coverage for `coerceDataForSchema` (private — exercised via
+// `applyTransform`) on arrays and on objects holding nested arrays of strings
+// and numbers. `initialData` is kept empty (`{}`) so the lodash `merge` step in
+// `applyTransform` cannot pre-convert indexed records into arrays — the array
+// shaping and scalar coercion must come from `coerceDataForSchema` itself.
+describe('coerceDataForSchema — arrays & nested arrays (applyTransform)', () => {
+  describe('top-level arrays', () => {
+    it('should coerce a multi-value string array', () => {
+      const Schema = z.object({ tags: z.array(z.string()) })
+
+      const { data, warnings } = applyTransform({
+        state: { tags: ['a', 'b', 'c'] },
+        initialData: {} as z.infer<typeof Schema>,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ tags: ['a', 'b', 'c'] })
+    })
+
+    it('should wrap a single string value into an array', () => {
+      const Schema = z.object({ tags: z.array(z.string()) })
+
+      const { data, warnings } = applyTransform({
+        state: { tags: 'solo' },
+        initialData: {} as z.infer<typeof Schema>,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ tags: ['solo'] })
+    })
+
+    it('should coerce a multi-value number array', () => {
+      const Schema = z.object({ ids: z.array(z.number()) })
+
+      const { data, warnings } = applyTransform({
+        state: { ids: ['1', '2', '3'] },
+        initialData: {} as z.infer<typeof Schema>,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ ids: [1, 2, 3] })
+    })
+
+    it('should wrap and coerce a single numeric value into a number array', () => {
+      const Schema = z.object({ ids: z.array(z.number()) })
+
+      const { data, warnings } = applyTransform({
+        state: { ids: '42' },
+        initialData: {} as z.infer<typeof Schema>,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ ids: [42] })
+    })
+
+    it('should convert an indexed record into a number array sorted by key', () => {
+      const Schema = z.object({ ids: z.array(z.number()) })
+
+      const { data, warnings } = applyTransform({
+        // Deserialized from `?ids[2]=3&ids[0]=1&ids[1]=2`
+        state: { ids: { '2': '3', '0': '1', '1': '2' } },
+        initialData: {} as z.infer<typeof Schema>,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ ids: [1, 2, 3] })
+    })
+
+    it('should coerce a boolean array from serialized 1/0 strings', () => {
+      const Schema = z.object({ flags: z.array(z.boolean()) })
+
+      const { data, warnings } = applyTransform({
+        state: { flags: ['1', '0', '1'] },
+        initialData: {} as z.infer<typeof Schema>,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ flags: [true, false, true] })
+    })
+
+    it('should fall back when a number array contains a non-numeric element', () => {
+      const Schema = z.object({ ids: z.array(z.number()) })
+
+      const { data, warnings } = applyTransform({
+        state: { ids: ['1', 'abc', '3'] },
+        initialData: { ids: [9] },
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings.length).toBeGreaterThan(0)
+      expect(data).toEqual({ ids: [9] })
+    })
+  })
+
+  describe('objects with nested arrays', () => {
+    it('should coerce nested string and number arrays inside an object', () => {
+      const Schema = z.object({
+        filter: z
+          .object({
+            ids: z.array(z.number()),
+            tags: z.array(z.string()),
+          })
+          .default({ ids: [], tags: [] }),
+      })
+
+      const { data, warnings } = applyTransform({
+        state: { filter: { ids: ['1', '2'], tags: ['red', 'blue'] } },
+        initialData: {} as z.infer<typeof Schema>,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ filter: { ids: [1, 2], tags: ['red', 'blue'] } })
+    })
+
+    it('should wrap single nested values into arrays', () => {
+      const Schema = z.object({
+        filter: z
+          .object({
+            ids: z.array(z.number()),
+            tags: z.array(z.string()),
+          })
+          .default({ ids: [], tags: [] }),
+      })
+
+      const { data, warnings } = applyTransform({
+        // `?filter[ids]=7&filter[tags]=solo` → single values, not arrays
+        state: { filter: { ids: '7', tags: 'solo' } },
+        initialData: {} as z.infer<typeof Schema>,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ filter: { ids: [7], tags: ['solo'] } })
+    })
+
+    it('should coerce arrays in a deeply nested object', () => {
+      const Schema = z.object({
+        a: z
+          .object({
+            b: z
+              .object({
+                nums: z.array(z.number()),
+                strs: z.array(z.string()),
+              })
+              .default({ nums: [], strs: [] }),
+          })
+          .default({ b: { nums: [], strs: [] } }),
+      })
+
+      const { data, warnings } = applyTransform({
+        state: { a: { b: { nums: ['10', '20'], strs: 'only' } } },
+        initialData: {} as z.infer<typeof Schema>,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({ a: { b: { nums: [10, 20], strs: ['only'] } } })
+    })
+  })
+
+  describe('arrays of objects holding nested arrays', () => {
+    const Schema = z.object({
+      items: z.array(
+        z.object({
+          name: z.string().default(''),
+          scores: z.array(z.number()),
+          labels: z.array(z.string()),
+        }),
+      ),
+    })
+
+    it('should coerce nested arrays inside plain array elements', () => {
+      const { data, warnings } = applyTransform({
+        state: {
+          items: [
+            { name: 'A', scores: ['1', '2'], labels: ['x', 'y'] },
+            { name: 'B', scores: '9', labels: 'z' },
+          ],
+        },
+        initialData: {} as z.infer<typeof Schema>,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({
+        items: [
+          { name: 'A', scores: [1, 2], labels: ['x', 'y'] },
+          { name: 'B', scores: [9], labels: ['z'] },
+        ],
+      })
+    })
+
+    it('should coerce nested arrays inside indexed-record elements (sorted by key)', () => {
+      const { data, warnings } = applyTransform({
+        // Deserialized from `?items[1][...]=...&items[0][...]=...`
+        state: {
+          items: {
+            '1': { name: 'B', scores: ['3', '4'], labels: 'q' },
+            '0': { name: 'A', scores: '1', labels: ['p'] },
+          },
+        },
+        initialData: {} as z.infer<typeof Schema>,
+        schema: Schema,
+        mergeOnlyExistingKeysWithoutTransform: true,
+      })
+
+      expect(warnings).toEqual([])
+      expect(data).toEqual({
+        items: [
+          { name: 'A', scores: [1], labels: ['p'] },
+          { name: 'B', scores: [3, 4], labels: ['q'] },
+        ],
+      })
+    })
+  })
+})
+
 // These tests route deserialized data through `applyTransform` — the library's
 // entry point that runs `coerceDataForSchema` and then `schema.safeParse`,
 // falling back to `initialData` (with a warning) on failure. The previous suite
@@ -452,7 +687,7 @@ describe('Zod schema integration (applyTransform)', () => {
       page: z.number().int().positive().default(1),
       perPage: z.number().int().positive().default(25),
       status: z.enum(['active', 'inactive', 'pending']).default('active'),
-      tags: z.array(z.string()).default([]),
+      tags: z.array(z.string()),
       dateRange: z
         .object({
           from: z.string().default(''),
@@ -764,7 +999,7 @@ describe('createEmptyZodObject', () => {
         name: z.string().default(''),
         page: z.number().default(1),
         active: z.boolean().default(false),
-        tags: z.array(z.string()).default([]),
+        tags: z.array(z.string()),
         score: z.number().nullable(),
       })
       expect(createEmptyZodObject(Schema)).toEqual({

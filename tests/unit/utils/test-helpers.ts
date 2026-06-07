@@ -1,12 +1,9 @@
-import { createRouter, createMemoryHistory, type Router } from 'vue-router'
-import type { Component } from 'vue'
+import { createRouter, createMemoryHistory, type Router, type RouteRecordRaw } from 'vue-router'
 
 /**
  * Creates a test router with minimal configuration
  */
-export function createTestRouter(
-  routes: Array<{ path: string; component?: Component }> = [],
-): Router {
+export function createTestRouter(routes: RouteRecordRaw[] = []): Router {
   const defaultRoutes =
     routes.length > 0
       ? routes

@@ -147,7 +147,7 @@ describe('applyTransform', () => {
   describe('automatic array coercion for schema', () => {
     it('should coerce a single string to array when schema expects .array()', () => {
       const schema = z.object({
-        tags: z.string().array().default([]),
+        tags: z.string().array(),
       })
 
       const result = applyTransform({
@@ -163,7 +163,7 @@ describe('applyTransform', () => {
 
     it('should coerce a single string to number array when schema expects z.number().array()', () => {
       const schema = z.object({
-        ids: z.number().array().default([]),
+        ids: z.number().array(),
       })
 
       const result = applyTransform({
@@ -179,7 +179,7 @@ describe('applyTransform', () => {
 
     it('should not touch values that are already arrays', () => {
       const schema = z.object({
-        tags: z.string().array().default([]),
+        tags: z.string().array(),
       })
 
       const result = applyTransform({
@@ -196,7 +196,7 @@ describe('applyTransform', () => {
     it('should coerce arrays inside nested objects', () => {
       const schema = z.object({
         filters: z.object({
-          statuses: z.enum(['active', 'inactive']).array().default([]),
+          statuses: z.enum(['active', 'inactive']).array(),
         }),
       })
 
@@ -213,8 +213,8 @@ describe('applyTransform', () => {
 
     it('should handle multiple array fields at once', () => {
       const schema = z.object({
-        tags: z.string().array().default([]),
-        ids: z.number().array().default([]),
+        tags: z.string().array(),
+        ids: z.number().array(),
         name: z.string().default(''),
       })
 
@@ -249,7 +249,7 @@ describe('applyTransform', () => {
       const schema = z.object({
         level1: z.object({
           level2: z.object({
-            items: z.number().array().default([]),
+            items: z.number().array(),
           }),
         }),
       })
@@ -337,7 +337,7 @@ describe('applyTransform', () => {
     it('should handle boolean and array coercion together', () => {
       const schema = z.object({
         active: z.boolean().default(false),
-        tags: z.string().array().default([]),
+        tags: z.string().array(),
       })
 
       const result = applyTransform({

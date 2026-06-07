@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { InjectionKey } from 'vue'
-import {
-  type ContextStorageHandler,
-  defineContextStorageHandler,
-  resolveHandlerInjectionKey,
-} from '../../src/registry'
+import { defineContextStorageHandler, resolveHandlerInjectionKey } from '../../src/registry'
+import type { ContextStorageHandler } from '../../src/handlers'
 import {
   contextStorageLocalStorageHandlerInjectKey,
   contextStorageQueryHandlerInjectKey,

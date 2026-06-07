@@ -769,12 +769,12 @@ The library introspects the Zod schema before validation and wraps non-array val
 
 ```typescript
 const Schema = z.object({
-  tags: z.string().array().default([]),
-  ids: z.number().array().default([]),
-  statuses: z.enum(['active', 'inactive']).array().default([]),
+  tags: z.string().array(),
+  ids: z.number().array(),
+  statuses: z.enum(['active', 'inactive']).array(),
   filters: z
     .object({
-      categories: z.string().array().default([]),
+      categories: z.string().array(),
     })
     .default({ categories: [] }),
 })
@@ -782,7 +782,7 @@ const Schema = z.object({
 // All of these work automatically:
 // ?tags=vue          → { tags: ['vue'], ... }
 // ?tags=vue&tags=ts  → { tags: ['vue', 'ts'], ... }
-// (no tags param)    → { tags: [], ... }
+// (no tags param)    → { tags: [], ... }  (falls back to the value in your reactive state)
 ```
 
 Arrays of objects are also handled automatically. They deserialize from indexed query parameters (`?items[0][product]=Apple`) into indexed objects (`{ '0': { product: 'Apple' } }`), and the library converts them back to arrays sorted by numeric key wherever the schema expects `.array()` — coercion is applied recursively inside array elements as well:
@@ -803,7 +803,7 @@ const Schema = z.object({
 
 #### Boolean Coercion
 
-The query handler serializes booleans as `'1'`/`'0'` strings in URL parameters (e.g. `?active=1`). Standard `z.boolean()` cannot be used because `Boolean('0')` is `true` in JavaScript. The library automatically converts `'1'` → `true` and `'0'` → `false` when the schema expects a boolean field. **No special helpers are needed** — plain `z.boolean()` works out of the box:
+The query handler serializes booleans as `'1'`/`'0'` strings in URL parameters (e.g. `?active=1`). Standard `z.coerce.boolean()` cannot be used because `Boolean('0')` is `true` in JavaScript. The library automatically converts `'1'` → `true` and `'0'` → `false` when the schema expects a boolean field. **No special helpers are needed** — plain `z.boolean()` works out of the box:
 
 ```typescript
 const Schema = z.object({
@@ -817,13 +817,13 @@ const Schema = z.object({
 
 #### Number Coercion
 
-URL query parameters are always strings (`?page=5` → `'5'`), so plain `z.number()` would reject them with `"expected number, received string"`. The library automatically converts numeric strings to numbers wherever the schema expects a number — including inside nested objects and `z.array(z.number())`. **`z` is not required** — plain `z.number()` works out of the box:
+URL query parameters are always strings (`?page=5` → `'5'`), so plain `z.number()` would reject them with `"expected number, received string"`. The library automatically converts numeric strings to numbers wherever the schema expects a number — including inside nested objects and `z.array(z.number())`. **`z.coerce` is not required** — plain `z.number()` works out of the box:
 
 ```typescript
 const Schema = z.object({
   page: z.number().default(1),
   score: z.number().nullable(),
-  ids: z.array(z.number()).default([]),
+  ids: z.array(z.number()),
 })
 
 // ?page=5            → { page: 5, ... }
@@ -833,7 +833,7 @@ const Schema = z.object({
 
 Coercion is conservative: a non-numeric string (`?page=abc`) or an empty value is **not** forced to a number (`Number('')` would be `0`). Instead the schema validation fails and the field falls back to its initial data, so missing/garbage input never silently becomes `0`. `null` is preserved for `.nullable()` fields.
 
-> `z.number()` still works and remains useful when you want Zod's own coercion semantics (e.g. coercing booleans or accepting empty strings as `0`).
+> `z.coerce.number()` still works and remains useful when you want Zod's own coercion semantics (e.g. coercing booleans or accepting empty strings as `0`).
 
 ### `createEmptyZodObject(schema, options?)`
 

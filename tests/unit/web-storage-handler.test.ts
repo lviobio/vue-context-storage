@@ -9,6 +9,16 @@ import {
   contextStorageLocalStorageHandler,
   contextStorageSessionStorageHandler,
 } from '../../src/symbols'
+import type { ContextStorageHandler } from '../../src/handlers'
+import type { RegisterWebStorageHandlerOptions } from '../../src/handlers/web-storage-base/types'
+
+// The web-storage handler always implements the optional `setEnabled`, so
+// require it here to call it directly without a non-null assertion everywhere.
+type WebStorageHandler<T extends Record<string, unknown>> = ContextStorageHandler<
+  T,
+  RegisterWebStorageHandlerOptions<T>
+> &
+  Required<Pick<ContextStorageHandler<T, RegisterWebStorageHandlerOptions<T>>, 'setEnabled'>>
 
 /**
  * Minimal in-memory Storage implementation so individual tests can inject
@@ -33,13 +43,13 @@ function createMemoryStorage(): Storage {
 function makeInstance<T extends Record<string, unknown>>(
   storage: Storage,
   options: { listenToStorageEvents?: boolean } = {},
-) {
+): WebStorageHandler<T> {
   return createWebStorageHandlerInstance<T>({
     storage,
     injectionKey: contextStorageSessionStorageHandler,
     handlerName: 'test-storage',
     options: { listenToStorageEvents: false, ...options },
-  })
+  }) as WebStorageHandler<T>
 }
 
 describe('createWebStorageHandlerInstance', () => {
@@ -292,7 +302,7 @@ describe('storage events (cross-tab sync)', () => {
           injectionKey: contextStorageLocalStorageHandler,
           handlerName: 'localStorage',
           options: { listenToStorageEvents: true },
-        })
+        }) as WebStorageHandler<{ a: number }>
         data = reactive({ a: 1 })
         handler.register(data, { key: 'k' })
         handler.setEnabled(true, true)
@@ -356,7 +366,7 @@ describe('storage handler factories', () => {
     const factory = createLocalStorageHandler()
     const Comp = defineComponent({
       setup() {
-        const handler = factory()
+        const handler = factory() as WebStorageHandler<{ a: number }>
         expect(handler.getInjectionKey()).toBe(contextStorageLocalStorageHandler)
         const data = reactive({ a: 1 })
         handler.register(data, { key: 'lk' })
@@ -372,7 +382,7 @@ describe('storage handler factories', () => {
     const factory = createSessionStorageHandler()
     const Comp = defineComponent({
       setup() {
-        const handler = factory()
+        const handler = factory() as WebStorageHandler<{ a: number }>
         expect(handler.getInjectionKey()).toBe(contextStorageSessionStorageHandler)
         const data = reactive({ a: 1 })
         handler.register(data, { key: 'sk' })

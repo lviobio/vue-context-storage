@@ -20,5 +20,5 @@
       "vue-context-storage": ["./src/index.ts"]
     }
   },
-  "include": ["src", "playground", "**/*.d.ts"]
+  "include": ["src", "playground", "tests", "**/*.d.ts"]
 }

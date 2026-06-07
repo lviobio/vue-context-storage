@@ -8,10 +8,13 @@ import { contextStorageQueryHandler } from '../../src/symbols'
 import type { ContextStorageHandler } from '../../src/handlers'
 import type { RegisterQueryHandlerOptions } from '../../src/handlers/query/types'
 
-type QueryHandler = ContextStorageHandler<
+type BaseQueryHandler = ContextStorageHandler<
   Record<string, unknown>,
   RegisterQueryHandlerOptions<Record<string, unknown>>
 >
+// The query handler always implements the optional `setEnabled`, so require it
+// here to call it directly without a non-null assertion at every call site.
+type QueryHandler = BaseQueryHandler & Required<Pick<BaseQueryHandler, 'setEnabled'>>
 
 interface Harness {
   router: Router
