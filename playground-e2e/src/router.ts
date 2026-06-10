@@ -26,6 +26,16 @@ const routes = [
     component: () => import('./views/RepeaterForm.vue'),
   },
   {
+    path: '/comma-array',
+    name: 'comma-array',
+    component: () => import('./views/CommaArray.vue'),
+  },
+  {
+    path: '/custom-serializer',
+    name: 'custom-serializer',
+    component: () => import('./views/CustomSerializer.vue'),
+  },
+  {
     path: '/session-storage-sync',
     name: 'session-storage-sync',
     component: () => import('./views/SessionStorageSync.vue'),

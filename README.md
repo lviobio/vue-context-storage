@@ -11,7 +11,7 @@ Vue 3 reactive state management — sync state with the URL query, localStorage,
 ![CI](https://github.com/lviobio/vue-context-storage/actions/workflows/ci.yml/badge.svg)
 ![Coverage](https://github.com/lviobio/vue-context-storage/actions/workflows/coverage.yml/badge.svg)
 [![codecov](https://codecov.io/gh/lviobio/vue-context-storage/branch/main/graph/badge.svg)](https://codecov.io/gh/lviobio/vue-context-storage)
-[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://lviobio.github.io/vue-context-storage/)
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://lviobio.github.io/vue-context-storage)
 
 Key features:
 
@@ -66,7 +66,6 @@ In Vue applications, reactive state often needs to live beyond a single componen
 - **URL query parameters** stay in sync with your data automatically - users can bookmark or share a page and get the exact same state back.
 - **localStorage and sessionStorage** are kept up to date without manual `getItem`/`setItem` calls, including cross-tab synchronization.
 - **Type safety** is preserved end-to-end: URL strings are coerced back to numbers, booleans, and arrays via transform helpers or Zod schemas.
-- **Multiple independent contexts** (e.g. two data tables on the same page) are supported out of the box through the key pattern, so query parameters never collide.
 
 The goal is a single, declarative API - `useContextStorage('query', data, options)` - that replaces scattered watchers, router guards, and storage listeners with one composable call per piece of state.
 
@@ -461,6 +460,93 @@ const customHandlers = [
 // Pass to ContextStorage or ContextStorageCollection component:
 // <ContextStorage :handlers="customHandlers">
 ```
+
+### Comma-separated Arrays in the Query String
+
+By default, flat arrays are written as repeated query keys (`?ids=1&ids=2&ids=3`). Set `serialize: { arrayFormat: 'comma' }` to store them as a single comma-joined value instead:
+
+```typescript
+createQueryHandler({ serialize: { arrayFormat: 'comma' } })
+
+// { ids: [1, 2, 3] }  →  ?ids=1,2,3
+```
+
+Values that themselves contain the separator are safely backslash-escaped, so they survive the round-trip without breaking into extra elements:
+
+```typescript
+// { tags: ['Some value', 'with, comma', 'last'] }
+//   →  ?tags=Some value,with\,comma,last
+//   →  { tags: ['Some value', 'with,comma', 'last'] }   (escaped comma restored)
+```
+
+The option can be set on the factory (applies to every registered context) or per `useContextStorage('query', ...)` call (the per-call value wins). A custom separator is supported via `arraySeparator`:
+
+```typescript
+createQueryHandler({ serialize: { arrayFormat: 'comma', arraySeparator: '|' } })
+
+// { ids: [1, 2, 3] }  →  ?ids=1|2|3
+```
+
+Restoring a comma-joined array back into an array requires a `schema` or `transform` (a comma-joined string is indistinguishable from a plain string on the URL — the same requirement as any non-string query value):
+
+```typescript
+import { z } from 'zod'
+
+const data = reactive({ ids: [] as number[] })
+
+useContextStorage('query', data, {
+  schema: z.object({ ids: z.array(z.number()) }),
+  serialize: { arrayFormat: 'comma' },
+})
+// ?ids=1,2,3  →  { ids: [1, 2, 3] }  (split + coerced automatically)
+```
+
+With the manual `transform` approach, pass the matching `separator` to the array helpers:
+
+```typescript
+useContextStorage('query', data, {
+  transform: (deserialized) => ({
+    ids: transform.asNumberArray(deserialized.ids, { separator: ',' }),
+  }),
+  serialize: { arrayFormat: 'comma' },
+})
+```
+
+### Fully Custom Serializer
+
+When the built-in serializer options aren't enough, pass a `serializer` (a `serialize` / `deserialize` pair) to `createQueryHandler` to take **full control** of how state is encoded to and decoded from the URL — e.g. a `qs`-style format, base64, or JSON. This is a **factory-level** option.
+
+```typescript
+import { createQueryHandler, type QuerySerializer } from 'vue-context-storage'
+
+// Example: JSON-encode each registration's data under its key
+const jsonSerializer: QuerySerializer = {
+  serialize: (data, options) => ({ [options?.key ?? '_']: JSON.stringify(data) }),
+  deserialize: (query) => {
+    const out: Record<string, unknown> = {}
+    for (const key of Object.keys(query)) {
+      try {
+        out[key] = JSON.parse(query[key] as string)
+      } catch {
+        out[key] = query[key]
+      }
+    }
+    return out
+  },
+}
+
+// <ContextStorage :additional-handlers="[createQueryHandler({ serializer: jsonSerializer })]">
+//   useContextStorage('query', data, { key: 'f', schema: ... })
+//   →  ?f={"ids":[1,2,3],"q":"hello"}
+```
+
+**Contract** (`QuerySerializer`):
+
+- `serialize` and `deserialize` **must be mutual inverses**.
+- They must preserve the same per-`key` nesting the built-in pair uses: `deserialize(serialize(data, { key }))` reproduces `{ [key]: data }` (and `{ ...data }` when no `key` is given). The handler relies on this to extract each registration's subtree, diff against baselines, and drive `onlyChanges`.
+- `serialize` always receives the **fully resolved options** (`ResolvedSerializeOptions`): `key`, plus `arrayFormat` and `arraySeparator` (the factory-level and per-`useContextStorage` `serialize` options merged, with defaults applied). A custom serializer can honour them — e.g. respect `arrayFormat: 'comma'` — or own the encoding entirely and ignore them.
+- `deserialize` runs on the **whole** route query before per-registration extraction, so it does NOT receive options — fix the decoding format in the function (mirroring whatever `serialize` produced).
+- `deserialize` output still flows through `schema` / `transform` coercion, so return already-typed values (numbers, arrays — like the JSON example above) or URL-style strings the standard coercion understands.
 
 ## Use localStorage Handler in Components
 

@@ -10,6 +10,7 @@ import { merge, pick } from 'lodash'
 import type { ContextStorageHandler, RegisterBaseOptions } from '../handlers'
 import type { HandlerSchema } from './types'
 import { contextStoragePrefixSegmentsInjectKey, resolvePrefixSegments } from '../prefix'
+import { splitArrayValue } from './query/helpers'
 
 /**
  * Fully synchronizes a reactive target object with source data.
@@ -36,6 +37,13 @@ export interface ApplyTransformInput<T extends Record<string, unknown>> {
   schema?: Pick<HandlerSchema<T>, 'safeParse'>
   transform?: (deserialized: any, initialData: T) => any
   mergeOnlyExistingKeysWithoutTransform: boolean
+  /**
+   * When set, array fields whose value arrived as a string are split on this
+   * separator during schema coercion (used by the query handler's `'comma'`
+   * array format). When omitted, a non-array scalar is wrapped into a
+   * single-element array as before.
+   */
+  arraySeparator?: string
 }
 
 export interface ApplyTransformWarning {
@@ -305,6 +313,7 @@ function coerceScalar(value: unknown, baseType: string | undefined): unknown {
 function coerceDataForSchema(
   data: Record<string, unknown>,
   schema: unknown,
+  arraySeparator?: string,
 ): Record<string, unknown> {
   const shape = (schema as any)?.shape
   if (!shape || typeof shape !== 'object') return data
@@ -330,6 +339,10 @@ function coerceDataForSchema(
           arr = Object.entries(value)
             .sort(([a], [b]) => Number(a) - Number(b))
             .map(([, v]) => v)
+        } else if (arraySeparator !== undefined && typeof value === 'string') {
+          // Comma array format: a single joined string → split back into an array,
+          // honouring backslash escapes so values containing the separator survive.
+          arr = splitArrayValue(value, arraySeparator)
         } else {
           arr = [value]
         }
@@ -343,7 +356,7 @@ function coerceDataForSchema(
         if (elementType === 'object' && (elementBase as any).shape) {
           arr = arr.map((v) =>
             v && typeof v === 'object' && !Array.isArray(v)
-              ? coerceDataForSchema(v as Record<string, unknown>, elementBase)
+              ? coerceDataForSchema(v as Record<string, unknown>, elementBase, arraySeparator)
               : v,
           )
         } else if (elementType === 'number' || elementType === 'boolean') {
@@ -355,7 +368,7 @@ function coerceDataForSchema(
     } else if (baseType === 'object' && (base as any).shape) {
       const nested = result[key]
       if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
-        result[key] = coerceDataForSchema(nested as Record<string, unknown>, base)
+        result[key] = coerceDataForSchema(nested as Record<string, unknown>, base, arraySeparator)
       }
     }
   }
@@ -385,7 +398,7 @@ export function applyTransform<T extends Record<string, unknown>>(
     // Coerce single values to arrays where the schema expects `.array()`.
     // This fixes the URL deserialization quirk where `?ids=1` produces `'1'`
     // instead of `['1']`.
-    const coerced = coerceDataForSchema(merged, input.schema)
+    const coerced = coerceDataForSchema(merged, input.schema, input.arraySeparator)
 
     const result = input.schema.safeParse(coerced)
 

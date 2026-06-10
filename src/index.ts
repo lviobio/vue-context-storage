@@ -52,6 +52,10 @@ export {
 export {
   serializeParams as serializeQueryParams,
   deserializeParams as deserializeQueryParams,
+  type QueryArrayFormat,
+  type QuerySerializeOptions,
+  type SerializeOptions,
+  type ResolvedSerializeOptions,
 } from './handlers/query/helpers'
 
 // Injection symbols
@@ -69,7 +73,7 @@ export {
 export { defaultHandlers } from './constants'
 
 // Types
-export type { QueryValue } from './handlers/query/types'
+export type { QueryValue, QuerySerializer, QueryHandlerBaseOptions } from './handlers/query/types'
 
 export type {
   LocalStorageHandlerBaseOptions,

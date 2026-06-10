@@ -1,6 +1,6 @@
 import type { LocationQuery } from 'vue-router'
 import { isEqual } from 'lodash'
-import { serializeParams } from './helpers'
+import { serializeParams, type QueryArrayFormat, type ResolvedSerializeOptions } from './helpers'
 
 export interface BuildQueryItem {
   /** Already resolved item data (output of toValue) */
@@ -17,6 +17,10 @@ export interface BuildQueryItem {
   onlyChanges?: boolean
   preserveEmptyState?: boolean
   causer?: string
+  /** How flat arrays are serialized to the URL (default: 'repeat') */
+  arrayFormat?: QueryArrayFormat
+  /** Separator used when arrayFormat is 'comma' (default: ',') */
+  arraySeparator?: string
 }
 
 export interface BuildQueryInput {
@@ -27,6 +31,13 @@ export interface BuildQueryInput {
   preserveEmptyState: boolean
   onlyChanges: boolean
   emptyPlaceholder: string
+  /**
+   * Serializer used to turn each item's data into a query patch. Defaults to the
+   * built-in {@link serializeParams}; the query handler passes a custom one when
+   * `createQueryHandler({ serializer })` is configured. Always invoked with the
+   * fully resolved options (`key`, `arrayFormat`, `arraySeparator`).
+   */
+  serialize?: (params: Record<string, unknown>, options: ResolvedSerializeOptions) => LocationQuery
 }
 
 export interface BuildQueryResult {
@@ -64,6 +75,7 @@ function sortQueryByReference(query: LocationQuery, ...references: LocationQuery
 export function buildQuery(input: BuildQueryInput): BuildQueryResult {
   const warnings: string[] = []
   const newQueryRaw: LocationQuery = {}
+  const serialize = input.serialize ?? serializeParams
 
   // Collect all serialized keys that are "owned" by registered items.
   // This is needed so that preserveUnusedKeys only preserves truly external keys,
@@ -74,7 +86,11 @@ export function buildQuery(input: BuildQueryInput): BuildQueryResult {
     const { key, onlyChanges = input.onlyChanges } = item
     let preserveEmptyState = item.preserveEmptyState ?? input.preserveEmptyState
 
-    const patch = serializeParams(item.data, { key })
+    const patch = serialize(item.data, {
+      key,
+      arrayFormat: item.arrayFormat ?? 'repeat',
+      arraySeparator: item.arraySeparator ?? ',',
+    })
 
     // Collect owned keys before onlyChanges filtering removes default-value keys.
     // Also include initialQueryData keys to cover values that became undefined.

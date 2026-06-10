@@ -35,14 +35,36 @@ export function createQueryHandler(
     let syncToQueryScheduled = false
     let registeredVersion = 0
 
-    const options: Required<QueryHandlerBaseOptions> = {
+    const options: Required<Omit<QueryHandlerBaseOptions, 'serializer'>> = {
       mode: 'replace',
       emptyPlaceholder: '_',
       mergeOnlyExistingKeysWithoutTransform: true,
       preserveUnusedKeys: true,
       preserveEmptyState: false,
       onlyChanges: true,
+      serialize: {},
       ...baseOptions,
+    }
+
+    // A factory-level custom serializer replaces the built-in pair entirely.
+    // When absent, the standard serializeParams/deserializeParams are used and
+    // the per-item `serialize` array options (resolveSerializeOptions) apply.
+    const serialize = baseOptions?.serializer?.serialize ?? serializeParams
+    const deserialize = baseOptions?.serializer?.deserialize ?? deserializeParams
+
+    /**
+     * Resolves the effective serializer options for a registered item, layering
+     * the per-register `serialize` over the factory-level one and applying
+     * defaults (`arrayFormat: 'repeat'`, `arraySeparator: ','`).
+     */
+    function resolveSerializeOptions(
+      itemOptions?: RegisterQueryHandlerOptions<any>,
+    ): Required<NonNullable<QueryHandlerBaseOptions['serialize']>> {
+      const merged = { ...options.serialize, ...itemOptions?.serialize }
+      return {
+        arrayFormat: merged.arrayFormat ?? 'repeat',
+        arraySeparator: merged.arraySeparator ?? ',',
+      }
     }
 
     const stopAfterEach = router.afterEach(() => {
@@ -183,7 +205,7 @@ export function createQueryHandler(
       const itemState = toValue(item.data)
 
       const result = computeSyncState({
-        deserializedState: deserializeParams(route.query),
+        deserializedState: deserialize(route.query),
         initialData: item.initialData,
         key,
         emptyPlaceholder: options.emptyPlaceholder,
@@ -209,12 +231,18 @@ export function createQueryHandler(
       // result.type === 'sync'
       const urlKeys = new Set(Object.keys(result.data))
 
+      const serializeOptions = resolveSerializeOptions(item.options)
+
       const transformed = applyTransform({
         state: result.data,
         initialData: item.initialData,
         schema: item.options?.schema,
         transform: item.options?.transform,
         mergeOnlyExistingKeysWithoutTransform,
+        // In comma mode arrays arrive as a single joined string; tell the schema
+        // coercion how to split them back into arrays.
+        arraySeparator:
+          serializeOptions.arrayFormat === 'comma' ? serializeOptions.arraySeparator : undefined,
       })
 
       transformed.warnings.forEach((w) => console.warn(w.message, ...w.args))
@@ -291,15 +319,19 @@ export function createQueryHandler(
         },
       )
 
+      const serializeOptions = resolveSerializeOptions(registerOptions)
+      const serializeBaselineOptions = { key: registerOptions.key, ...serializeOptions }
+
       const initialData = cloneDeep(resolvedData) as T
-      const initialQueryData = serializeParams(initialData, { key: registerOptions.key })
+      const initialQueryData = serialize(initialData, serializeBaselineOptions)
 
       // Option-level additionalDefaultData: stored as its own baseline so that
       // schema-meta values for the same key are not overwritten.
       const additionalDefaultQueryData = registerOptions.additionalDefaultData
-        ? serializeParams(registerOptions.additionalDefaultData as Record<string, unknown>, {
-            key: registerOptions.key,
-          })
+        ? serialize(
+            registerOptions.additionalDefaultData as Record<string, unknown>,
+            serializeBaselineOptions,
+          )
         : undefined
 
       // Schema-meta additionalDefaultData: kept independent from the option-level
@@ -309,7 +341,7 @@ export function createQueryHandler(
         ? extractAdditionalDefaultDataFromSchema(registerOptions.schema)
         : undefined
       const schemaMetaDefaultQueryData = schemaMetaDefaults
-        ? serializeParams(schemaMetaDefaults, { key: registerOptions.key })
+        ? serialize(schemaMetaDefaults, serializeBaselineOptions)
         : undefined
 
       // Schema `.default()` values: another independent baseline so that a
@@ -318,7 +350,7 @@ export function createQueryHandler(
         ? extractDefaultsFromSchema(registerOptions.schema)
         : undefined
       const schemaDefaultQueryData = schemaDefaults
-        ? serializeParams(schemaDefaults, { key: registerOptions.key })
+        ? serialize(schemaDefaults, serializeBaselineOptions)
         : undefined
 
       const item: ContextStorageQueryRegisteredItem<T> = {
@@ -385,23 +417,29 @@ export function createQueryHandler(
 
     function buildQueryFromRegistered(): { newQuery: LocationQuery; newQueryRaw: LocationQuery } {
       const result = buildQuery({
-        items: registered.map((item) => ({
-          data: toValue(item.data) as Record<string, unknown>,
-          initialQueryData: item.initialQueryData,
-          additionalDefaultQueryData: item.additionalDefaultQueryData,
-          schemaMetaDefaultQueryData: item.schemaMetaDefaultQueryData,
-          schemaDefaultQueryData: item.schemaDefaultQueryData,
-          key: item.options?.key,
-          onlyChanges: item.options?.onlyChanges,
-          preserveEmptyState: item.options?.preserveEmptyState,
-          causer: item.options?.causer,
-        })),
+        items: registered.map((item) => {
+          const serializeOptions = resolveSerializeOptions(item.options)
+          return {
+            data: toValue(item.data) as Record<string, unknown>,
+            initialQueryData: item.initialQueryData,
+            additionalDefaultQueryData: item.additionalDefaultQueryData,
+            schemaMetaDefaultQueryData: item.schemaMetaDefaultQueryData,
+            schemaDefaultQueryData: item.schemaDefaultQueryData,
+            key: item.options?.key,
+            onlyChanges: item.options?.onlyChanges,
+            preserveEmptyState: item.options?.preserveEmptyState,
+            causer: item.options?.causer,
+            arrayFormat: serializeOptions.arrayFormat,
+            arraySeparator: serializeOptions.arraySeparator,
+          }
+        }),
         currentQuery,
         routeQuery: route.query,
         preserveUnusedKeys: options.preserveUnusedKeys,
         preserveEmptyState: options.preserveEmptyState,
         onlyChanges: options.onlyChanges,
         emptyPlaceholder: options.emptyPlaceholder,
+        serialize,
       })
 
       result.warnings.forEach((w) => console.warn(w))

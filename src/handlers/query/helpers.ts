@@ -1,6 +1,30 @@
 import type { LocationQuery } from 'vue-router'
 
-export interface SerializeOptions {
+/**
+ * Controls how flat (scalar) arrays are written to the URL query.
+ *
+ * - `'repeat'` (default): one query entry per value — `?ids=1&ids=2&ids=3`.
+ *   Round-trips natively because vue-router restores repeated keys as arrays.
+ * - `'comma'`: a single comma-joined value — `?ids=1,2,3`. Produces shorter,
+ *   more readable URLs, but the array-ness is lost on the URL (a comma-joined
+ *   string is indistinguishable from a plain string), so restoring an array
+ *   requires a `schema` or `transform` to know the field is an array.
+ */
+export type QueryArrayFormat = 'repeat' | 'comma'
+
+export interface QuerySerializeOptions {
+  /**
+   * How flat (scalar) arrays are written to the URL. Default: `'repeat'`.
+   */
+  arrayFormat?: QueryArrayFormat
+
+  /**
+   * Separator used when `arrayFormat` is `'comma'`. Default: `','`.
+   */
+  arraySeparator?: string
+}
+
+export interface SerializeOptions extends QuerySerializeOptions {
   /**
    * Custom key prefix for serialized keys.
    * @example
@@ -9,6 +33,90 @@ export interface SerializeOptions {
    * - key: '' => 'field' (no prefix)
    */
   key?: string
+}
+
+/**
+ * The serialize options after the handler has resolved them — the factory-level
+ * and per-register `serialize` options merged, with defaults applied
+ * (`arrayFormat: 'repeat'`, `arraySeparator: ','`). This is exactly what the
+ * query handler passes to {@link serializeParams} (and to a custom
+ * `serializer.serialize`), so `arrayFormat` and `arraySeparator` are always
+ * present — `key` is present only when the registration sets one.
+ */
+export interface ResolvedSerializeOptions {
+  key?: string
+  arrayFormat: QueryArrayFormat
+  arraySeparator: string
+}
+
+/**
+ * Escapes the separator (and the escape character itself) inside a single
+ * array element so that a value which *contains* the separator does not get
+ * split into multiple elements on the way back.
+ *
+ * The backslash (`\`) is the escape character. It is escaped first (so an
+ * existing backslash becomes `\\`), then every occurrence of the separator is
+ * prefixed with a backslash.
+ *
+ * @example
+ * escapeArrayValue('Some value, with comma', ',') // => 'Some value\\, with comma'
+ */
+function escapeArrayValue(value: string, separator: string): string {
+  return value
+    .split('\\')
+    .join('\\\\')
+    .split(separator)
+    .join('\\' + separator)
+}
+
+/**
+ * Joins array elements for the `'comma'` array format, escaping any separator
+ * characters inside the elements (see {@link escapeArrayValue}). The inverse of
+ * {@link splitArrayValue}.
+ */
+export function joinArrayValues(values: readonly unknown[], separator: string): string {
+  return values.map((value) => escapeArrayValue(String(value), separator)).join(separator)
+}
+
+/**
+ * Splits a `'comma'`-formatted array value back into its elements, honouring
+ * backslash escapes produced by {@link joinArrayValues}. A separator preceded by
+ * a backslash is treated as a literal part of the value, not a delimiter, so
+ * elements that legitimately contain the separator round-trip intact.
+ *
+ * @example
+ * splitArrayValue('Some value\\, with comma,second', ',')
+ * // => ['Some value, with comma', 'second']
+ */
+export function splitArrayValue(value: string, separator: string): string[] {
+  // An empty separator cannot delimit anything — return the value as-is.
+  if (separator.length === 0) return [value]
+
+  const result: string[] = []
+  let current = ''
+  let i = 0
+
+  while (i < value.length) {
+    if (value[i] === '\\' && i + 1 < value.length) {
+      // The next character is escaped — take it literally.
+      current += value[i + 1]
+      i += 2
+      continue
+    }
+
+    if (value.startsWith(separator, i)) {
+      result.push(current)
+      current = ''
+      i += separator.length
+      continue
+    }
+
+    current += value[i]
+    i += 1
+  }
+
+  result.push(current)
+  return result
 }
 
 /**
@@ -37,7 +145,7 @@ export function serializeParams(
   params: Record<string, unknown>,
   options: SerializeOptions = {},
 ): LocationQuery {
-  const { key: prefix = '' } = options
+  const { key: prefix = '', arrayFormat = 'repeat', arraySeparator = ',' } = options
 
   const result: LocationQuery = {}
 
@@ -82,6 +190,10 @@ export function serializeParams(
               key: formattedKey,
             }),
           )
+        } else if (arrayFormat === 'comma') {
+          // Serialize flat arrays as a single comma-joined value: a=1,2,3
+          // Separators inside values are backslash-escaped so they survive the round-trip.
+          result[formattedKey] = joinArrayValues(value, arraySeparator)
         } else {
           // Serialize flat arrays directly: a=1&a=2&a=3
           result[formattedKey] = value.map(String)

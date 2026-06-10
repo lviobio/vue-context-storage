@@ -1,4 +1,5 @@
 import type { QueryValue } from './types'
+import { splitArrayValue } from './helpers'
 
 interface AsNumberOptions {
   nullable?: boolean
@@ -136,22 +137,27 @@ export function asString(
 
 interface AsNumberArrayOptions {
   nullable?: boolean
+  /**
+   * Split a single string value on this separator before parsing.
+   * Use with the query handler's `'comma'` array format: `asNumberArray(v, { separator: ',' })`.
+   */
+  separator?: string
 }
 
 export function asNumberArray(value: QueryValue | undefined): number[]
 export function asNumberArray(
   value: QueryValue | undefined,
-  options: { nullable: true },
+  options: { nullable: true; separator?: string },
 ): number[] | null
 export function asNumberArray(
   value: QueryValue | undefined,
-  options: { nullable?: false },
+  options: { nullable?: false; separator?: string },
 ): number[]
 export function asNumberArray(
   value: QueryValue | undefined,
   options?: AsNumberArrayOptions,
 ): number[] | null {
-  const { nullable = false } = options || {}
+  const { nullable = false, separator } = options || {}
 
   if (value === null && nullable) {
     return null
@@ -166,7 +172,7 @@ export function asNumberArray(
   if (Array.isArray(value)) {
     arrayValue = value
   } else if (typeof value === 'string') {
-    arrayValue = [value]
+    arrayValue = separator !== undefined ? splitArrayValue(value, separator) : [value]
   } else {
     arrayValue = []
   }
@@ -184,30 +190,55 @@ interface AsArrayOptions<T> {
   nullable?: boolean
   missable?: boolean
   transform?: (value: QueryValue) => T
+  /**
+   * Split a single string value on this separator before mapping.
+   * Use with the query handler's `'comma'` array format: `asArray(v, { separator: ',' })`.
+   */
+  separator?: string
 }
 
 export function asArray<T>(value: QueryValue | undefined): T[]
 export function asArray<T>(
   value: QueryValue | undefined,
-  options: { nullable: true; missable: true; transform?: (value: QueryValue) => T },
+  options: {
+    nullable: true
+    missable: true
+    transform?: (value: QueryValue) => T
+    separator?: string
+  },
 ): T[] | null | undefined
 export function asArray<T>(
   value: QueryValue | undefined,
-  options: { nullable: true; missable?: false; transform?: (value: QueryValue) => T },
+  options: {
+    nullable: true
+    missable?: false
+    transform?: (value: QueryValue) => T
+    separator?: string
+  },
 ): T[] | null
 export function asArray<T>(
   value: QueryValue | undefined,
-  options: { nullable?: false; missable: true; transform?: (value: QueryValue) => T },
+  options: {
+    nullable?: false
+    missable: true
+    transform?: (value: QueryValue) => T
+    separator?: string
+  },
 ): T[] | undefined
 export function asArray<T>(
   value: QueryValue | undefined,
-  options: { nullable?: false; missable?: false; transform?: (value: QueryValue) => T },
+  options: {
+    nullable?: false
+    missable?: false
+    transform?: (value: QueryValue) => T
+    separator?: string
+  },
 ): T[]
 export function asArray<T>(
   value: QueryValue | undefined,
   options?: AsArrayOptions<T>,
 ): T[] | null | undefined {
-  const { nullable = false, missable = false, transform } = options || {}
+  const { nullable = false, missable = false, transform, separator } = options || {}
 
   if (value === null && nullable) {
     return null
@@ -225,6 +256,8 @@ export function asArray<T>(
 
   if (Array.isArray(value)) {
     arrayValue = value
+  } else if (separator !== undefined && typeof value === 'string') {
+    arrayValue = splitArrayValue(value, separator)
   } else {
     arrayValue = [value]
   }

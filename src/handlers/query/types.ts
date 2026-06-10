@@ -1,8 +1,41 @@
 import type { LocationQuery, LocationQueryValue } from 'vue-router'
 import type { MaybeRefOrGetter, UnwrapNestedRefs, WatchHandle } from 'vue'
 import type { RegisterBaseOptions } from '../../handlers'
+import type { QuerySerializeOptions, ResolvedSerializeOptions } from './helpers'
 
 export type QueryValue = LocationQueryValue | LocationQueryValue[]
+
+/**
+ * A fully custom serializer pair that replaces the built-in
+ * `serializeParams` / `deserializeParams` for the query handler.
+ *
+ * Set it on the handler factory (`createQueryHandler({ serializer })`) to take
+ * full control of how reactive state is encoded to / decoded from the URL query
+ * (e.g. a `qs`-style format, base64, JSON, or custom escaping).
+ *
+ * Contract:
+ * - `serialize` and `deserialize` MUST be mutual inverses.
+ * - They must preserve the same per-`key` nesting the standard pair uses, i.e.
+ *   `deserialize(serialize(data, { key }))` reproduces `{ [key]: data }` (and
+ *   `{ ...data }` when no `key` is given). The handler relies on this to extract
+ *   each registration's subtree, diff against baselines, and drive `onlyChanges`.
+ * - `serialize` receives the fully {@link ResolvedSerializeOptions resolved}
+ *   options — the factory-level and per-register `serialize` options merged with
+ *   defaults — so `key`, `arrayFormat` and `arraySeparator` are all available.
+ *   A custom implementation may honour the array options (e.g. respect
+ *   `arrayFormat: 'comma'`) or own the encoding entirely and ignore them.
+ * - `deserialize` runs on the whole route query before per-registration
+ *   extraction, so it does NOT receive options — the author fixes the decoding
+ *   format (and must mirror whatever `serialize` produced).
+ *
+ * `deserialize` output still flows through `schema` / `transform` coercion, so
+ * return already-typed values (numbers, arrays) or URL-style strings the
+ * standard coercion understands.
+ */
+export interface QuerySerializer {
+  serialize: (params: Record<string, unknown>, options: ResolvedSerializeOptions) => LocationQuery
+  deserialize: (query: Record<string, any>) => Record<string, any>
+}
 
 // A recursive type that transforms all properties to CustomType
 export type DeepTransformValuesToLocationQueryValue<T> = {
@@ -83,6 +116,29 @@ interface QueryHandlerSharedOptions {
    * If transform option is not passed, ref will be merged with query only by keys that exists in ref.
    */
   mergeOnlyExistingKeysWithoutTransform?: boolean
+
+  /**
+   * Options for the standard query serializer.
+   *
+   * Use this to store flat arrays as a single comma-joined value instead of
+   * repeated keys:
+   *
+   * @example
+   * ```ts
+   * createQueryHandler({ serialize: { arrayFormat: 'comma' } })
+   *
+   * // { ids: [1, 2, 3] } → ?ids=1,2,3   (instead of ?ids=1&ids=2&ids=3)
+   * ```
+   *
+   * Can be set on the handler factory (applies to every registered context) or
+   * per `useContextStorage('query', ...)` call (overrides the factory value).
+   *
+   * Restoring a comma-joined array back into an array requires a `schema` or a
+   * `transform` (the comma string is indistinguishable from a plain string on
+   * the URL). The built-in `schema` coercion and the `asArray` / `asNumberArray`
+   * transform helpers split on `arraySeparator` automatically.
+   */
+  serialize?: QuerySerializeOptions
 }
 
 export interface QueryHandlerBaseOptions extends QueryHandlerSharedOptions {
@@ -113,6 +169,28 @@ export interface QueryHandlerBaseOptions extends QueryHandlerSharedOptions {
    * to have exclusive ownership of all query parameters.
    */
   preserveUnusedKeys?: boolean
+
+  /**
+   * A fully custom serializer pair replacing the built-in `serializeParams` /
+   * `deserializeParams`. Factory-level only — owns the entire URL encoding.
+   *
+   * When set, the built-in `serialize` options (`arrayFormat` / `arraySeparator`)
+   * no longer apply. See {@link QuerySerializer} for the contract.
+   *
+   * @example
+   * ```ts
+   * import qs from 'qs'
+   *
+   * createQueryHandler({
+   *   serializer: {
+   *     serialize: (data, { key } = {}) =>
+   *       qs.parse(qs.stringify(key ? { [key]: data } : data, { encode: false })),
+   *     deserialize: (query) => query,
+   *   },
+   * })
+   * ```
+   */
+  serializer?: QuerySerializer
 }
 
 export interface RegisterQueryHandlerBaseOptions<T> extends QueryHandlerSharedOptions {
