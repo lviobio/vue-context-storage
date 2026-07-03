@@ -6,7 +6,7 @@ import {
   onBeforeUnmount,
   toValue,
 } from 'vue'
-import { merge, pick } from 'lodash'
+import { merge, pick } from 'lodash-es'
 import type { ContextStorageHandler, RegisterBaseOptions } from '../handlers'
 import type { HandlerSchema } from './types'
 import { contextStoragePrefixSegmentsInjectKey, resolvePrefixSegments } from '../prefix'

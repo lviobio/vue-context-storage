@@ -7,7 +7,7 @@ import {
   syncReactive,
 } from '../../src/handlers/helpers'
 import { computeSyncState } from '../../src/handlers/query/compute-sync-state'
-import { cloneDeep } from 'lodash'
+import { cloneDeep } from 'lodash-es'
 
 describe('applyTransform', () => {
   describe('schema with partial state', () => {

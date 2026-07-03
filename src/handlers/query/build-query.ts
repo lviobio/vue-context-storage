@@ -1,5 +1,5 @@
 import type { LocationQuery } from 'vue-router'
-import { isEqual } from 'lodash'
+import { isEqual } from 'lodash-es'
 import { serializeParams, type QueryArrayFormat, type ResolvedSerializeOptions } from './helpers'
 
 export interface BuildQueryItem {

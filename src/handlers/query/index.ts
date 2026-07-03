@@ -1,7 +1,7 @@
 import type { ContextStorageHandlerFactory } from '../../handlers'
 import { deserializeParams, serializeParams } from './helpers'
 import { contextStorageQueryHandler } from '../../symbols'
-import { cloneDeep, isEqual } from 'lodash'
+import { cloneDeep, isEqual } from 'lodash-es'
 import {
   applyTransform,
   extractAdditionalDefaultDataFromSchema,

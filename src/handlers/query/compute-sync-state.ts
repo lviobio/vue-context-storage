@@ -1,4 +1,4 @@
-import { omit } from 'lodash'
+import { omit } from 'lodash-es'
 
 export interface ComputeSyncStateInput<T extends Record<string, unknown>> {
   /** Deserialized state from URL query (output of deserializeParams) */
