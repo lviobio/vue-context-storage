@@ -62,6 +62,9 @@ export interface ResolvedSerializeOptions {
  * escapeArrayValue('Some value, with comma', ',') // => 'Some value\\, with comma'
  */
 function escapeArrayValue(value: string, separator: string): string {
+  // Fast path: nothing to escape (the common case — plain ids/tags/slugs).
+  if (!value.includes(separator) && !value.includes('\\')) return value
+
   return value
     .split('\\')
     .join('\\\\')
@@ -91,6 +94,11 @@ export function joinArrayValues(values: readonly unknown[], separator: string): 
 export function splitArrayValue(value: string, separator: string): string[] {
   // An empty separator cannot delimit anything — return the value as-is.
   if (separator.length === 0) return [value]
+
+  // Fast path: no escape marker present, so no element could have needed
+  // escaping (joinArrayValues only ever emits `\` when it escapes something)
+  // — a native split is equivalent and far faster than the manual parse below.
+  if (!value.includes('\\')) return value.split(separator)
 
   const result: string[] = []
   let current = ''

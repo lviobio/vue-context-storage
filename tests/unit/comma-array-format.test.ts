@@ -111,6 +111,14 @@ describe('joinArrayValues / splitArrayValue (escape round-trip)', () => {
   it('does not split on an escaped separator', () => {
     expect(splitArrayValue('a\\,b,c', ',')).toEqual(['a,b', 'c'])
   })
+
+  it('splitArrayValue fast path (no backslash) matches native split', () => {
+    expect(splitArrayValue('a,b,c', ',')).toEqual(['a', 'b', 'c'])
+  })
+
+  it('joinArrayValues fast path (nothing to escape) matches plain join', () => {
+    expect(joinArrayValues(['a', 'b', 'c'], ',')).toEqual('a,b,c')
+  })
 })
 
 describe('comma array round-trip via schema coercion', () => {
