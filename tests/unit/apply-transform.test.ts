@@ -7,7 +7,6 @@ import {
   syncReactive,
 } from '../../src/handlers/helpers'
 import { computeSyncState } from '../../src/handlers/query/compute-sync-state'
-import { cloneDeep } from 'lodash-es'
 
 describe('applyTransform', () => {
   describe('schema with partial state', () => {
@@ -417,7 +416,7 @@ describe('syncReactive + initialData reference safety', () => {
     }
 
     // Simulate what the query handler does: itemState is a mutable object
-    const itemState: Record<string, unknown> = cloneDeep(initialData)
+    const itemState: Record<string, unknown> = structuredClone(initialData)
 
     // 1. First reset: navigate to empty URL → computeSyncState returns reset with initialData
     const result1 = computeSyncState({
@@ -429,7 +428,7 @@ describe('syncReactive + initialData reference safety', () => {
     if (result1.type !== 'reset') return
 
     // Apply reset WITH cloneDeep (the fix)
-    syncReactive(itemState, cloneDeep(result1.data))
+    syncReactive(itemState, structuredClone(result1.data))
 
     // 2. User mutates nested data
     ;(itemState.filters as any).title = 'hello'
@@ -444,7 +443,7 @@ describe('syncReactive + initialData reference safety', () => {
       filters: { title: '' },
     }
 
-    const itemState: Record<string, unknown> = cloneDeep(initialData)
+    const itemState: Record<string, unknown> = structuredClone(initialData)
 
     const result = computeSyncState({
       deserializedState: {},
@@ -471,7 +470,7 @@ describe('syncReactive + initialData reference safety', () => {
       filters: { title: '', score: null as number | null },
     }
 
-    const itemState: Record<string, unknown> = cloneDeep(initialData)
+    const itemState: Record<string, unknown> = structuredClone(initialData)
 
     // First reset
     const result1 = computeSyncState({
@@ -480,7 +479,7 @@ describe('syncReactive + initialData reference safety', () => {
       emptyPlaceholder: '_',
     })
     if (result1.type !== 'reset') return
-    syncReactive(itemState, cloneDeep(result1.data))
+    syncReactive(itemState, structuredClone(result1.data))
 
     // User changes data
     ;(itemState.filters as any).title = 'changed'
@@ -493,7 +492,7 @@ describe('syncReactive + initialData reference safety', () => {
       emptyPlaceholder: '_',
     })
     if (result2.type !== 'reset') return
-    syncReactive(itemState, cloneDeep(result2.data))
+    syncReactive(itemState, structuredClone(result2.data))
 
     expect(itemState).toEqual({ page: 1, filters: { title: '', score: null } })
     // initialData is still clean

@@ -6,15 +6,15 @@ import {
   onBeforeUnmount,
   toValue,
 } from 'vue'
-import { merge, pick } from 'lodash-es'
 import type { ContextStorageHandler, RegisterBaseOptions } from '../handlers'
+import { mergeDeep, pick } from './deep-utils'
 import type { HandlerSchema } from './types'
 import { contextStoragePrefixSegmentsInjectKey, resolvePrefixSegments } from '../prefix'
 import { splitArrayValue } from './query/helpers'
 
 /**
  * Fully synchronizes a reactive target object with source data.
- * Unlike lodash `merge`, this also removes keys from target that are not present in source.
+ * Unlike `mergeDeep`, this also removes keys from target that are not present in source.
  * This is necessary because Vue reactive proxies cannot be replaced — only mutated in place.
  */
 export function syncReactive<T extends Record<string, unknown>>(
@@ -222,7 +222,7 @@ export function extractDefaultsFromSchema(schema: unknown): Record<string, unkno
 
       let combined: unknown
       if (hasDefault && nested) {
-        combined = merge({}, objectDefault, nested)
+        combined = mergeDeep({}, objectDefault as Record<string, unknown>, nested)
       } else if (hasDefault) {
         combined = objectDefault
       } else {
@@ -393,7 +393,7 @@ export function applyTransform<T extends Record<string, unknown>>(
     // Deep merge initialData with state so missing nested objects
     // don't cause "expected object, received undefined" schema errors.
     // State values take priority over initialData.
-    const merged = merge({}, input.initialData, data)
+    const merged = mergeDeep<Record<string, unknown>>({}, input.initialData, data)
 
     // Coerce single values to arrays where the schema expects `.array()`.
     // This fixes the URL deserialization quirk where `?ids=1` produces `'1'`

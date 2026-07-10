@@ -1,16 +1,16 @@
 import type { ContextStorageHandlerFactory } from '../../handlers'
 import { deserializeParams, serializeParams } from './helpers'
 import { contextStorageQueryHandler } from '../../symbols'
-import { cloneDeep, isEqual } from 'lodash-es'
 import {
   applyTransform,
   extractAdditionalDefaultDataFromSchema,
   extractDefaultsFromSchema,
   syncReactive,
 } from '../helpers'
+import { isEqual } from '../deep-utils'
 import { buildQuery } from './build-query'
 import { computeSyncState } from './compute-sync-state'
-import { computed, type MaybeRefOrGetter, onBeforeUnmount, toValue, watch } from 'vue'
+import { computed, type MaybeRefOrGetter, onBeforeUnmount, toRaw, toValue, watch } from 'vue'
 import { type LocationQuery, useRoute, useRouter } from 'vue-router'
 import type {
   ContextStorageQueryRegisteredItem,
@@ -224,7 +224,7 @@ export function createQueryHandler(
         // Must cloneDeep to avoid sharing nested object references with initialData.
         // Without cloning, Object.assign makes itemState.nested === initialData.nested,
         // so subsequent mutations to itemState also corrupt initialData.
-        syncReactive(itemState, cloneDeep(result.data))
+        syncReactive(itemState, structuredClone(result.data))
         return
       }
 
@@ -322,7 +322,8 @@ export function createQueryHandler(
       const serializeOptions = resolveSerializeOptions(registerOptions)
       const serializeBaselineOptions = { key: registerOptions.key, ...serializeOptions }
 
-      const initialData = cloneDeep(resolvedData) as T
+      // toRaw first: structuredClone can't clone a Vue reactive Proxy directly.
+      const initialData = structuredClone(toRaw(resolvedData)) as T
       const initialQueryData = serialize(initialData, serializeBaselineOptions)
 
       // Option-level additionalDefaultData: stored as its own baseline so that
@@ -409,7 +410,7 @@ export function createQueryHandler(
         },
         reset: () => {
           console.debug('[query-handler] reset', { key: registerOptions.key })
-          syncReactive(toValue(data) as Record<string, unknown>, cloneDeep(initialData))
+          syncReactive(toValue(data) as Record<string, unknown>, structuredClone(initialData))
         },
         wasChanged,
       }

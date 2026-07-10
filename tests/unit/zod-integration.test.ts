@@ -50,8 +50,8 @@ describe('z.array of objects (applyTransform coercion)', () => {
             '1': { product: 'B', quantity: '2' },
           },
         },
-        // Empty initialData so lodash merge doesn't pre-convert the record:
-        // the sorting must come from the schema coercion itself.
+        // initialData intentionally empty: sorting must come from
+        // `coerceDataForSchema` itself, not from the deep-merge step.
         initialData: {} as z.infer<typeof Schema>,
         schema: Schema,
         mergeOnlyExistingKeysWithoutTransform: true,
@@ -142,9 +142,8 @@ describe('z.array of objects (applyTransform coercion)', () => {
 
   describe('plain array input', () => {
     // `applyTransform` deep-merges deserialized state into `initialData` before
-    // parsing. When `initialData` holds an array (`items: []`), lodash `merge`
-    // converts the deserialized indexed record into a real array before the
-    // schema coercion runs, so plain arrays must pass through untouched.
+    // parsing; arrays are replaced wholesale (not merged by index), so a plain
+    // array in `state` must pass through untouched regardless of `initialData`.
     it('should accept a plain array of items', () => {
       const { data, warnings } = applyTransform({
         state: {
@@ -442,9 +441,9 @@ describe('z.number auto-coercion (applyTransform, no z)', () => {
 
 // Focused coverage for `coerceDataForSchema` (private — exercised via
 // `applyTransform`) on arrays and on objects holding nested arrays of strings
-// and numbers. `initialData` is kept empty (`{}`) so the lodash `merge` step in
-// `applyTransform` cannot pre-convert indexed records into arrays — the array
-// shaping and scalar coercion must come from `coerceDataForSchema` itself.
+// and numbers. `initialData` is kept empty (`{}`) so the deep-merge step in
+// `applyTransform` has nothing to merge against — the array shaping and
+// scalar coercion must come from `coerceDataForSchema` itself.
 describe('coerceDataForSchema — arrays & nested arrays (applyTransform)', () => {
   describe('top-level arrays', () => {
     it('should coerce a multi-value string array', () => {

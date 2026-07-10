@@ -1,10 +1,11 @@
-import { cloneDeep, isEqual } from 'lodash-es'
 import { applyTransform, syncReactive } from '../helpers'
+import { isEqual } from '../deep-utils'
 import {
   computed,
   type InjectionKey,
   type MaybeRefOrGetter,
   onBeforeUnmount,
+  toRaw,
   toValue,
   watch,
 } from 'vue'
@@ -185,7 +186,8 @@ export function createWebStorageHandlerInstance<T extends Record<string, unknown
 
     const item: ContextStorageWebStorageRegisteredItem<T> = {
       data,
-      initialData: cloneDeep(resolvedData) as T,
+      // toRaw first: structuredClone can't clone a Vue reactive Proxy directly.
+      initialData: structuredClone(toRaw(resolvedData)) as T,
       options,
       watchHandle,
     }
@@ -206,7 +208,7 @@ export function createWebStorageHandlerInstance<T extends Record<string, unknown
         registeredDataObjects.delete(resolvedData)
       },
       reset: () => {
-        syncReactive(toValue(data) as Record<string, unknown>, cloneDeep(item.initialData))
+        syncReactive(toValue(data) as Record<string, unknown>, structuredClone(item.initialData))
       },
       wasChanged,
     }
